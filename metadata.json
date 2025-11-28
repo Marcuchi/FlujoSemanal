@@ -1,0 +1,5 @@
+{
+  "name": "FlujoSemanal",
+  "description": "Aplicación para la gestión de flujos de caja semanal, permitiendo el registro detallado de ingresos, egresos y arqueos de caja por día.",
+  "requestFramePermissions": []
+}
