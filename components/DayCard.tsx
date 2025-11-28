@@ -12,6 +12,9 @@ interface DayCardProps {
 
 export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBalance = 0 }) => {
   
+  // Guard clause to prevent crashes if data is missing
+  if (!dayData) return null;
+
   const handleAddTransaction = (type: TransactionType) => {
     const newTransaction: Transaction = {
       id: generateId(),

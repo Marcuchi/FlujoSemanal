@@ -26,14 +26,23 @@ const App: React.FC = () => {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        // Simple validation to check structure
-        const sampleDay = Object.values(parsed)[0] as any;
-        if (!sampleDay || !Array.isArray(sampleDay.incomes)) {
-           return createInitialState();
+        
+        // Validación robusta: Verifica que existan TODOS los días y sus arrays
+        const isValid = DAYS_OF_WEEK.every(day => 
+          parsed[day.id] && 
+          Array.isArray(parsed[day.id].incomes) &&
+          Array.isArray(parsed[day.id].expenses) &&
+          Array.isArray(parsed[day.id].toBox)
+        );
+        
+        if (isValid) {
+          return parsed;
+        } else {
+          console.warn("Datos corruptos detectados. Reiniciando estado.");
+          return createInitialState();
         }
-        return parsed;
       } catch (e) {
-        console.error("Failed to parse saved data", e);
+        console.error("Error al leer datos guardados. Reiniciando.", e);
         return createInitialState();
       }
     }
@@ -84,9 +93,11 @@ const App: React.FC = () => {
 
   const totals = React.useMemo(() => (Object.values(weekData) as DayData[]).reduce(
     (acc, day) => {
-      const dayIncome = day.incomes.reduce((sum, item) => sum + item.amount, 0);
-      const dayExpense = day.expenses.reduce((sum, item) => sum + item.amount, 0);
-      const dayToBox = day.toBox.reduce((sum, item) => sum + item.amount, 0);
+      // Safety checks inside reduce
+      if (!day) return acc;
+      const dayIncome = day.incomes?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
+      const dayExpense = day.expenses?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
+      const dayToBox = day.toBox?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
       return {
         income: acc.income + dayIncome,
         expense: acc.expense + dayExpense,
@@ -106,9 +117,9 @@ const App: React.FC = () => {
       balances[day.id] = currentBalance;
       const data = weekData[day.id];
       if (data) {
-        const income = data.incomes.reduce((s, t) => s + t.amount, 0);
-        const expense = data.expenses.reduce((s, t) => s + t.amount, 0);
-        const toBox = data.toBox.reduce((s, t) => s + t.amount, 0);
+        const income = data.incomes?.reduce((s, t) => s + (t.amount || 0), 0) || 0;
+        const expense = data.expenses?.reduce((s, t) => s + (t.amount || 0), 0) || 0;
+        const toBox = data.toBox?.reduce((s, t) => s + (t.amount || 0), 0) || 0;
         currentBalance = currentBalance + income - expense - toBox;
       }
     }
@@ -133,8 +144,12 @@ const App: React.FC = () => {
             <div className="flex items-center gap-3">
               <img 
                 src="https://avicolaalpina.com.ar/wp-content/uploads/2025/04/logoCompleto0.png" 
-                alt="Avícola Alpina Logo" 
+                alt="Avícola Alpina" 
                 className="h-12 w-auto rounded-lg bg-white p-1 shadow-md shadow-indigo-900/20"
+                onError={(e) => {
+                  // Fallback if image fails (e.g. 404)
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
               />
               <div>
                 <h1 className="text-xl font-bold text-slate-100 leading-tight">Flujo<span className="text-indigo-400">Semanal</span></h1>
