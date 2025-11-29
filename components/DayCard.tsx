@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Archive, TrendingUp, TrendingDown, Briefcase, History, Wallet, RotateCcw, Edit2, Check, X } from 'lucide-react';
+import { Plus, Archive, TrendingUp, TrendingDown, Briefcase, History, Wallet, RotateCcw, Edit2, Check, X, Truck } from 'lucide-react';
 import { DayData, Transaction, TransactionType, HistoryItem } from '../types';
 import { TransactionItem } from './TransactionItem';
 import { formatCurrency, generateId } from '../utils';
@@ -45,10 +45,7 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
   };
 
   const handleRemoveTransaction = (type: TransactionType, id: string) => {
-    // Find item before deleting to add to history
     const itemToRemove = dayData[type].find(t => t.id === id);
-    
-    // Only add to history if it's not a "ghost" empty item (amount 0 and empty title) created by mistake
     const isGhost = itemToRemove && itemToRemove.amount === 0 && (itemToRemove.title === '' || (type === 'toBox' && itemToRemove.title === 'Caja'));
 
     if (itemToRemove && !isGhost) {
@@ -63,6 +60,27 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
 
     const updatedList = dayData[type].filter((t) => t.id !== id);
     onUpdate({ ...dayData, [type]: updatedList });
+  };
+
+  const handleMoveTransaction = (currentType: TransactionType, id: string) => {
+     if (currentType !== 'incomes' && currentType !== 'deliveries') return;
+
+     const targetType = currentType === 'incomes' ? 'deliveries' : 'incomes';
+     const itemToMove = dayData[currentType].find(t => t.id === id);
+
+     if (!itemToMove) return;
+
+     // Remove from source
+     const newSourceList = dayData[currentType].filter(t => t.id !== id);
+     
+     // Add to target
+     const newTargetList = [...dayData[targetType], itemToMove];
+
+     onUpdate({
+         ...dayData,
+         [currentType]: newSourceList,
+         [targetType]: newTargetList
+     });
   };
 
   const saveInitialAmount = () => {
@@ -105,10 +123,11 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
   };
 
   const totalIncome = React.useMemo(() => dayData.incomes.reduce((acc, curr) => acc + curr.amount, 0), [dayData.incomes]);
+  const totalDeliveries = React.useMemo(() => dayData.deliveries.reduce((acc, curr) => acc + curr.amount, 0), [dayData.deliveries]);
   const totalExpense = React.useMemo(() => dayData.expenses.reduce((acc, curr) => acc + curr.amount, 0), [dayData.expenses]);
   const totalToBox = React.useMemo(() => dayData.toBox.reduce((acc, curr) => acc + curr.amount, 0), [dayData.toBox]);
   
-  const totalOficina = effectiveInitialAmount + totalIncome - totalExpense - totalToBox;
+  const totalOficina = effectiveInitialAmount + totalIncome + totalDeliveries - totalExpense - totalToBox;
 
   const MetricDisplay = ({ label, value, icon: Icon, colorClass, borderClass }: { label: string; value: number; icon: any; colorClass: string; borderClass?: string }) => (
     <div className={`flex items-center justify-between p-2 rounded-lg bg-slate-800 border ${borderClass || 'border-slate-700'}`}>
@@ -134,6 +153,7 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
 
       <div className="flex-1 overflow-y-auto p-3 space-y-3 bg-slate-950 custom-scrollbar">
         
+        {/* Monto Inicial */}
         <div className="rounded-lg bg-slate-800/40 border border-slate-700/50 overflow-hidden shadow-sm">
            <div className="flex justify-between items-center px-3 py-2 bg-slate-800 border-b border-slate-700">
              <h3 className="font-bold text-xs text-slate-300 uppercase flex items-center gap-1.5 tracking-wider">
@@ -180,22 +200,71 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
            </div>
         </div>
 
+        {/* Ingresos & Repartos Container */}
         <div className="rounded-lg bg-emerald-950/40 border border-emerald-900/50 overflow-hidden shadow-sm">
           <div className="flex justify-between items-center px-3 py-2 bg-emerald-950 border-b border-emerald-900">
             <h3 className="font-bold text-xs text-emerald-200 uppercase flex items-center gap-1.5 tracking-wider">
               <TrendingUp size={14} className="text-emerald-400"/> 
               Ingresos
             </h3>
-            <button onClick={() => handleAddTransaction('incomes')} className="p-1 rounded bg-emerald-900 hover:bg-emerald-800 text-emerald-100 transition-colors border border-emerald-800">
-              <Plus size={14} />
-            </button>
           </div>
-          <div className="p-2 space-y-1 min-h-[3rem]">
-            {dayData.incomes.map(t => <TransactionItem key={t.id} transaction={t} type="incomes" onUpdate={(id, u) => handleUpdateTransaction('incomes', id, u)} onRemove={(id) => handleRemoveTransaction('incomes', id)} />)}
-             {dayData.incomes.length === 0 && <p className="text-[10px] text-emerald-600/40 text-center italic py-2">Sin ingresos registrados</p>}
+          
+          <div className="p-2 space-y-2">
+            
+            {/* Ventas Mostrador -> Renamed to General */}
+            <div>
+              <div className="flex justify-between items-center mb-1 px-1">
+                <span className="text-[10px] uppercase font-bold text-emerald-500/80 tracking-wide">General</span>
+                <button onClick={() => handleAddTransaction('incomes')} className="p-0.5 rounded bg-emerald-900/50 hover:bg-emerald-800 text-emerald-200 border border-emerald-800/50 transition-colors">
+                  <Plus size={12} />
+                </button>
+              </div>
+              <div className="space-y-1">
+                {dayData.incomes.map(t => (
+                    <TransactionItem 
+                        key={t.id} 
+                        transaction={t} 
+                        type="incomes" 
+                        onUpdate={(id, u) => handleUpdateTransaction('incomes', id, u)} 
+                        onRemove={(id) => handleRemoveTransaction('incomes', id)}
+                        onMove={(id) => handleMoveTransaction('incomes', id)} 
+                    />
+                ))}
+                {dayData.incomes.length === 0 && <p className="text-[10px] text-emerald-600/30 text-center italic py-1">Sin ventas</p>}
+              </div>
+            </div>
+            
+            <div className="h-px bg-emerald-900/30 mx-1"></div>
+
+            {/* Repartos */}
+            <div>
+              <div className="flex justify-between items-center mb-1 px-1">
+                <span className="text-[10px] uppercase font-bold text-teal-500/80 tracking-wide flex items-center gap-1">
+                   <Truck size={10} /> Repartos
+                </span>
+                <button onClick={() => handleAddTransaction('deliveries')} className="p-0.5 rounded bg-teal-900/50 hover:bg-teal-800 text-teal-200 border border-teal-800/50 transition-colors">
+                  <Plus size={12} />
+                </button>
+              </div>
+              <div className="space-y-1">
+                {dayData.deliveries.map(t => (
+                    <TransactionItem 
+                        key={t.id} 
+                        transaction={t} 
+                        type="deliveries" 
+                        onUpdate={(id, u) => handleUpdateTransaction('deliveries', id, u)} 
+                        onRemove={(id) => handleRemoveTransaction('deliveries', id)}
+                        onMove={(id) => handleMoveTransaction('deliveries', id)} 
+                    />
+                ))}
+                {dayData.deliveries.length === 0 && <p className="text-[10px] text-teal-600/30 text-center italic py-1">Sin repartos</p>}
+              </div>
+            </div>
+
           </div>
         </div>
 
+        {/* Egresos */}
         <div className="rounded-lg bg-rose-950/40 border border-rose-900/50 overflow-hidden shadow-sm">
           <div className="flex justify-between items-center px-3 py-2 bg-rose-950 border-b border-rose-900">
             <h3 className="font-bold text-xs text-rose-200 uppercase flex items-center gap-1.5 tracking-wider">
@@ -212,6 +281,7 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
           </div>
         </div>
 
+        {/* A Caja */}
         <div className="rounded-lg bg-indigo-950/40 border border-indigo-900/50 overflow-hidden shadow-sm">
           <div className="flex justify-between items-center px-3 py-2 bg-indigo-950 border-b border-indigo-900">
             <h3 className="font-bold text-xs text-indigo-200 uppercase flex items-center gap-1.5 tracking-wider">

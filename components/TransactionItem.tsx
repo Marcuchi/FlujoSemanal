@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trash2, Edit2, Check, X } from 'lucide-react';
+import { Trash2, Edit2, Check, X, ArrowLeftRight } from 'lucide-react';
 import { Transaction, TransactionType } from '../types';
 import { formatCurrency } from '../utils';
 
@@ -8,11 +8,11 @@ interface TransactionItemProps {
   type: TransactionType;
   onUpdate: (id: string, updates: Partial<Transaction>) => void;
   onRemove: (id: string) => void;
+  onMove?: (id: string) => void; // New prop for moving items
 }
 
 const formatNumberInput = (value: number): string => {
-  if (value === 0 && !Object.is(value, -0)) return ''; // Don't show 0, allows placeholder. Handle -0 case if needed but usually 0 is enough.
-  // Handle negative specifically for input display
+  if (value === 0 && !Object.is(value, -0)) return '';
   return new Intl.NumberFormat('es-AR').format(value);
 };
 
@@ -25,10 +25,10 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
   transaction,
   type,
   onUpdate,
-  onRemove
+  onRemove,
+  onMove
 }) => {
   const isBox = type === 'toBox';
-  // Check if it's a new transaction: amount 0 and (title empty or title is 'Caja' for box items)
   const isNew = transaction.amount === 0 && (transaction.title === '' || (isBox && transaction.title === 'Caja'));
   const [isEditing, setIsEditing] = React.useState(isNew);
   
@@ -41,7 +41,6 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
 
   React.useEffect(() => {
     if (isEditing) {
-      // If it is 'Caja', focus on amount to save a step, otherwise focus title
       if (isBox && tempTitle === 'Caja') {
         amountInputRef.current?.focus();
       } else {
@@ -53,15 +52,12 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let val = e.target.value;
     
-    // Only allow negative sign if type is 'toBox'
     const allowNegative = type === 'toBox';
     const hasNegative = allowNegative && val.includes('-');
     
-    // Remove non-digit chars
     const digits = val.replace(/\D/g, '');
     
     if (digits === '') {
-        // If user typed just '-' and allowed, show it
         if (hasNegative && val === '-') {
             setInputValue('-');
             setTempAmount(0);
@@ -78,12 +74,10 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
       setTempAmount(0);
       setInputValue('');
     } else {
-      // Apply negative if strictly allowed and present
       if (hasNegative) {
           numVal = -numVal;
       }
       setTempAmount(numVal);
-      // Format with dots, preserve negative sign visually
       const formatted = new Intl.NumberFormat('es-AR').format(Math.abs(numVal));
       setInputValue(hasNegative ? `-${formatted}` : formatted);
     }
@@ -95,7 +89,6 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
       titleInputRef.current?.focus();
       return;
     }
-    // Auto-capitalize first letter here
     const formattedTitle = capitalizeFirstLetter(tempTitle);
     
     onUpdate(transaction.id, { title: formattedTitle, amount: tempAmount });
@@ -117,7 +110,6 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
   };
 
   const getTheme = () => {
-    // Themes adapted for Dark Backgrounds
     switch (type) {
       case 'incomes': return { 
         indicator: 'bg-emerald-500', 
@@ -125,6 +117,13 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
         textAmount: 'text-emerald-300',
         textTitle: 'text-emerald-100',
         subtle: 'text-emerald-500'
+      };
+      case 'deliveries': return { 
+        indicator: 'bg-teal-400', 
+        hoverBg: 'hover:bg-teal-900/60', 
+        textAmount: 'text-teal-300', 
+        textTitle: 'text-teal-100', 
+        subtle: 'text-teal-500' 
       };
       case 'expenses': return { 
         indicator: 'bg-rose-500', 
@@ -169,7 +168,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
             <input
               ref={amountInputRef}
               type="text"
-              inputMode="numeric" // Changed to numeric to allow software keyboard on mobile
+              inputMode="numeric"
               value={inputValue}
               onChange={handleAmountChange}
               onKeyDown={handleKeyDown}
@@ -187,6 +186,10 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
     );
   }
 
+  // Determine if move button should be shown
+  const showMoveButton = (type === 'incomes' || type === 'deliveries') && onMove;
+  const moveButtonTitle = type === 'incomes' ? 'Mover a Repartos' : 'Mover a General';
+
   return (
     <div className={`group relative p-2 rounded-lg ${theme.hoverBg} bg-black/20 transition-colors flex items-center justify-between border border-transparent hover:border-white/5`}>
       <div className="flex items-center gap-2 overflow-hidden">
@@ -199,6 +202,17 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
       </span>
 
       <div className="absolute inset-0 bg-slate-900/90 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-end gap-2 px-2 border border-slate-700">
+        
+        {showMoveButton && (
+           <button 
+             onClick={() => onMove?.(transaction.id)} 
+             className="p-1.5 rounded-md bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white transition-colors shadow-sm border border-slate-600" 
+             title={moveButtonTitle}
+           >
+             <ArrowLeftRight size={14} />
+           </button>
+        )}
+
         <button onClick={() => setIsEditing(true)} className="p-1.5 rounded-md bg-slate-700 hover:bg-slate-600 text-white transition-colors shadow-sm border border-slate-600" title="Modificar"><Edit2 size={14} /></button>
         <button onClick={() => onRemove(transaction.id)} className="p-1.5 rounded-md bg-rose-900 hover:bg-rose-800 text-white transition-colors shadow-sm border border-rose-950" title="Eliminar"><Trash2 size={14} /></button>
       </div>

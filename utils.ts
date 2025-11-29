@@ -1,9 +1,6 @@
 import { WeekData, DAYS_OF_WEEK, DayData, Transaction, TransactionType, HistoryItem } from './types';
 
 export const formatCurrency = (value: number): string => {
-  // Use 'es-AR' or 'es-ES' but force no fraction digits if integers are preferred
-  // Using 2 fraction digits standard for currency, or 0 based on user preference.
-  // Previous code used 0, sticking to it.
   return new Intl.NumberFormat('es-AR', {
     style: 'currency',
     currency: 'ARS',
@@ -19,7 +16,7 @@ export const generateId = (): string => {
 // CSV Helpers
 
 export const exportToCSV = (data: WeekData, history: HistoryItem[] = []) => {
-  const headers = ['DayID', 'DayName', 'Type', 'Title', 'Amount', 'Metadata']; // Metadata for extra fields
+  const headers = ['DayID', 'DayName', 'Type', 'Title', 'Amount', 'Metadata']; 
   const rows: string[] = [headers.join(',')];
 
   // 1. Export Week Data
@@ -35,16 +32,16 @@ export const exportToCSV = (data: WeekData, history: HistoryItem[] = []) => {
     };
 
     addRows(day.incomes, 'incomes');
+    addRows(day.deliveries, 'deliveries'); // Export Deliveries
     addRows(day.expenses, 'expenses');
     addRows(day.toBox, 'toBox');
   });
 
-  // 2. Export History (Trash)
+  // 2. Export History
   if (history.length > 0) {
       rows.push(''); // Spacer
       rows.push('---HISTORY---');
       history.forEach(h => {
-          // Format: DayID, OriginalDayName (placeholder), HISTORY, Title, Amount, DeletedAt|OriginalType|OriginalDayId
           const metadata = `${h.deletedAt}|${h.originalType}|${h.originalDayId}`;
           rows.push(`${h.originalDayId},HISTORY,history,"${h.title.replace(/"/g, '""')}",${h.amount},"${metadata}"`);
       });
@@ -112,7 +109,6 @@ export const parseCSV = (csvText: string): { weekData: WeekData, history: Histor
 
     if (rows.length < 2) return null;
 
-    // Initialize structures
     const newState: WeekData = {};
     const newHistory: HistoryItem[] = [];
     
@@ -121,6 +117,7 @@ export const parseCSV = (csvText: string): { weekData: WeekData, history: Histor
         id: d.id,
         name: d.name,
         incomes: [],
+        deliveries: [], // Init deliveries
         expenses: [],
         toBox: []
       };
@@ -132,7 +129,6 @@ export const parseCSV = (csvText: string): { weekData: WeekData, history: Histor
       const cols = rows[i];
       if (cols.length === 0 || (cols.length === 1 && cols[0] === '')) continue;
       
-      // Check for section marker
       if (cols[0] && cols[0].includes('---HISTORY---')) {
           isHistorySection = true;
           continue;
@@ -146,7 +142,6 @@ export const parseCSV = (csvText: string): { weekData: WeekData, history: Histor
       const amount = parseFloat(amountStr) || 0;
 
       if (isHistorySection || cleanType === 'history') {
-          // Parse metadata for history items: deletedAt|originalType|originalDayId
           if (metadata) {
               const [deletedAt, originalType, originalDayId] = metadata.split('|');
               if (deletedAt && originalType) {
@@ -161,7 +156,6 @@ export const parseCSV = (csvText: string): { weekData: WeekData, history: Histor
               }
           }
       } else {
-          // Normal Data
           if (!newState[cleanDayId]) continue;
 
           if (cleanType === 'initial') {
@@ -176,6 +170,7 @@ export const parseCSV = (csvText: string): { weekData: WeekData, history: Histor
           };
 
           if (cleanType === 'incomes') newState[cleanDayId].incomes.push(transaction);
+          else if (cleanType === 'deliveries') newState[cleanDayId].deliveries.push(transaction); // Parse deliveries
           else if (cleanType === 'expenses') newState[cleanDayId].expenses.push(transaction);
           else if (cleanType === 'toBox') newState[cleanDayId].toBox.push(transaction);
       }

@@ -23,6 +23,7 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, his
   const getTypeLabel = (type: string) => {
     switch(type) {
       case 'incomes': return { label: 'Ingreso', color: 'text-emerald-400' };
+      case 'deliveries': return { label: 'Reparto', color: 'text-teal-400' };
       case 'expenses': return { label: 'Egreso', color: 'text-rose-400' };
       case 'toBox': return { label: 'A Caja', color: 'text-indigo-400' };
       default: return { label: 'Item', color: 'text-slate-400' };

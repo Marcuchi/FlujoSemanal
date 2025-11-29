@@ -16,6 +16,7 @@ const createInitialState = (): WeekData => {
       id: day.id,
       name: day.name,
       incomes: [],
+      deliveries: [], // Init deliveries
       expenses: [],
       toBox: [],
     };
@@ -47,6 +48,7 @@ const App: React.FC = () => {
               id: day.id,
               name: day.name,
               incomes: dayData.incomes || [],
+              deliveries: dayData.deliveries || [], // Load deliveries
               expenses: dayData.expenses || [],
               toBox: dayData.toBox || [],
               manualInitialAmount: dayData.manualInitialAmount
@@ -158,7 +160,6 @@ const App: React.FC = () => {
           localStorage.removeItem('history');
       }
       
-      // Reload to ensure clean slate
       window.location.reload();
     }
   };
@@ -190,10 +191,11 @@ const App: React.FC = () => {
     (acc, day) => {
       if (!day) return acc;
       const dayIncome = day.incomes?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
+      const dayDeliveries = day.deliveries?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
       const dayExpense = day.expenses?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
       const dayToBox = day.toBox?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
       return {
-        income: acc.income + dayIncome,
+        income: acc.income + dayIncome + dayDeliveries, // Include deliveries in income
         expense: acc.expense + dayExpense,
         toBox: acc.toBox + dayToBox,
       };
@@ -214,9 +216,12 @@ const App: React.FC = () => {
       
       if (data) {
         const income = data.incomes?.reduce((s, t) => s + (t.amount || 0), 0) || 0;
+        const deliveries = data.deliveries?.reduce((s, t) => s + (t.amount || 0), 0) || 0;
         const expense = data.expenses?.reduce((s, t) => s + (t.amount || 0), 0) || 0;
         const toBox = data.toBox?.reduce((s, t) => s + (t.amount || 0), 0) || 0;
-        currentBalance = effectiveInitial + income - expense - toBox;
+        
+        // Include deliveries in running balance calculation
+        currentBalance = effectiveInitial + income + deliveries - expense - toBox;
       }
     }
     return balances;
