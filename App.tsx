@@ -1,10 +1,11 @@
 import React from 'react';
-import { Download, Upload, RotateCcw } from 'lucide-react';
+import { Download, Upload, RotateCcw, PieChart as PieChartIcon } from 'lucide-react';
 import { ref, onValue, set } from 'firebase/database';
 import { db } from './firebaseConfig';
 import { DAYS_OF_WEEK, WeekData, DayData } from './types';
 import { DayCard } from './components/DayCard';
 import { Summary } from './components/Summary';
+import { WeeklyReportModal } from './components/WeeklyReportModal';
 import { exportToCSV, parseCSV } from './utils';
 
 // Initial state creator
@@ -25,45 +26,86 @@ const createInitialState = (): WeekData => {
 const App: React.FC = () => {
   const [weekData, setWeekData] = React.useState<WeekData>(createInitialState());
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [isOfflineMode, setIsOfflineMode] = React.useState(false);
+  const [showReport, setShowReport] = React.useState(false);
 
-  // Conexión a Firebase (Suscripción a cambios en tiempo real)
+  // Data Loading Effect (Hybrid: Cloud or Local)
   React.useEffect(() => {
-    const dataRef = ref(db, 'weekData');
-    
-    const unsubscribe = onValue(dataRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        // Firebase no guarda arrays vacíos, así que debemos "hidratar" los datos
-        // para asegurar que incomes, expenses y toBox sean siempre arrays
-        const sanitizedData: WeekData = {};
-        DAYS_OF_WEEK.forEach((day) => {
-          const dayData = data[day.id] || {};
-          sanitizedData[day.id] = {
-            id: day.id,
-            name: day.name,
-            incomes: dayData.incomes || [],
-            expenses: dayData.expenses || [],
-            toBox: dayData.toBox || [],
-            manualInitialAmount: dayData.manualInitialAmount // Puede ser undefined
-          };
-        });
-        setWeekData(sanitizedData);
-      } else {
-        // Si no hay datos en la DB (primera vez), inicializamos
-        const initial = createInitialState();
-        set(ref(db, 'weekData'), initial);
-        setWeekData(initial);
-      }
-    });
+    if (db) {
+      // --- MODO NUBE (Firebase) ---
+      const dataRef = ref(db, 'weekData');
+      
+      const unsubscribe = onValue(dataRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          const sanitizedData: WeekData = {};
+          DAYS_OF_WEEK.forEach((day) => {
+            const dayData = data[day.id] || {};
+            sanitizedData[day.id] = {
+              id: day.id,
+              name: day.name,
+              incomes: dayData.incomes || [],
+              expenses: dayData.expenses || [],
+              toBox: dayData.toBox || [],
+              manualInitialAmount: dayData.manualInitialAmount
+            };
+          });
+          setWeekData(sanitizedData);
+        } else {
+          // Inicializar DB si está vacía
+          const initial = createInitialState();
+          // Limpiamos undefined antes de guardar
+          set(ref(db, 'weekData'), JSON.parse(JSON.stringify(initial)));
+          setWeekData(initial);
+        }
+      }, (error) => {
+        console.error("Error leyendo Firebase:", error);
+        // Fallback opcional si falla la lectura a pesar de tener objeto db
+      });
 
-    return () => unsubscribe();
+      return () => unsubscribe();
+    } else {
+      // --- MODO LOCAL (LocalStorage) ---
+      setIsOfflineMode(true);
+      const saved = localStorage.getItem('weekData');
+      if (saved) {
+        try {
+          setWeekData(JSON.parse(saved));
+        } catch (e) {
+          console.error("Error parsing local storage", e);
+        }
+      }
+    }
   }, []);
 
+  // Helper para guardar datos (abstrae la lógica Nube vs Local)
+  const saveWeekData = (newData: WeekData) => {
+    if (db) {
+      // Guardar en Firebase
+      // IMPORTANTE: Firebase SDK lanza error crítico si encuentra valores 'undefined'.
+      // JSON.stringify elimina automáticamente las claves con valor undefined.
+      // JSON.parse reconstruye el objeto limpio y seguro para enviar.
+      const cleanData = JSON.parse(JSON.stringify(newData));
+
+      set(ref(db, 'weekData'), cleanData).catch(err => {
+        console.error("Error guardando en Firebase", err);
+      });
+      // Actualizamos estado local optimísticamente
+      setWeekData(newData); 
+    } else {
+      // Guardar en LocalStorage
+      setWeekData(newData);
+      localStorage.setItem('weekData', JSON.stringify(newData));
+    }
+  };
+
   const handleUpdateDay = (updatedDay: DayData) => {
-    // Actualización optimista y envío a Firebase
-    // Nota: Firebase actualizará el estado local a través del listener onValue, 
-    // pero escribir directamente es seguro.
-    set(ref(db, `weekData/${updatedDay.id}`), updatedDay);
+    // Calculamos el nuevo estado completo basado en el estado anterior
+    const newWeekData = {
+      ...weekData,
+      [updatedDay.id]: updatedDay
+    };
+    saveWeekData(newWeekData);
   };
 
   const handleExport = () => {
@@ -71,12 +113,14 @@ const App: React.FC = () => {
   };
 
   const handleReset = () => {
-    if (window.confirm("¿Estás seguro de reiniciar toda la semana? Esto borrará todos los datos para TODOS los usuarios.")) {
+    const msg = db 
+      ? "¿Estás seguro de reiniciar la semana? Esto borrará los datos en la NUBE para todos." 
+      : "¿Estás seguro de reiniciar la semana? Esto borrará los datos LOCALES.";
+      
+    if (window.confirm(msg)) {
       const emptyState = createInitialState();
-      set(ref(db, 'weekData'), emptyState).then(() => {
-        if (fileInputRef.current) fileInputRef.current.value = '';
-        // No necesitamos reload con Firebase, la actualización es reactiva
-      });
+      saveWeekData(emptyState);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -93,13 +137,16 @@ const App: React.FC = () => {
       const text = event.target?.result as string;
       const parsedData = parseCSV(text);
       if (parsedData) {
-        if (window.confirm('Esto sobrescribirá los datos actuales en la nube. ¿Deseas continuar?')) {
-          set(ref(db, 'weekData'), parsedData);
+        const msg = db 
+          ? 'Esto sobrescribirá los datos actuales en la NUBE. ¿Continuar?' 
+          : 'Esto sobrescribirá los datos LOCALES. ¿Continuar?';
+          
+        if (window.confirm(msg)) {
+          saveWeekData(parsedData);
         }
       } else {
         alert('Error al leer el archivo CSV. Verifique el formato.');
       }
-      // Clear input so same file can be selected again
       if (fileInputRef.current) fileInputRef.current.value = '';
     };
     reader.readAsText(file);
@@ -153,6 +200,12 @@ const App: React.FC = () => {
         className="hidden" 
       />
 
+      <WeeklyReportModal 
+        isOpen={showReport} 
+        onClose={() => setShowReport(false)} 
+        weekData={weekData} 
+      />
+
       {/* Header */}
       <header className="bg-slate-900 border-b border-slate-800 shadow-md flex-none z-20">
         <div className="max-w-full px-4 py-3">
@@ -168,7 +221,10 @@ const App: React.FC = () => {
                 }}
               />
               <div>
-                <h1 className="text-xl font-bold text-slate-100 leading-tight">Flujo<span className="text-indigo-400">Semanal</span></h1>
+                <h1 className="text-xl font-bold text-slate-100 leading-tight flex items-center gap-2">
+                  Flujo<span className="text-indigo-400">Semanal</span>
+                  {isOfflineMode && <span className="text-[10px] bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded ml-2 border border-slate-600">MODO LOCAL</span>}
+                </h1>
                 <p className="text-xs text-slate-400 hidden sm:block">Avícola Alpina</p>
               </div>
             </div>
@@ -183,6 +239,15 @@ const App: React.FC = () => {
             </div>
             
             <div className="flex items-center gap-2 flex-shrink-0">
+              <button 
+                type="button"
+                onClick={() => setShowReport(true)}
+                className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-100 bg-indigo-600 hover:bg-indigo-500 rounded-lg transition-colors shadow-sm shadow-indigo-900/50"
+              >
+                <PieChartIcon size={14} />
+                <span className="hidden lg:inline">Informe Semanal</span>
+              </button>
+
               <button 
                 type="button"
                 onClick={handleImportClick}
