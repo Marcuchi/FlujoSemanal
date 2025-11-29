@@ -1,14 +1,14 @@
 import React from 'react';
-import { Download, Upload, RotateCcw, PieChart as PieChartIcon } from 'lucide-react';
+import { Download, Upload, RotateCcw, PieChart as PieChartIcon, History } from 'lucide-react';
 import { ref, onValue, set } from 'firebase/database';
 import { db } from './firebaseConfig';
-import { DAYS_OF_WEEK, WeekData, DayData } from './types';
+import { DAYS_OF_WEEK, WeekData, DayData, HistoryItem } from './types';
 import { DayCard } from './components/DayCard';
 import { Summary } from './components/Summary';
 import { WeeklyReportModal } from './components/WeeklyReportModal';
+import { HistoryModal } from './components/HistoryModal';
 import { exportToCSV, parseCSV } from './utils';
 
-// Initial state creator
 const createInitialState = (): WeekData => {
   const state: WeekData = {};
   DAYS_OF_WEEK.forEach((day) => {
@@ -25,18 +25,19 @@ const createInitialState = (): WeekData => {
 
 const App: React.FC = () => {
   const [weekData, setWeekData] = React.useState<WeekData>(createInitialState());
+  const [history, setHistory] = React.useState<HistoryItem[]>([]);
+  
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [isOfflineMode, setIsOfflineMode] = React.useState(false);
   const [showReport, setShowReport] = React.useState(false);
+  const [showHistory, setShowHistory] = React.useState(false);
 
-  // Data Loading Effect (Hybrid: Cloud or Local)
+  // Data Loading Effect
   React.useEffect(() => {
     if (db) {
-      // --- MODO NUBE (Firebase) ---
-      // TypeScript doesn't narrow imported mutable variables, so we assert not null with !
-      const dataRef = ref(db!, 'weekData');
-      
-      const unsubscribe = onValue(dataRef, (snapshot) => {
+      // 1. Week Data Listener
+      const weekRef = ref(db!, 'weekData');
+      const unsubscribeWeek = onValue(weekRef, (snapshot) => {
         const data = snapshot.val();
         if (data) {
           const sanitizedData: WeekData = {};
@@ -53,80 +54,113 @@ const App: React.FC = () => {
           });
           setWeekData(sanitizedData);
         } else {
-          // Inicializar DB si está vacía
           const initial = createInitialState();
-          // Limpiamos undefined antes de guardar
           set(ref(db!, 'weekData'), JSON.parse(JSON.stringify(initial)));
           setWeekData(initial);
         }
-      }, (error) => {
-        console.error("Error leyendo Firebase:", error);
-        // Fallback opcional si falla la lectura a pesar de tener objeto db
       });
 
-      return () => unsubscribe();
+      // 2. History Listener
+      const historyRef = ref(db!, 'history');
+      const unsubscribeHistory = onValue(historyRef, (snapshot) => {
+          const data = snapshot.val();
+          setHistory(data || []);
+      });
+
+      return () => {
+        unsubscribeWeek();
+        unsubscribeHistory();
+      };
     } else {
-      // --- MODO LOCAL (LocalStorage) ---
+      // LocalStorage Fallback
       setIsOfflineMode(true);
       const saved = localStorage.getItem('weekData');
+      const savedHistory = localStorage.getItem('history');
       if (saved) {
         try {
           setWeekData(JSON.parse(saved));
-        } catch (e) {
-          console.error("Error parsing local storage", e);
-        }
+        } catch (e) { console.error(e); }
+      }
+      if (savedHistory) {
+         try {
+             setHistory(JSON.parse(savedHistory));
+         } catch (e) { console.error(e); }
       }
     }
   }, []);
 
-  // Helper para guardar datos (abstrae la lógica Nube vs Local)
   const saveWeekData = (newData: WeekData) => {
     if (db) {
-      // Guardar en Firebase
-      // IMPORTANTE: Firebase SDK lanza error crítico si encuentra valores 'undefined'.
-      // JSON.stringify elimina automáticamente las claves con valor undefined.
-      // JSON.parse reconstruye el objeto limpio y seguro para enviar.
       const cleanData = JSON.parse(JSON.stringify(newData));
-
-      set(ref(db!, 'weekData'), cleanData).catch(err => {
-        console.error("Error guardando en Firebase", err);
-      });
-      // Actualizamos estado local optimísticamente
+      set(ref(db!, 'weekData'), cleanData).catch(console.error);
       setWeekData(newData); 
     } else {
-      // Guardar en LocalStorage
       setWeekData(newData);
       localStorage.setItem('weekData', JSON.stringify(newData));
     }
   };
 
+  const saveHistory = (newHistory: HistoryItem[]) => {
+      if (db) {
+          const cleanHistory = JSON.parse(JSON.stringify(newHistory));
+          set(ref(db!, 'history'), cleanHistory).catch(console.error);
+          setHistory(newHistory);
+      } else {
+          setHistory(newHistory);
+          localStorage.setItem('history', JSON.stringify(newHistory));
+      }
+  };
+
   const handleUpdateDay = (updatedDay: DayData) => {
-    // Calculamos el nuevo estado completo basado en el estado anterior
-    const newWeekData = {
-      ...weekData,
-      [updatedDay.id]: updatedDay
-    };
+    const newWeekData = { ...weekData, [updatedDay.id]: updatedDay };
     saveWeekData(newWeekData);
   };
 
+  const handleAddToHistory = (item: HistoryItem) => {
+      const newHistory = [...history, item];
+      saveHistory(newHistory);
+  };
+
+  const handleRestoreHistory = (item: HistoryItem) => {
+      // 1. Remove from history
+      const newHistory = history.filter(i => i.id !== item.id);
+      saveHistory(newHistory);
+
+      // 2. Restore to Day
+      const { originalDayId, originalType, deletedAt, ...transaction } = item;
+      const day = weekData[originalDayId];
+      if (day) {
+          const newDay = { 
+              ...day, 
+              [originalType]: [...day[originalType], transaction] 
+          };
+          handleUpdateDay(newDay);
+      }
+  };
+
   const handleExport = () => {
-    exportToCSV(weekData);
+    exportToCSV(weekData, history);
   };
 
   const handleReset = () => {
     const msg = db 
-      ? "¿Estás seguro de reiniciar la semana? Esto borrará los datos en la NUBE para todos." 
+      ? "¿Estás seguro de reiniciar la semana? Esto borrará TODOS los datos (incluido historial) en la NUBE." 
       : "¿Estás seguro de reiniciar la semana? Esto borrará los datos LOCALES.";
       
     if (window.confirm(msg)) {
       const emptyState = createInitialState();
-      saveWeekData(emptyState);
-      if (fileInputRef.current) fileInputRef.current.value = '';
+      
+      if (db) {
+          set(ref(db!, 'weekData'), JSON.parse(JSON.stringify(emptyState)));
+          set(ref(db!, 'history'), []);
+      } else {
+          localStorage.removeItem('weekData');
+          localStorage.removeItem('history');
+      }
+      
+      // Reload to ensure clean slate
+      window.location.reload();
     }
-  };
-
-  const handleImportClick = () => {
-    fileInputRef.current?.click();
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -136,22 +170,21 @@ const App: React.FC = () => {
     const reader = new FileReader();
     reader.onload = (event) => {
       const text = event.target?.result as string;
-      const parsedData = parseCSV(text);
-      if (parsedData) {
-        const msg = db 
-          ? 'Esto sobrescribirá los datos actuales en la NUBE. ¿Continuar?' 
-          : 'Esto sobrescribirá los datos LOCALES. ¿Continuar?';
-          
-        if (window.confirm(msg)) {
-          saveWeekData(parsedData);
+      const result = parseCSV(text);
+      if (result) {
+        if (window.confirm('Esto sobrescribirá datos actuales. ¿Continuar?')) {
+          saveWeekData(result.weekData);
+          saveHistory(result.history);
         }
       } else {
-        alert('Error al leer el archivo CSV. Verifique el formato.');
+        alert('Error al leer el archivo CSV.');
       }
       if (fileInputRef.current) fileInputRef.current.value = '';
     };
     reader.readAsText(file);
   };
+
+  const handleImportClick = () => fileInputRef.current?.click();
 
   const totals = React.useMemo(() => (Object.values(weekData) as DayData[]).reduce(
     (acc, day) => {
@@ -177,14 +210,12 @@ const App: React.FC = () => {
     for (const day of DAYS_OF_WEEK) {
       const data = weekData[day.id];
       const effectiveInitial = data?.manualInitialAmount ?? currentBalance;
-      
       balances[day.id] = currentBalance;
       
       if (data) {
         const income = data.incomes?.reduce((s, t) => s + (t.amount || 0), 0) || 0;
         const expense = data.expenses?.reduce((s, t) => s + (t.amount || 0), 0) || 0;
         const toBox = data.toBox?.reduce((s, t) => s + (t.amount || 0), 0) || 0;
-        
         currentBalance = effectiveInitial + income - expense - toBox;
       }
     }
@@ -193,21 +224,11 @@ const App: React.FC = () => {
 
   return (
     <div className="h-screen bg-slate-950 flex flex-col overflow-hidden text-slate-100">
-      <input 
-        type="file" 
-        accept=".csv" 
-        ref={fileInputRef} 
-        onChange={handleFileChange} 
-        className="hidden" 
-      />
+      <input type="file" accept=".csv" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
 
-      <WeeklyReportModal 
-        isOpen={showReport} 
-        onClose={() => setShowReport(false)} 
-        weekData={weekData} 
-      />
+      <WeeklyReportModal isOpen={showReport} onClose={() => setShowReport(false)} weekData={weekData} />
+      <HistoryModal isOpen={showHistory} onClose={() => setShowHistory(false)} history={history} onRestore={handleRestoreHistory} />
 
-      {/* Header */}
       <header className="bg-slate-900 border-b border-slate-800 shadow-md flex-none z-20">
         <div className="max-w-full px-4 py-3">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -217,9 +238,7 @@ const App: React.FC = () => {
                 src="https://avicolaalpina.com.ar/wp-content/uploads/2025/04/logoCompleto0.png" 
                 alt="Avícola Alpina" 
                 className="h-12 w-auto rounded-lg bg-white p-1 shadow-md shadow-indigo-900/20"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = 'none';
-                }}
+                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
               />
               <div>
                 <h1 className="text-xl font-bold text-slate-100 leading-tight flex items-center gap-2">
@@ -231,12 +250,7 @@ const App: React.FC = () => {
             </div>
 
             <div className="flex-1 overflow-x-auto no-scrollbar mx-4">
-               <Summary 
-                totalIncome={totals.income}
-                totalExpense={totals.expense}
-                netTotal={netTotal}
-                totalToBox={totals.toBox}
-              />
+               <Summary totalIncome={totals.income} totalExpense={totals.expense} netTotal={netTotal} totalToBox={totals.toBox} />
             </div>
             
             <div className="flex items-center gap-2 flex-shrink-0">
@@ -251,27 +265,29 @@ const App: React.FC = () => {
 
               <button 
                 type="button"
-                onClick={handleImportClick}
-                className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 hover:text-white rounded-lg transition-colors border border-slate-700"
+                onClick={() => setShowHistory(true)}
+                className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 hover:text-white rounded-lg transition-colors border border-slate-700 relative"
               >
+                <History size={14} />
+                <span className="hidden lg:inline">Historial</span>
+                {history.length > 0 && (
+                    <span className="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-red-500 text-[8px] text-white">
+                        {history.length}
+                    </span>
+                )}
+              </button>
+
+              <button type="button" onClick={handleImportClick} className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 hover:text-white rounded-lg transition-colors border border-slate-700">
                 <Upload size={14} />
                 <span className="hidden lg:inline">Importar</span>
               </button>
 
-              <button 
-                type="button"
-                onClick={handleExport}
-                className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 hover:text-white rounded-lg transition-colors border border-slate-700"
-              >
+              <button type="button" onClick={handleExport} className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 hover:text-white rounded-lg transition-colors border border-slate-700">
                 <Download size={14} />
                 <span className="hidden lg:inline">Exportar</span>
               </button>
 
-              <button 
-                type="button"
-                onClick={handleReset}
-                className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-red-300 bg-red-950/30 hover:bg-red-900/50 hover:text-red-200 rounded-lg transition-colors border border-red-900/50"
-              >
+              <button type="button" onClick={handleReset} className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-red-300 bg-red-950/30 hover:bg-red-900/50 hover:text-red-200 rounded-lg transition-colors border border-red-900/50">
                 <RotateCcw size={14} />
                 <span className="hidden lg:inline">Reiniciar</span>
               </button>
@@ -280,7 +296,6 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      {/* Main Content - Horizontal Scroll */}
       <main className="flex-1 overflow-x-auto overflow-y-hidden bg-slate-950 p-4">
         <div className="flex h-full gap-4 min-w-max pb-2">
           {DAYS_OF_WEEK.map((dayDef) => (
@@ -289,6 +304,7 @@ const App: React.FC = () => {
               dayData={weekData[dayDef.id]}
               onUpdate={handleUpdateDay}
               previousBalance={runningBalances[dayDef.id]}
+              onAddToHistory={handleAddToHistory}
             />
           ))}
         </div>

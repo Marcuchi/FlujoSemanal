@@ -1,24 +1,23 @@
 import React from 'react';
 import { Plus, Archive, TrendingUp, TrendingDown, Briefcase, History, Wallet, RotateCcw, Edit2, Check, X } from 'lucide-react';
-import { DayData, Transaction, TransactionType } from '../types';
+import { DayData, Transaction, TransactionType, HistoryItem } from '../types';
 import { TransactionItem } from './TransactionItem';
 import { formatCurrency, generateId } from '../utils';
 
 interface DayCardProps {
   dayData: DayData;
   onUpdate: (updatedDay: DayData) => void;
-  previousBalance: number; // This is the automatic calculated balance from prev day
+  previousBalance: number;
+  onAddToHistory: (item: HistoryItem) => void;
 }
 
-export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBalance = 0 }) => {
+export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBalance = 0, onAddToHistory }) => {
   
-  // Guard clause to prevent crashes if data is missing
   if (!dayData) return null;
 
   const [isEditingInitial, setIsEditingInitial] = React.useState(false);
   const [tempInitial, setTempInitial] = React.useState('');
   
-  // Determine if we are using a manual override or the automatic calculation
   const isManualInitial = dayData.manualInitialAmount !== undefined;
   const effectiveInitialAmount = isManualInitial ? dayData.manualInitialAmount! : previousBalance;
 
@@ -45,13 +44,28 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
     onUpdate({ ...dayData, [type]: updatedList });
   };
 
-  const handleRemoveTransaction = (type: TransactionType, id:string) => {
+  const handleRemoveTransaction = (type: TransactionType, id: string) => {
+    // Find item before deleting to add to history
+    const itemToRemove = dayData[type].find(t => t.id === id);
+    
+    // Only add to history if it's not a "ghost" empty item (amount 0 and empty title) created by mistake
+    const isGhost = itemToRemove && itemToRemove.amount === 0 && (itemToRemove.title === '' || (type === 'toBox' && itemToRemove.title === 'Caja'));
+
+    if (itemToRemove && !isGhost) {
+      const historyItem: HistoryItem = {
+        ...itemToRemove,
+        deletedAt: new Date().toISOString(),
+        originalDayId: dayData.id,
+        originalType: type
+      };
+      onAddToHistory(historyItem);
+    }
+
     const updatedList = dayData[type].filter((t) => t.id !== id);
     onUpdate({ ...dayData, [type]: updatedList });
   };
 
   const saveInitialAmount = () => {
-    // Parse formatted string: remove dots, keep negatives if any (though logic below restricts to positive)
     const val = parseFloat(tempInitial.replace(/\./g, '').replace(/,/g, '.'));
     if (!isNaN(val)) {
       onUpdate({ ...dayData, manualInitialAmount: val });
@@ -64,7 +78,6 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
   };
 
   const startEditingInitial = () => {
-    // Format existing amount when starting edit
     const formatted = new Intl.NumberFormat('es-AR').format(effectiveInitialAmount);
     setTempInitial(formatted);
     setIsEditingInitial(true);
@@ -72,7 +85,6 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
 
   const handleInitialChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
-    // Strict positive for Initial Amount based on request "solo el A CAJA debe permitir negativos"
     const digits = val.replace(/\D/g, ''); 
     
     if (digits === '') {
@@ -82,7 +94,6 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
 
     const numVal = parseInt(digits, 10);
     if (!isNaN(numVal)) {
-      // Format with thousands separators
       const formatted = new Intl.NumberFormat('es-AR').format(numVal);
       setTempInitial(formatted);
     }
@@ -111,7 +122,6 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
 
   return (
     <section className="bg-slate-900 rounded-xl shadow-lg border border-slate-800 flex flex-col w-[340px] h-full overflow-hidden flex-shrink-0">
-      {/* Day Header */}
       <div className="p-3 bg-slate-900 border-b border-slate-800 flex-none relative">
         <div className="flex justify-between items-center mb-3">
           <h2 className="text-lg font-bold text-slate-100 uppercase tracking-wide flex-1 pl-1">{dayData.name}</h2>
@@ -122,10 +132,8 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
         </div>
       </div>
 
-      {/* Content Columns - Scrollable Area */}
       <div className="flex-1 overflow-y-auto p-3 space-y-3 bg-slate-950 custom-scrollbar">
         
-        {/* Initial Amount Section */}
         <div className="rounded-lg bg-slate-800/40 border border-slate-700/50 overflow-hidden shadow-sm">
            <div className="flex justify-between items-center px-3 py-2 bg-slate-800 border-b border-slate-700">
              <h3 className="font-bold text-xs text-slate-300 uppercase flex items-center gap-1.5 tracking-wider">
@@ -172,7 +180,6 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
            </div>
         </div>
 
-        {/* Incomes Container */}
         <div className="rounded-lg bg-emerald-950/40 border border-emerald-900/50 overflow-hidden shadow-sm">
           <div className="flex justify-between items-center px-3 py-2 bg-emerald-950 border-b border-emerald-900">
             <h3 className="font-bold text-xs text-emerald-200 uppercase flex items-center gap-1.5 tracking-wider">
@@ -189,7 +196,6 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
           </div>
         </div>
 
-        {/* Expenses Container */}
         <div className="rounded-lg bg-rose-950/40 border border-rose-900/50 overflow-hidden shadow-sm">
           <div className="flex justify-between items-center px-3 py-2 bg-rose-950 border-b border-rose-900">
             <h3 className="font-bold text-xs text-rose-200 uppercase flex items-center gap-1.5 tracking-wider">
@@ -206,7 +212,6 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
           </div>
         </div>
 
-        {/* To Box Container */}
         <div className="rounded-lg bg-indigo-950/40 border border-indigo-900/50 overflow-hidden shadow-sm">
           <div className="flex justify-between items-center px-3 py-2 bg-indigo-950 border-b border-indigo-900">
             <h3 className="font-bold text-xs text-indigo-200 uppercase flex items-center gap-1.5 tracking-wider">

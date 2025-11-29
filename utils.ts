@@ -1,6 +1,9 @@
-import { WeekData, DAYS_OF_WEEK, DayData, Transaction, TransactionType } from './types';
+import { WeekData, DAYS_OF_WEEK, DayData, Transaction, TransactionType, HistoryItem } from './types';
 
 export const formatCurrency = (value: number): string => {
+  // Use 'es-AR' or 'es-ES' but force no fraction digits if integers are preferred
+  // Using 2 fraction digits standard for currency, or 0 based on user preference.
+  // Previous code used 0, sticking to it.
   return new Intl.NumberFormat('es-AR', {
     style: 'currency',
     currency: 'ARS',
@@ -15,32 +18,39 @@ export const generateId = (): string => {
 
 // CSV Helpers
 
-export const exportToCSV = (data: WeekData) => {
-  const headers = ['DayID', 'DayName', 'Type', 'Title', 'Amount'];
+export const exportToCSV = (data: WeekData, history: HistoryItem[] = []) => {
+  const headers = ['DayID', 'DayName', 'Type', 'Title', 'Amount', 'Metadata']; // Metadata for extra fields
   const rows: string[] = [headers.join(',')];
 
+  // 1. Export Week Data
   Object.values(data).forEach((day) => {
-    // Process Manual Initial Amount if exists
     if (day.manualInitialAmount !== undefined) {
-       rows.push(`${day.id},${day.name},initial,"Monto Inicial Manual",${day.manualInitialAmount}`);
+       rows.push(`${day.id},${day.name},initial,"Monto Inicial Manual",${day.manualInitialAmount},`);
     }
 
-    // Process Incomes
-    day.incomes.forEach(t => {
-      rows.push(`${day.id},${day.name},incomes,"${t.title.replace(/"/g, '""')}",${t.amount}`);
-    });
-    // Process Expenses
-    day.expenses.forEach(t => {
-      rows.push(`${day.id},${day.name},expenses,"${t.title.replace(/"/g, '""')}",${t.amount}`);
-    });
-    // Process ToBox
-    day.toBox.forEach(t => {
-      rows.push(`${day.id},${day.name},toBox,"${t.title.replace(/"/g, '""')}",${t.amount}`);
-    });
+    const addRows = (list: Transaction[], type: string) => {
+        list.forEach(t => {
+            rows.push(`${day.id},${day.name},${type},"${t.title.replace(/"/g, '""')}",${t.amount},`);
+        });
+    };
+
+    addRows(day.incomes, 'incomes');
+    addRows(day.expenses, 'expenses');
+    addRows(day.toBox, 'toBox');
   });
 
+  // 2. Export History (Trash)
+  if (history.length > 0) {
+      rows.push(''); // Spacer
+      rows.push('---HISTORY---');
+      history.forEach(h => {
+          // Format: DayID, OriginalDayName (placeholder), HISTORY, Title, Amount, DeletedAt|OriginalType|OriginalDayId
+          const metadata = `${h.deletedAt}|${h.originalType}|${h.originalDayId}`;
+          rows.push(`${h.originalDayId},HISTORY,history,"${h.title.replace(/"/g, '""')}",${h.amount},"${metadata}"`);
+      });
+  }
+
   const csvContent = rows.join("\n");
-  // Add BOM for Excel UTF-8 compatibility
   const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
   
   const link = document.createElement("a");
@@ -55,15 +65,13 @@ export const exportToCSV = (data: WeekData) => {
   document.body.removeChild(link);
 };
 
-export const parseCSV = (csvText: string): WeekData | null => {
+export const parseCSV = (csvText: string): { weekData: WeekData, history: HistoryItem[] } | null => {
   try {
-    // Robust CSV parser state machine
     const rows: string[][] = [];
     let currentRow: string[] = [];
     let currentField = '';
     let inQuotes = false;
     
-    // Normalize newlines
     const text = csvText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
     for (let i = 0; i < text.length; i++) {
@@ -73,11 +81,9 @@ export const parseCSV = (csvText: string): WeekData | null => {
       if (inQuotes) {
         if (char === '"') {
           if (nextChar === '"') {
-            // Escaped quote
             currentField += '"';
-            i++; // Skip next quote
+            i++; 
           } else {
-            // End of quotes
             inQuotes = false;
           }
         } else {
@@ -99,16 +105,17 @@ export const parseCSV = (csvText: string): WeekData | null => {
         }
       }
     }
-    // Push last row if exists
     if (currentField || currentRow.length > 0) {
       currentRow.push(currentField);
       rows.push(currentRow);
     }
 
-    if (rows.length < 2) return null; // Header + 1 row minimum
+    if (rows.length < 2) return null;
 
-    // Initialize empty structure
+    // Initialize structures
     const newState: WeekData = {};
+    const newHistory: HistoryItem[] = [];
+    
     DAYS_OF_WEEK.forEach(d => {
       newState[d.id] = {
         id: d.id,
@@ -119,38 +126,61 @@ export const parseCSV = (csvText: string): WeekData | null => {
       };
     });
 
-    // Skip header (index 0)
+    let isHistorySection = false;
+
     for (let i = 1; i < rows.length; i++) {
       const cols = rows[i];
-      if (cols.length < 5) continue;
-
-      const [dayId, , type, title, amountStr] = cols;
+      if (cols.length === 0 || (cols.length === 1 && cols[0] === '')) continue;
       
-      // Clean up inputs just in case
-      const cleanDayId = dayId.trim();
-      const cleanType = type.trim();
-      // Only parse if dayId is valid
-      if (!newState[cleanDayId]) continue;
-
-      const amount = parseFloat(amountStr) || 0;
-
-      // Handle Initial Amount special case
-      if (cleanType === 'initial') {
-        newState[cleanDayId].manualInitialAmount = amount;
-        continue;
+      // Check for section marker
+      if (cols[0] && cols[0].includes('---HISTORY---')) {
+          isHistorySection = true;
+          continue;
       }
 
-      const transaction: Transaction = {
-        id: generateId() + Math.random().toString(36).substring(2), // Ensure unique ID on import
-        title: title, // Parser handles unquoting
-        amount: amount
-      };
+      if (cols.length < 5) continue;
 
-      if (cleanType === 'incomes') newState[cleanDayId].incomes.push(transaction);
-      else if (cleanType === 'expenses') newState[cleanDayId].expenses.push(transaction);
-      else if (cleanType === 'toBox') newState[cleanDayId].toBox.push(transaction);
+      const [dayId, , type, title, amountStr, metadata] = cols;
+      const cleanDayId = dayId.trim();
+      const cleanType = type.trim();
+      const amount = parseFloat(amountStr) || 0;
+
+      if (isHistorySection || cleanType === 'history') {
+          // Parse metadata for history items: deletedAt|originalType|originalDayId
+          if (metadata) {
+              const [deletedAt, originalType, originalDayId] = metadata.split('|');
+              if (deletedAt && originalType) {
+                  newHistory.push({
+                      id: generateId() + Math.random().toString(36).substring(2),
+                      title: title,
+                      amount: amount,
+                      deletedAt: deletedAt,
+                      originalType: originalType as TransactionType,
+                      originalDayId: originalDayId || cleanDayId
+                  });
+              }
+          }
+      } else {
+          // Normal Data
+          if (!newState[cleanDayId]) continue;
+
+          if (cleanType === 'initial') {
+            newState[cleanDayId].manualInitialAmount = amount;
+            continue;
+          }
+
+          const transaction: Transaction = {
+            id: generateId() + Math.random().toString(36).substring(2),
+            title: title,
+            amount: amount
+          };
+
+          if (cleanType === 'incomes') newState[cleanDayId].incomes.push(transaction);
+          else if (cleanType === 'expenses') newState[cleanDayId].expenses.push(transaction);
+          else if (cleanType === 'toBox') newState[cleanDayId].toBox.push(transaction);
+      }
     }
-    return newState;
+    return { weekData: newState, history: newHistory };
   } catch (error) {
     console.error("Error parsing CSV", error);
     return null;

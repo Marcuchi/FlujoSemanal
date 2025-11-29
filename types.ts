@@ -15,6 +15,12 @@ export interface DayData {
 
 export type TransactionType = 'incomes' | 'expenses' | 'toBox';
 
+export interface HistoryItem extends Transaction {
+  deletedAt: string; // ISO Date string
+  originalDayId: string;
+  originalType: TransactionType;
+}
+
 export type WeekData = Record<string, DayData>;
 
 export const DAYS_OF_WEEK = [
