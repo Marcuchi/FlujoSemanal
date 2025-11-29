@@ -39,12 +39,17 @@ export const exportToCSV = (data: WeekData) => {
     });
   });
 
-  const csvContent = "data:text/csv;charset=utf-8," + rows.join("\n");
-  const encodedUri = encodeURI(csvContent);
+  const csvContent = rows.join("\n");
+  // Add BOM for Excel UTF-8 compatibility
+  const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+  
   const link = document.createElement("a");
-  link.setAttribute("href", encodedUri);
+  const url = URL.createObjectURL(blob);
+  link.setAttribute("href", url);
+  
   const dateStr = new Date().toISOString().slice(0, 10);
   link.setAttribute("download", `flujo_semanal_${dateStr}.csv`);
+  
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
