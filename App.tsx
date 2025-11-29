@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { Download, Upload, PieChart as PieChartIcon, History, ChevronLeft, ChevronRight, Calendar, Menu, LayoutGrid, Scale } from 'lucide-react';
+import { Download, Upload, PieChart as PieChartIcon, History, ChevronLeft, ChevronRight, Calendar, Menu, LayoutGrid, Scale, BookUser } from 'lucide-react';
 import { ref, onValue, set, get, child } from 'firebase/database';
 import { db } from './firebaseConfig';
 import { DAYS_OF_WEEK, WeekData, DayData, HistoryItem, AppMode } from './types';
@@ -10,6 +11,7 @@ import { HistoryModal } from './components/HistoryModal';
 import { WeekPickerModal } from './components/WeekPickerModal';
 import { MenuModal } from './components/MenuModal';
 import { KilosApp } from './components/KilosApp';
+import { CurrentAccountsApp } from './components/CurrentAccountsApp';
 import { exportToCSV, parseCSV, getWeekKey, getWeekRangeLabel, addWeeks, getMonday } from './utils';
 
 const createInitialState = (): WeekData => {
@@ -350,6 +352,16 @@ const App: React.FC = () => {
     setShowWeekPicker(false);
   };
 
+  const getHeaderContent = () => {
+      if (currentApp === 'KILOS') {
+          return <>Control<span className="text-orange-400">Kilos</span></>;
+      }
+      if (currentApp === 'CC') {
+          return <>Cuentas<span className="text-emerald-400">Corrientes</span></>;
+      }
+      return <>Flujo<span className="text-indigo-400">Semanal</span></>;
+  };
+
   const Header = () => (
       <header className="bg-slate-900 border-b border-slate-800 shadow-md flex-none z-20">
         <div className="max-w-full px-4 py-3">
@@ -359,16 +371,12 @@ const App: React.FC = () => {
               <img 
                 src="https://avicolaalpina.com.ar/wp-content/uploads/2025/04/logoCompleto0.png" 
                 alt="Avícola Alpina" 
-                className={`h-12 w-auto object-contain transition-all ${currentApp === 'KILOS' ? 'grayscale opacity-80' : ''}`}
+                className={`h-12 w-auto object-contain transition-all ${currentApp !== 'FLOW' ? 'grayscale opacity-80' : ''}`}
                 onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
               />
               <div>
                 <h1 className="text-xl font-bold text-slate-100 leading-tight flex items-center gap-2">
-                  {currentApp === 'FLOW' ? (
-                      <>Flujo<span className="text-indigo-400">Semanal</span></>
-                  ) : (
-                      <>Control<span className="text-orange-400">Kilos</span></>
-                  )}
+                  {getHeaderContent()}
                   {isOfflineMode && <span className="text-[10px] bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded ml-2 border border-slate-600">MODO LOCAL</span>}
                 </h1>
                 <p className="text-xs text-slate-400 hidden sm:block">Avícola Alpina</p>
@@ -381,7 +389,7 @@ const App: React.FC = () => {
                 </div>
             )}
             
-            {currentApp === 'KILOS' && <div className="flex-1"></div>}
+            {currentApp !== 'FLOW' && <div className="flex-1"></div>}
             
             <div className="flex items-center gap-2 flex-shrink-0">
               
@@ -449,49 +457,51 @@ const App: React.FC = () => {
       <Header />
 
       {/* Week Navigation Bar (Shared) */}
-      <div className="bg-slate-900/80 border-b border-slate-800 flex items-center justify-center py-2 relative z-10 backdrop-blur-sm flex-none">
-        <div className="flex items-center gap-6 bg-slate-800/50 px-4 py-1.5 rounded-full border border-slate-700/50 relative">
-            <button 
-                onClick={handlePrevWeek}
-                className="p-1 hover:bg-slate-700 rounded-full text-slate-400 hover:text-white transition-colors"
-                title="Semana Anterior"
-            >
-                <ChevronLeft size={20} />
-            </button>
-            
-            <button 
-                onClick={() => setShowWeekPicker(!showWeekPicker)}
-                className="flex items-center gap-2 text-sm font-medium text-slate-200 hover:text-white px-2 py-1 rounded hover:bg-slate-700/50 transition-colors"
-            >
-                <Calendar size={14} className={currentApp === 'FLOW' ? "text-indigo-400" : "text-orange-400"} />
-                <span>{getWeekRangeLabel(currentDate)}</span>
-            </button>
-            
-            <WeekPickerModal 
-               isOpen={showWeekPicker} 
-               onClose={() => setShowWeekPicker(false)} 
-               currentDate={currentDate}
-               onSelectDate={handleDateSelect}
-            />
+      {currentApp !== 'CC' && (
+        <div className="bg-slate-900/80 border-b border-slate-800 flex items-center justify-center py-2 relative z-50 backdrop-blur-sm flex-none">
+          <div className="flex items-center gap-6 bg-slate-800/50 px-4 py-1.5 rounded-full border border-slate-700/50 relative">
+              <button 
+                  onClick={handlePrevWeek}
+                  className="p-1 hover:bg-slate-700 rounded-full text-slate-400 hover:text-white transition-colors"
+                  title="Semana Anterior"
+              >
+                  <ChevronLeft size={20} />
+              </button>
+              
+              <button 
+                  onClick={() => setShowWeekPicker(!showWeekPicker)}
+                  className="flex items-center gap-2 text-sm font-medium text-slate-200 hover:text-white px-2 py-1 rounded hover:bg-slate-700/50 transition-colors"
+              >
+                  <Calendar size={14} className={currentApp === 'FLOW' ? "text-indigo-400" : (currentApp === 'KILOS' ? "text-orange-400" : "text-emerald-400")} />
+                  <span>{getWeekRangeLabel(currentDate)}</span>
+              </button>
+              
+              <WeekPickerModal 
+                isOpen={showWeekPicker} 
+                onClose={() => setShowWeekPicker(false)} 
+                currentDate={currentDate}
+                onSelectDate={handleDateSelect}
+              />
 
-            <button 
-                onClick={handleNextWeek}
-                className="p-1 hover:bg-slate-700 rounded-full text-slate-400 hover:text-white transition-colors"
-                title="Siguiente Semana"
-            >
-                <ChevronRight size={20} />
-            </button>
+              <button 
+                  onClick={handleNextWeek}
+                  className="p-1 hover:bg-slate-700 rounded-full text-slate-400 hover:text-white transition-colors"
+                  title="Siguiente Semana"
+              >
+                  <ChevronRight size={20} />
+              </button>
+          </div>
         </div>
-      </div>
+      )}
 
       <main className="flex-1 overflow-hidden relative">
         {loading && (
              <div className="absolute inset-0 bg-slate-950/80 z-50 flex items-center justify-center">
-                 <div className={`w-8 h-8 border-4 border-t-transparent rounded-full animate-spin ${currentApp === 'FLOW' ? 'border-indigo-500' : 'border-orange-500'}`}></div>
+                 <div className={`w-8 h-8 border-4 border-t-transparent rounded-full animate-spin ${currentApp === 'FLOW' ? 'border-indigo-500' : 'border-emerald-500'}`}></div>
              </div>
         )}
         
-        {currentApp === 'FLOW' ? (
+        {currentApp === 'FLOW' && (
             <div className="flex h-full gap-4 min-w-max pb-2 p-4 overflow-x-auto">
               {DAYS_OF_WEEK.map((dayDef) => (
                 <DayCard
@@ -503,8 +513,14 @@ const App: React.FC = () => {
                 />
               ))}
             </div>
-        ) : (
+        )}
+
+        {currentApp === 'KILOS' && (
             <KilosApp db={db} weekKey={currentWeekKey} />
+        )}
+
+        {currentApp === 'CC' && (
+            <CurrentAccountsApp db={db} />
         )}
       </main>
     </div>

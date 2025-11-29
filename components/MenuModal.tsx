@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { X, LayoutGrid, RotateCcw, ArrowRight, Scale } from 'lucide-react';
+import { X, LayoutGrid, RotateCcw, ArrowRight, Scale, BookUser } from 'lucide-react';
 import { AppMode } from '../types';
 
 interface MenuModalProps {
@@ -91,6 +92,36 @@ export const MenuModal: React.FC<MenuModalProps> = ({ isOpen, onClose, onReset, 
                 </div>
               )}
             </button>
+
+            {/* Cuentas Corrientes App */}
+            <button 
+              onClick={() => handleAppClick('CC')}
+              className={`group flex items-center justify-between p-4 rounded-xl border transition-all ${
+                currentApp === 'CC' 
+                  ? 'bg-emerald-600/10 border-emerald-500/50 hover:bg-emerald-600/20' 
+                  : 'bg-slate-800/40 border-slate-700/50 hover:bg-slate-800 hover:border-slate-600'
+              }`}
+            >
+              <div className="flex items-center gap-4">
+                <div className={`p-3 rounded-lg shadow-lg ${currentApp === 'CC' ? 'bg-emerald-600 text-white shadow-emerald-900/50' : 'bg-slate-700 text-slate-400'}`}>
+                  <BookUser size={24} />
+                </div>
+                <div className="text-left">
+                  <h3 className={`font-bold transition-colors ${currentApp === 'CC' ? 'text-white' : 'text-slate-300 group-hover:text-white'}`}>Cuentas Corrientes</h3>
+                  <p className="text-xs text-slate-400">Nico, Amilcar, Alexis, Oviedo, Bravo</p>
+                </div>
+              </div>
+              {currentApp === 'CC' && (
+                <div className="flex items-center gap-2 text-emerald-400 text-xs font-semibold px-2 py-1 bg-emerald-950/50 rounded border border-emerald-900/50">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
+                  ACTIVO
+                </div>
+              )}
+            </button>
+
           </div>
 
           <div className="mt-8 pt-6 border-t border-slate-800">

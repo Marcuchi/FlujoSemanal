@@ -69,7 +69,24 @@ export interface KilosDayData {
 
 export type KilosWeekData = Record<string, KilosDayData>;
 
-export type AppMode = 'FLOW' | 'KILOS';
+// --- CURRENT ACCOUNTS (CC) TYPES ---
+
+export interface CCTransaction {
+  id: string;
+  date: string; // YYYY-MM-DD
+  description: string;
+  delivery: number; // Entrega (Paga)
+  debit: number;    // Debe (Saca/Deuda aumenta)
+}
+
+export interface CCAccountData {
+  initialBalance: number;
+  transactions: CCTransaction[];
+}
+
+export type CCData = Record<string, CCAccountData>;
+
+export type AppMode = 'FLOW' | 'KILOS' | 'CC';
 
 export const DAYS_OF_WEEK = [
   { id: 'monday', name: 'Lunes' },

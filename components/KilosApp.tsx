@@ -2,7 +2,7 @@
 import React from 'react';
 import { ref, onValue, set } from 'firebase/database';
 import { Database } from 'firebase/database';
-import { Plus, X, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { DAYS_OF_WEEK, KilosWeekData, KilosDayData, DRIVERS_LIST, ROUTES_LIST } from '../types';
 
 interface KilosAppProps {
@@ -29,102 +29,6 @@ const createInitialKilosState = (): KilosWeekData => {
 
 const formatNumber = (value: number) => {
   return new Intl.NumberFormat('es-AR').format(value);
-};
-
-// --- Subcomponent for Public Cell (List Management) ---
-const PublicCell = ({ 
-    values = [], 
-    onChange 
-}: { 
-    values: number[], 
-    onChange: (newValues: number[]) => void 
-}) => {
-    const [isOpen, setIsOpen] = React.useState(false);
-    const [isAdding, setIsAdding] = React.useState(false);
-    const [tempValue, setTempValue] = React.useState('');
-    const inputRef = React.useRef<HTMLInputElement>(null);
-
-    const total = values.reduce((acc, curr) => acc + curr, 0);
-
-    const handleAdd = () => {
-        const val = parseFloat(tempValue);
-        if (!isNaN(val) && val !== 0) {
-            onChange([...values, val]);
-            setTempValue('');
-            setIsAdding(false);
-        } else {
-            setIsAdding(false);
-        }
-    };
-
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter') handleAdd();
-        if (e.key === 'Escape') setIsAdding(false);
-    };
-
-    const handleDelete = (index: number) => {
-        const newValues = [...values];
-        newValues.splice(index, 1);
-        onChange(newValues);
-    };
-
-    return (
-        <div className="relative h-full min-h-[40px] flex items-center justify-end px-2 group">
-            {/* Display Total */}
-            <button 
-                onClick={() => setIsOpen(!isOpen)}
-                className="font-mono font-bold text-emerald-300 hover:text-emerald-100 mr-2 text-right w-full"
-            >
-                {formatNumber(total)}
-            </button>
-
-            {/* Quick Add Button */}
-            <button 
-                onClick={() => { setIsAdding(true); setTimeout(() => inputRef.current?.focus(), 50); }}
-                className="p-1 rounded bg-emerald-900/50 text-emerald-400 hover:bg-emerald-800 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"
-            >
-                <Plus size={12} />
-            </button>
-
-            {/* Add Input Popup */}
-            {isAdding && (
-                <div className="absolute right-0 top-0 z-20 flex items-center bg-slate-800 rounded border border-emerald-500 shadow-lg p-1">
-                    <input
-                        ref={inputRef}
-                        type="number"
-                        value={tempValue}
-                        onChange={(e) => setTempValue(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        onBlur={handleAdd} // Auto save on blur
-                        className="w-16 bg-slate-900 text-white text-xs p-1 rounded border-none outline-none text-right"
-                        placeholder="Kg"
-                    />
-                </div>
-            )}
-
-            {/* List Details Popup */}
-            {isOpen && (
-                <div className="absolute top-full right-0 mt-1 z-30 bg-slate-800 border border-slate-700 rounded-lg shadow-xl w-40 overflow-hidden animate-in fade-in zoom-in duration-100">
-                    <div className="bg-slate-900 px-3 py-2 border-b border-slate-700 flex justify-between items-center">
-                        <span className="text-[10px] uppercase font-bold text-slate-400">Detalle</span>
-                        <button onClick={() => setIsOpen(false)}><X size={14} className="text-slate-500 hover:text-white"/></button>
-                    </div>
-                    <div className="max-h-40 overflow-y-auto p-1 custom-scrollbar">
-                        {values.length === 0 ? (
-                            <div className="text-xs text-slate-500 text-center py-2">Sin registros</div>
-                        ) : (
-                            values.map((v, i) => (
-                                <div key={i} className="flex justify-between items-center px-2 py-1.5 hover:bg-slate-700/50 rounded">
-                                    <span className="font-mono text-emerald-300 text-xs">{formatNumber(v)}</span>
-                                    <button onClick={() => handleDelete(i)} className="text-rose-400 hover:text-rose-200"><Trash2 size={12}/></button>
-                                </div>
-                            ))
-                        )}
-                    </div>
-                </div>
-            )}
-        </div>
-    );
 };
 
 export const KilosApp: React.FC<KilosAppProps> = ({ db, weekKey }) => {
@@ -189,11 +93,6 @@ export const KilosApp: React.FC<KilosAppProps> = ({ db, weekKey }) => {
 
   // --- Handlers ---
 
-  const handlePublicChange = (dayId: string, newValues: number[]) => {
-      const updatedDay = { ...data[dayId], public: newValues };
-      saveData({ ...data, [dayId]: updatedDay });
-  };
-
   const handleDeepChange = (dayId: string, category: 'drivers' | 'routes_out' | 'routes_in', key: string, value: string) => {
       const num = parseFloat(value) || 0;
       const updatedCategory = { ...data[dayId][category], [key]: num };
@@ -207,36 +106,73 @@ export const KilosApp: React.FC<KilosAppProps> = ({ db, weekKey }) => {
       saveData({ ...data, [dayId]: updatedDay });
   };
 
+  // Public Row Handlers
+  const handlePublicRowChange = (dayId: string, index: number, value: string) => {
+      const num = parseFloat(value) || 0;
+      const currentList = [...data[dayId].public];
+      // Pad array if needed
+      while (currentList.length <= index) currentList.push(0);
+      currentList[index] = num;
+      
+      const updatedDay = { ...data[dayId], public: currentList };
+      saveData({ ...data, [dayId]: updatedDay });
+  };
+
+  const addPublicRow = () => {
+      const newData = { ...data };
+      DAYS_OF_WEEK.forEach(day => {
+          const list = [...newData[day.id].public];
+          list.push(0);
+          newData[day.id] = { ...newData[day.id], public: list };
+      });
+      saveData(newData);
+  };
+
+  const removePublicRow = (index: number) => {
+      const newData = { ...data };
+      DAYS_OF_WEEK.forEach(day => {
+          const list = [...newData[day.id].public];
+          list.splice(index, 1);
+          newData[day.id] = { ...newData[day.id], public: list };
+      });
+      saveData(newData);
+  };
+
   // --- Calculations ---
 
   const getDayTotal = (day: KilosDayData) => {
       const totalPublic = day.public.reduce((a, b) => a + b, 0);
       const totalDrivers = Object.values(day.drivers).reduce((a, b) => a + b, 0);
       const totalRoutesOut = Object.values(day.routes_out).reduce((a, b) => a + b, 0);
-      const totalRoutesIn = Object.values(day.routes_in).reduce((a, b) => a + b, 0); // Logic: This should subtract
+      const totalRoutesIn = Object.values(day.routes_in).reduce((a, b) => a + b, 0); 
       
       // Total = (Public + Drivers + Routes Out + Camera Plus) - Routes In - Camera Minus
       return (totalPublic + totalDrivers + totalRoutesOut + day.camera_plus) - totalRoutesIn - day.camera_minus;
   };
 
-  const getRowTotal = (category: string, key?: string) => {
+  const getRowTotal = (category: string, key?: string | number) => {
       return (Object.values(data) as KilosDayData[]).reduce((acc, day) => {
-          if (category === 'public') {
-              return acc + day.public.reduce((a, b) => a + b, 0);
+          if (category === 'public' && typeof key === 'number') {
+              return acc + (day.public[key] || 0);
           }
           if (category === 'camera_plus') return acc + day.camera_plus;
           if (category === 'camera_minus') return acc + day.camera_minus;
           
-          // For Record types
-          if (category === 'drivers') return acc + (day.drivers[key!] || 0);
-          if (category === 'routes_out') return acc + (day.routes_out[key!] || 0);
-          if (category === 'routes_in') return acc + (day.routes_in[key!] || 0);
+          if (category === 'drivers') return acc + (day.drivers[key as string] || 0);
+          if (category === 'routes_out') return acc + (day.routes_out[key as string] || 0);
+          if (category === 'routes_in') return acc + (day.routes_in[key as string] || 0);
           
           return acc;
       }, 0);
   };
 
   const grandTotal = (Object.values(data) as KilosDayData[]).reduce((acc, day) => acc + getDayTotal(day), 0);
+
+  // Determine how many public rows to render (max of all days)
+  const maxPublicRows = React.useMemo(() => {
+     const lengths = (Object.values(data) as KilosDayData[]).map(d => d.public.length);
+     return Math.max(1, ...lengths);
+  }, [data]);
 
   if (loading) return <div className="text-white p-8 animate-pulse">Cargando Tabla de Kilos...</div>;
 
@@ -268,7 +204,7 @@ export const KilosApp: React.FC<KilosAppProps> = ({ db, weekKey }) => {
                 <table className="w-full text-left border-collapse">
                     <thead className="sticky top-0 z-20 shadow-md">
                         <tr className="bg-slate-950 border-b border-slate-800">
-                            <th className="p-3 text-xs font-bold text-slate-500 uppercase tracking-wider min-w-[180px] border-r border-slate-800 sticky left-0 bg-slate-950 z-30">Concepto</th>
+                            <th className="p-3 text-xs font-bold text-slate-500 uppercase tracking-wider min-w-[180px] border-r border-slate-800 sticky left-0 bg-slate-900 z-30">Categoría</th>
                             {DAYS_OF_WEEK.map(day => (
                                 <th key={day.id} className="p-3 text-xs font-bold text-slate-300 uppercase tracking-wider text-right min-w-[100px] border-r border-slate-800/50">
                                     {day.name}
@@ -279,29 +215,103 @@ export const KilosApp: React.FC<KilosAppProps> = ({ db, weekKey }) => {
                     </thead>
                     <tbody className="divide-y divide-slate-800/50">
                         
-                        {/* --- PÚBLICO (Primera Fila) --- */}
-                        <tr className="bg-emerald-950/10 hover:bg-emerald-900/10 transition-colors">
-                            <td className="p-3 font-bold text-emerald-400 text-sm border-r border-slate-800 sticky left-0 bg-slate-900 z-10 border-l-4 border-l-emerald-500">
-                                Público (Particulares)
+                        {/* --- CÁMARA (Top) --- */}
+                        <tr className="bg-slate-800/50"><td colSpan={8} className="px-3 py-1 text-[10px] font-bold text-slate-500 uppercase tracking-widest bg-slate-900/80 sticky left-0">Ajustes Cámara</td></tr>
+                        
+                        {/* Cámara ++ */}
+                        <tr className="hover:bg-amber-950/10 transition-colors">
+                            <td className="p-2 pl-6 text-sm text-amber-300 font-medium border-r border-slate-800 sticky left-0 bg-slate-900 z-10">
+                                Cámara ++
                             </td>
                             {DAYS_OF_WEEK.map(day => (
                                 <td key={day.id} className="p-1 border-r border-slate-800/30">
-                                    <PublicCell 
-                                        values={data[day.id].public} 
-                                        onChange={(newVal) => handlePublicChange(day.id, newVal)} 
+                                    <InputCell 
+                                        value={data[day.id].camera_plus} 
+                                        onChange={(v: string) => handleSimpleChange(day.id, 'camera_plus', v)} 
+                                        colorClass="text-amber-200 focus:border-amber-500"
                                     />
                                 </td>
                             ))}
-                            <td className="p-3 text-right font-mono font-bold text-emerald-300 bg-slate-900/30">
-                                {formatNumber(getRowTotal('public'))}
+                            <td className="p-2 text-right font-mono text-slate-400 bg-slate-900/20">
+                                {formatNumber(getRowTotal('camera_plus'))}
+                            </td>
+                        </tr>
+
+                        {/* Cámara -- */}
+                        <tr className="hover:bg-purple-950/10 transition-colors">
+                            <td className="p-2 pl-6 text-sm text-purple-300 font-medium border-r border-slate-800 sticky left-0 bg-slate-900 z-10">
+                                Cámara --
+                            </td>
+                            {DAYS_OF_WEEK.map(day => (
+                                <td key={day.id} className="p-1 border-r border-slate-800/30">
+                                    <div className="relative">
+                                        <InputCell 
+                                            value={data[day.id].camera_minus} 
+                                            onChange={(v: string) => handleSimpleChange(day.id, 'camera_minus', v)} 
+                                            colorClass="text-purple-200 focus:border-purple-500"
+                                        />
+                                        {data[day.id].camera_minus > 0 && <span className="absolute left-1 top-1 text-purple-600 text-[10px] font-bold">-</span>}
+                                    </div>
+                                </td>
+                            ))}
+                            <td className="p-2 text-right font-mono text-slate-400 bg-slate-900/20">
+                                - {formatNumber(getRowTotal('camera_minus'))}
                             </td>
                         </tr>
 
                         {/* Spacer */}
                         <tr className="bg-slate-950 h-2"><td colSpan={8}></td></tr>
 
+                        {/* --- PÚBLICO (Dynamic Rows) --- */}
+                        <tr className="bg-emerald-950/20 border-b border-emerald-900/30">
+                            <td colSpan={8} className="px-0 py-0 sticky left-0 bg-slate-900 z-10 p-0 border-r border-slate-800">
+                                <div className="flex items-center justify-between px-3 py-1 bg-slate-900/80 w-full">
+                                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Público</span>
+                                    <button 
+                                        onClick={addPublicRow}
+                                        className="flex items-center gap-1 text-[10px] bg-emerald-900/50 hover:bg-emerald-800 text-emerald-400 px-2 py-0.5 rounded border border-emerald-800/50 transition-colors"
+                                    >
+                                        <Plus size={10} /> Agregar Fila
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+
+                        {Array.from({ length: maxPublicRows }).map((_, rowIndex) => (
+                            <tr key={`public-row-${rowIndex}`} className="bg-emerald-950/5 hover:bg-emerald-900/10 transition-colors group">
+                                <td className="p-2 pl-4 text-sm font-bold text-emerald-400 border-r border-slate-800 sticky left-0 bg-slate-900 z-10 border-l-4 border-l-emerald-500/0">
+                                    <div className="flex items-center justify-between group-hover:border-l-emerald-500">
+                                        <span>Público</span>
+                                        <button 
+                                            onClick={() => removePublicRow(rowIndex)}
+                                            className="opacity-0 group-hover:opacity-100 p-1 text-rose-500 hover:text-rose-300 hover:bg-rose-900/20 rounded transition-all"
+                                            title="Eliminar fila"
+                                        >
+                                            <Trash2 size={12} />
+                                        </button>
+                                    </div>
+                                </td>
+                                {DAYS_OF_WEEK.map(day => (
+                                    <td key={day.id} className="p-1 border-r border-slate-800/30">
+                                        <InputCell 
+                                            value={data[day.id].public[rowIndex] || 0} 
+                                            onChange={(v: string) => handlePublicRowChange(day.id, rowIndex, v)} 
+                                            colorClass="text-emerald-300 focus:border-emerald-500"
+                                            bgClass="bg-slate-900/30"
+                                        />
+                                    </td>
+                                ))}
+                                <td className="p-2 text-right font-mono font-bold text-emerald-300/70 bg-slate-900/30">
+                                    {formatNumber(getRowTotal('public', rowIndex))}
+                                </td>
+                            </tr>
+                        ))}
+
+                        {/* Spacer */}
+                        <tr className="bg-slate-950 h-2"><td colSpan={8}></td></tr>
+
                         {/* --- CHOFERES --- */}
-                        <tr className="bg-slate-800/50"><td colSpan={8} className="px-3 py-1 text-[10px] font-bold text-slate-500 uppercase tracking-widest bg-slate-900/80 sticky left-0">Choferes</td></tr>
+                        <tr className="bg-slate-800/50"><td colSpan={8} className="px-3 py-1 text-[10px] font-bold text-slate-500 uppercase tracking-widest bg-slate-900/80 sticky left-0">Clientes</td></tr>
                         {DRIVERS_LIST.map(driver => (
                             <tr key={driver} className="hover:bg-slate-800/30 transition-colors">
                                 <td className="p-2 pl-6 text-sm text-slate-300 font-medium border-r border-slate-800 sticky left-0 bg-slate-900 z-10">
@@ -376,53 +386,6 @@ export const KilosApp: React.FC<KilosAppProps> = ({ db, weekKey }) => {
                                 </td>
                             </tr>
                         ))}
-
-                        {/* Spacer */}
-                        <tr className="bg-slate-950 h-2"><td colSpan={8}></td></tr>
-
-                        {/* --- CÁMARA --- */}
-                        <tr className="bg-slate-800/50"><td colSpan={8} className="px-3 py-1 text-[10px] font-bold text-slate-500 uppercase tracking-widest bg-slate-900/80 sticky left-0">Ajustes Cámara</td></tr>
-                        
-                        {/* Cámara ++ */}
-                        <tr className="hover:bg-amber-950/10 transition-colors">
-                            <td className="p-2 pl-6 text-sm text-amber-300 font-medium border-r border-slate-800 sticky left-0 bg-slate-900 z-10">
-                                Cámara ++ (Agrega)
-                            </td>
-                            {DAYS_OF_WEEK.map(day => (
-                                <td key={day.id} className="p-1 border-r border-slate-800/30">
-                                    <InputCell 
-                                        value={data[day.id].camera_plus} 
-                                        onChange={(v: string) => handleSimpleChange(day.id, 'camera_plus', v)} 
-                                        colorClass="text-amber-200 focus:border-amber-500"
-                                    />
-                                </td>
-                            ))}
-                            <td className="p-2 text-right font-mono text-slate-400 bg-slate-900/20">
-                                {formatNumber(getRowTotal('camera_plus'))}
-                            </td>
-                        </tr>
-
-                        {/* Cámara -- */}
-                        <tr className="hover:bg-purple-950/10 transition-colors">
-                            <td className="p-2 pl-6 text-sm text-purple-300 font-medium border-r border-slate-800 sticky left-0 bg-slate-900 z-10">
-                                Cámara -- (Resta)
-                            </td>
-                            {DAYS_OF_WEEK.map(day => (
-                                <td key={day.id} className="p-1 border-r border-slate-800/30">
-                                    <div className="relative">
-                                        <InputCell 
-                                            value={data[day.id].camera_minus} 
-                                            onChange={(v: string) => handleSimpleChange(day.id, 'camera_minus', v)} 
-                                            colorClass="text-purple-200 focus:border-purple-500"
-                                        />
-                                        {data[day.id].camera_minus > 0 && <span className="absolute left-1 top-1 text-purple-600 text-[10px] font-bold">-</span>}
-                                    </div>
-                                </td>
-                            ))}
-                            <td className="p-2 text-right font-mono text-slate-400 bg-slate-900/20">
-                                - {formatNumber(getRowTotal('camera_minus'))}
-                            </td>
-                        </tr>
 
                     </tbody>
                     <tfoot className="sticky bottom-0 z-20 shadow-[0_-5px_10px_rgba(0,0,0,0.3)]">
