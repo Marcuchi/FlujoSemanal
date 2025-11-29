@@ -8,7 +8,7 @@ interface TransactionItemProps {
   type: TransactionType;
   onUpdate: (id: string, updates: Partial<Transaction>) => void;
   onRemove: (id: string) => void;
-  onMove?: (id: string) => void; // New prop for moving items
+  onMove?: (id: string) => void; 
 }
 
 const formatNumberInput = (value: number): string => {
@@ -132,6 +132,13 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
         textTitle: 'text-rose-100',
         subtle: 'text-rose-500'
       };
+      case 'salaries': return { 
+        indicator: 'bg-amber-500', 
+        hoverBg: 'hover:bg-amber-900/60', 
+        textAmount: 'text-amber-300',
+        textTitle: 'text-amber-100',
+        subtle: 'text-amber-500'
+      };
       case 'toBox': return { 
         indicator: 'bg-indigo-500', 
         hoverBg: 'hover:bg-indigo-900/60', 
@@ -187,8 +194,13 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
   }
 
   // Determine if move button should be shown
-  const showMoveButton = (type === 'incomes' || type === 'deliveries') && onMove;
-  const moveButtonTitle = type === 'incomes' ? 'Mover a Repartos' : 'Mover a General';
+  const showMoveButton = (type === 'incomes' || type === 'deliveries' || type === 'expenses' || type === 'salaries') && onMove;
+  
+  let moveButtonTitle = '';
+  if (type === 'incomes') moveButtonTitle = 'Mover a Repartos';
+  else if (type === 'deliveries') moveButtonTitle = 'Mover a General';
+  else if (type === 'expenses') moveButtonTitle = 'Mover a Adelantos/Sueldos';
+  else if (type === 'salaries') moveButtonTitle = 'Mover a Gastos';
 
   return (
     <div className={`group relative p-2 rounded-lg ${theme.hoverBg} bg-black/20 transition-colors flex items-center justify-between border border-transparent hover:border-white/5`}>

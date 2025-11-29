@@ -16,8 +16,9 @@ const createInitialState = (): WeekData => {
       id: day.id,
       name: day.name,
       incomes: [],
-      deliveries: [], // Init deliveries
+      deliveries: [],
       expenses: [],
+      salaries: [], // Init salaries
       toBox: [],
     };
   });
@@ -48,10 +49,12 @@ const App: React.FC = () => {
               id: day.id,
               name: day.name,
               incomes: dayData.incomes || [],
-              deliveries: dayData.deliveries || [], // Load deliveries
+              deliveries: dayData.deliveries || [],
               expenses: dayData.expenses || [],
+              salaries: dayData.salaries || [], // Load salaries
               toBox: dayData.toBox || [],
-              manualInitialAmount: dayData.manualInitialAmount
+              manualInitialAmount: dayData.manualInitialAmount,
+              initialBoxAmount: dayData.initialBoxAmount // Load Initial Box
             };
           });
           setWeekData(sanitizedData);
@@ -92,8 +95,14 @@ const App: React.FC = () => {
   }, []);
 
   const saveWeekData = (newData: WeekData) => {
+    // Sanitize data before saving (remove undefineds)
+    const cleanData = JSON.parse(JSON.stringify(newData));
+    
+    // Explicitly handle fields that might be undefined to ensure they are null in Firebase (to delete them)
+    // or just rely on JSON.stringify stripping undefined. 
+    // For Firebase, it's safer to ensure the structure is valid.
+    
     if (db) {
-      const cleanData = JSON.parse(JSON.stringify(newData));
       set(ref(db!, 'weekData'), cleanData).catch(console.error);
       setWeekData(newData); 
     } else {
@@ -193,11 +202,14 @@ const App: React.FC = () => {
       const dayIncome = day.incomes?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
       const dayDeliveries = day.deliveries?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
       const dayExpense = day.expenses?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
+      const daySalaries = day.salaries?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
       const dayToBox = day.toBox?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
+      const initialBox = day.initialBoxAmount || 0; // Add initial box to total
+
       return {
-        income: acc.income + dayIncome + dayDeliveries, // Include deliveries in income
-        expense: acc.expense + dayExpense,
-        toBox: acc.toBox + dayToBox,
+        income: acc.income + dayIncome + dayDeliveries,
+        expense: acc.expense + dayExpense + daySalaries, // Include salaries in total expense
+        toBox: acc.toBox + dayToBox + initialBox,
       };
     },
     { income: 0, expense: 0, toBox: 0 }
@@ -218,10 +230,11 @@ const App: React.FC = () => {
         const income = data.incomes?.reduce((s, t) => s + (t.amount || 0), 0) || 0;
         const deliveries = data.deliveries?.reduce((s, t) => s + (t.amount || 0), 0) || 0;
         const expense = data.expenses?.reduce((s, t) => s + (t.amount || 0), 0) || 0;
+        const salaries = data.salaries?.reduce((s, t) => s + (t.amount || 0), 0) || 0;
         const toBox = data.toBox?.reduce((s, t) => s + (t.amount || 0), 0) || 0;
         
-        // Include deliveries in running balance calculation
-        currentBalance = effectiveInitial + income + deliveries - expense - toBox;
+        // Subtract salaries in balance
+        currentBalance = effectiveInitial + income + deliveries - expense - salaries - toBox;
       }
     }
     return balances;

@@ -25,6 +25,11 @@ export const exportToCSV = (data: WeekData, history: HistoryItem[] = []) => {
        rows.push(`${day.id},${day.name},initial,"Monto Inicial Manual",${day.manualInitialAmount},`);
     }
 
+    // Export Monday's Initial Box if exists
+    if (day.id === 'monday' && day.initialBoxAmount !== undefined) {
+       rows.push(`${day.id},${day.name},initialBox,"Caja Inicial",${day.initialBoxAmount},`);
+    }
+
     const addRows = (list: Transaction[], type: string) => {
         list.forEach(t => {
             rows.push(`${day.id},${day.name},${type},"${t.title.replace(/"/g, '""')}",${t.amount},`);
@@ -32,8 +37,9 @@ export const exportToCSV = (data: WeekData, history: HistoryItem[] = []) => {
     };
 
     addRows(day.incomes, 'incomes');
-    addRows(day.deliveries, 'deliveries'); // Export Deliveries
+    addRows(day.deliveries, 'deliveries');
     addRows(day.expenses, 'expenses');
+    addRows(day.salaries, 'salaries'); // Export Salaries
     addRows(day.toBox, 'toBox');
   });
 
@@ -117,8 +123,9 @@ export const parseCSV = (csvText: string): { weekData: WeekData, history: Histor
         id: d.id,
         name: d.name,
         incomes: [],
-        deliveries: [], // Init deliveries
+        deliveries: [],
         expenses: [],
+        salaries: [], // Init salaries
         toBox: []
       };
     });
@@ -163,6 +170,11 @@ export const parseCSV = (csvText: string): { weekData: WeekData, history: Histor
             continue;
           }
 
+          if (cleanType === 'initialBox') {
+            newState[cleanDayId].initialBoxAmount = amount;
+            continue;
+          }
+
           const transaction: Transaction = {
             id: generateId() + Math.random().toString(36).substring(2),
             title: title,
@@ -170,8 +182,9 @@ export const parseCSV = (csvText: string): { weekData: WeekData, history: Histor
           };
 
           if (cleanType === 'incomes') newState[cleanDayId].incomes.push(transaction);
-          else if (cleanType === 'deliveries') newState[cleanDayId].deliveries.push(transaction); // Parse deliveries
+          else if (cleanType === 'deliveries') newState[cleanDayId].deliveries.push(transaction);
           else if (cleanType === 'expenses') newState[cleanDayId].expenses.push(transaction);
+          else if (cleanType === 'salaries') newState[cleanDayId].salaries.push(transaction); // Parse salaries
           else if (cleanType === 'toBox') newState[cleanDayId].toBox.push(transaction);
       }
     }

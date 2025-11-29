@@ -24,7 +24,8 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, his
     switch(type) {
       case 'incomes': return { label: 'Ingreso', color: 'text-emerald-400' };
       case 'deliveries': return { label: 'Reparto', color: 'text-teal-400' };
-      case 'expenses': return { label: 'Egreso', color: 'text-rose-400' };
+      case 'expenses': return { label: 'Gasto', color: 'text-rose-400' };
+      case 'salaries': return { label: 'Adelanto', color: 'text-amber-400' };
       case 'toBox': return { label: 'A Caja', color: 'text-indigo-400' };
       default: return { label: 'Item', color: 'text-slate-400' };
     }

@@ -8,13 +8,15 @@ export interface DayData {
   id: string;
   name: string;
   incomes: Transaction[];
-  deliveries: Transaction[]; // New subgroup for Repartos
+  deliveries: Transaction[]; 
   expenses: Transaction[];
+  salaries: Transaction[]; // New subgroup for Adelantos/Sueldos
   toBox: Transaction[];
   manualInitialAmount?: number;
+  initialBoxAmount?: number; // New field for Monday's Initial Box
 }
 
-export type TransactionType = 'incomes' | 'deliveries' | 'expenses' | 'toBox';
+export type TransactionType = 'incomes' | 'deliveries' | 'expenses' | 'salaries' | 'toBox';
 
 export interface HistoryItem extends Transaction {
   deletedAt: string; // ISO Date string

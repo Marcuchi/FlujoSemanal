@@ -1,7 +1,8 @@
 import React from 'react';
-import { X, FileText } from 'lucide-react';
+import { X, FileText, Users } from 'lucide-react';
 import { WeekData, DayData } from '../types';
 import { PieChart } from './PieChart';
+import { formatCurrency } from '../utils';
 
 interface WeeklyReportModalProps {
   isOpen: boolean;
@@ -14,14 +15,13 @@ const COLORS = [
 ];
 
 export const WeeklyReportModal: React.FC<WeeklyReportModalProps> = ({ isOpen, onClose, weekData }) => {
-  // Grouping Logic
+  
+  // Logic for Pie Charts (Top 5 + Others)
   const processData = (dataType: 'incomes' | 'deliveries' | 'expenses') => {
     const grouped: Record<string, number> = {};
     
     Object.values(weekData).forEach((day: DayData) => {
-      // Direct access to the specific array
       const list = day[dataType];
-
       list.forEach((t) => {
         if (t.amount > 0 && t.title.trim() !== '') {
           const key = t.title.trim().toLowerCase();
@@ -30,7 +30,6 @@ export const WeeklyReportModal: React.FC<WeeklyReportModalProps> = ({ isOpen, on
       });
     });
 
-    // Convert to array and sort
     const sorted = Object.entries(grouped)
       .map(([name, value]) => ({
         name,
@@ -38,13 +37,11 @@ export const WeeklyReportModal: React.FC<WeeklyReportModalProps> = ({ isOpen, on
       }))
       .sort((a, b) => b.value - a.value);
 
-    // Take top 5
     const top5 = sorted.slice(0, 5).map((item, index) => ({
       ...item,
       color: COLORS[index % COLORS.length]
     }));
 
-    // Calculate "Others"
     const othersValue = sorted.slice(5).reduce((acc, curr) => acc + curr.value, 0);
 
     if (othersValue > 0) {
@@ -58,9 +55,35 @@ export const WeeklyReportModal: React.FC<WeeklyReportModalProps> = ({ isOpen, on
     return top5;
   };
 
+  // Logic for Salaries List (All items, grouped by name)
+  const getSalariesList = () => {
+    const grouped: Record<string, number> = {};
+    
+    Object.values(weekData).forEach((day: DayData) => {
+      const list = day.salaries;
+      list.forEach((t) => {
+        if (t.amount > 0 && t.title.trim() !== '') {
+          const key = t.title.trim().toLowerCase();
+          grouped[key] = (grouped[key] || 0) + t.amount;
+        }
+      });
+    });
+
+    // Return full list sorted by amount
+    return Object.entries(grouped)
+      .map(([name, value]) => ({
+        name,
+        value
+      }))
+      .sort((a, b) => b.value - a.value);
+  };
+
   const incomesData = React.useMemo(() => processData('incomes'), [weekData]);
   const deliveriesData = React.useMemo(() => processData('deliveries'), [weekData]);
   const expensesData = React.useMemo(() => processData('expenses'), [weekData]);
+  const salariesList = React.useMemo(() => getSalariesList(), [weekData]);
+
+  const totalSalaries = salariesList.reduce((acc, item) => acc + item.value, 0);
 
   if (!isOpen) return null;
 
@@ -82,8 +105,8 @@ export const WeeklyReportModal: React.FC<WeeklyReportModalProps> = ({ isOpen, on
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-8 custom-scrollbar">
           
-          {/* Charts Row */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Charts Row - 2x2 Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 gap-8">
             <PieChart 
               data={incomesData} 
               title="Top 5 General" 
@@ -97,8 +120,44 @@ export const WeeklyReportModal: React.FC<WeeklyReportModalProps> = ({ isOpen, on
             <PieChart 
               data={expensesData} 
               title="Top 5 Egresos" 
-              emptyMessage="No hay egresos registrados."
+              emptyMessage="No hay gastos registrados."
             />
+            
+            {/* Custom List for Salaries instead of PieChart */}
+            <div className="flex flex-col h-full bg-slate-900/50 rounded-xl border border-slate-800 p-5">
+              {/* Header with Title and Total */}
+              <div className="flex flex-row justify-between items-center mb-6 border-b border-slate-800 pb-3">
+                <h3 className="text-sm font-bold text-amber-200 uppercase tracking-wider flex items-center gap-2">
+                   <Users size={16} /> Detalle Adelantos
+                </h3>
+                <span className="text-lg font-mono font-bold text-amber-100 bg-amber-900/30 px-3 py-1 rounded-lg border border-amber-900/50 shadow-sm">
+                  {formatCurrency(totalSalaries)}
+                </span>
+              </div>
+
+              <div className="flex-1 overflow-y-auto max-h-64 custom-scrollbar pr-2">
+                {salariesList.length === 0 ? (
+                   <div className="flex flex-col items-center justify-center h-full text-slate-500 italic">
+                      No hay adelantos registrados.
+                   </div>
+                ) : (
+                  <div className="space-y-2">
+                    {salariesList.map((item, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-2 hover:bg-slate-800/30 rounded transition-colors border-b border-slate-800/50 last:border-0">
+                         <div className="flex items-center gap-3">
+                           <span className="text-xs font-mono text-slate-500 w-4">{idx + 1}.</span>
+                           <span className="text-slate-300 font-medium capitalize truncate">{item.name}</span>
+                         </div>
+                         <span className="text-amber-300 font-mono font-bold text-sm">
+                            {formatCurrency(item.value)}
+                         </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
           </div>
         </div>
 
