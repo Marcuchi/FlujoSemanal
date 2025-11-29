@@ -11,7 +11,8 @@ interface TransactionItemProps {
 }
 
 const formatNumberInput = (value: number): string => {
-  if (!value) return '';
+  if (value === 0 && !Object.is(value, -0)) return ''; // Don't show 0, allows placeholder. Handle -0 case if needed but usually 0 is enough.
+  // Handle negative specifically for input display
   return new Intl.NumberFormat('es-AR').format(value);
 };
 
@@ -50,14 +51,41 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
   }, [isEditing, isBox, tempTitle]);
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const cleanVal = e.target.value.replace(/\D/g, '');
-    const numVal = parseInt(cleanVal, 10);
+    let val = e.target.value;
+    
+    // Only allow negative sign if type is 'toBox'
+    const allowNegative = type === 'toBox';
+    const hasNegative = allowNegative && val.includes('-');
+    
+    // Remove non-digit chars
+    const digits = val.replace(/\D/g, '');
+    
+    if (digits === '') {
+        // If user typed just '-' and allowed, show it
+        if (hasNegative && val === '-') {
+            setInputValue('-');
+            setTempAmount(0);
+            return;
+        }
+        setTempAmount(0);
+        setInputValue('');
+        return;
+    }
+
+    let numVal = parseInt(digits, 10);
+    
     if (isNaN(numVal)) {
       setTempAmount(0);
       setInputValue('');
     } else {
+      // Apply negative if strictly allowed and present
+      if (hasNegative) {
+          numVal = -numVal;
+      }
       setTempAmount(numVal);
-      setInputValue(new Intl.NumberFormat('es-AR').format(numVal));
+      // Format with dots, preserve negative sign visually
+      const formatted = new Intl.NumberFormat('es-AR').format(Math.abs(numVal));
+      setInputValue(hasNegative ? `-${formatted}` : formatted);
     }
   };
 
@@ -141,7 +169,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
             <input
               ref={amountInputRef}
               type="text"
-              inputMode="numeric"
+              inputMode="numeric" // Changed to numeric to allow software keyboard on mobile
               value={inputValue}
               onChange={handleAmountChange}
               onKeyDown={handleKeyDown}

@@ -20,6 +20,11 @@ export const exportToCSV = (data: WeekData) => {
   const rows: string[] = [headers.join(',')];
 
   Object.values(data).forEach((day) => {
+    // Process Manual Initial Amount if exists
+    if (day.manualInitialAmount !== undefined) {
+       rows.push(`${day.id},${day.name},initial,"Monto Inicial Manual",${day.manualInitialAmount}`);
+    }
+
     // Process Incomes
     day.incomes.forEach(t => {
       rows.push(`${day.id},${day.name},incomes,"${t.title.replace(/"/g, '""')}",${t.amount}`);
@@ -123,6 +128,12 @@ export const parseCSV = (csvText: string): WeekData | null => {
       if (!newState[cleanDayId]) continue;
 
       const amount = parseFloat(amountStr) || 0;
+
+      // Handle Initial Amount special case
+      if (cleanType === 'initial') {
+        newState[cleanDayId].manualInitialAmount = amount;
+        continue;
+      }
 
       const transaction: Transaction = {
         id: generateId() + Math.random().toString(36).substring(2), // Ensure unique ID on import

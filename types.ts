@@ -10,6 +10,7 @@ export interface DayData {
   incomes: Transaction[];
   expenses: Transaction[];
   toBox: Transaction[];
+  manualInitialAmount?: number; // Optional: if present, overrides the calculated previous balance
 }
 
 export type TransactionType = 'incomes' | 'expenses' | 'toBox';

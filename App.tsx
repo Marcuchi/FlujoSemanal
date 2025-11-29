@@ -1,5 +1,7 @@
 import React from 'react';
-import { Download, Upload } from 'lucide-react';
+import { Download, Upload, RotateCcw } from 'lucide-react';
+import { ref, onValue, set } from 'firebase/database';
+import { db } from './firebaseConfig';
 import { DAYS_OF_WEEK, WeekData, DayData } from './types';
 import { DayCard } from './components/DayCard';
 import { Summary } from './components/Summary';
@@ -21,49 +23,61 @@ const createInitialState = (): WeekData => {
 };
 
 const App: React.FC = () => {
-  const [weekData, setWeekData] = React.useState<WeekData>(() => {
-    const saved = localStorage.getItem('flowTrackData');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        
-        // Validación robusta: Verifica que existan TODOS los días y sus arrays
-        const isValid = DAYS_OF_WEEK.every(day => 
-          parsed[day.id] && 
-          Array.isArray(parsed[day.id].incomes) &&
-          Array.isArray(parsed[day.id].expenses) &&
-          Array.isArray(parsed[day.id].toBox)
-        );
-        
-        if (isValid) {
-          return parsed;
-        } else {
-          console.warn("Datos corruptos detectados. Reiniciando estado.");
-          return createInitialState();
-        }
-      } catch (e) {
-        console.error("Error al leer datos guardados. Reiniciando.", e);
-        return createInitialState();
-      }
-    }
-    return createInitialState();
-  });
-
+  const [weekData, setWeekData] = React.useState<WeekData>(createInitialState());
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
+  // Conexión a Firebase (Suscripción a cambios en tiempo real)
   React.useEffect(() => {
-    localStorage.setItem('flowTrackData', JSON.stringify(weekData));
-  }, [weekData]);
+    const dataRef = ref(db, 'weekData');
+    
+    const unsubscribe = onValue(dataRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        // Firebase no guarda arrays vacíos, así que debemos "hidratar" los datos
+        // para asegurar que incomes, expenses y toBox sean siempre arrays
+        const sanitizedData: WeekData = {};
+        DAYS_OF_WEEK.forEach((day) => {
+          const dayData = data[day.id] || {};
+          sanitizedData[day.id] = {
+            id: day.id,
+            name: day.name,
+            incomes: dayData.incomes || [],
+            expenses: dayData.expenses || [],
+            toBox: dayData.toBox || [],
+            manualInitialAmount: dayData.manualInitialAmount // Puede ser undefined
+          };
+        });
+        setWeekData(sanitizedData);
+      } else {
+        // Si no hay datos en la DB (primera vez), inicializamos
+        const initial = createInitialState();
+        set(ref(db, 'weekData'), initial);
+        setWeekData(initial);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const handleUpdateDay = (updatedDay: DayData) => {
-    setWeekData((prev) => ({
-      ...prev,
-      [updatedDay.id]: updatedDay,
-    }));
+    // Actualización optimista y envío a Firebase
+    // Nota: Firebase actualizará el estado local a través del listener onValue, 
+    // pero escribir directamente es seguro.
+    set(ref(db, `weekData/${updatedDay.id}`), updatedDay);
   };
 
   const handleExport = () => {
     exportToCSV(weekData);
+  };
+
+  const handleReset = () => {
+    if (window.confirm("¿Estás seguro de reiniciar toda la semana? Esto borrará todos los datos para TODOS los usuarios.")) {
+      const emptyState = createInitialState();
+      set(ref(db, 'weekData'), emptyState).then(() => {
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        // No necesitamos reload con Firebase, la actualización es reactiva
+      });
+    }
   };
 
   const handleImportClick = () => {
@@ -79,8 +93,8 @@ const App: React.FC = () => {
       const text = event.target?.result as string;
       const parsedData = parseCSV(text);
       if (parsedData) {
-        if (window.confirm('Esto sobrescribirá los datos actuales. ¿Deseas continuar?')) {
-          setWeekData(parsedData);
+        if (window.confirm('Esto sobrescribirá los datos actuales en la nube. ¿Deseas continuar?')) {
+          set(ref(db, 'weekData'), parsedData);
         }
       } else {
         alert('Error al leer el archivo CSV. Verifique el formato.');
@@ -93,7 +107,6 @@ const App: React.FC = () => {
 
   const totals = React.useMemo(() => (Object.values(weekData) as DayData[]).reduce(
     (acc, day) => {
-      // Safety checks inside reduce
       if (!day) return acc;
       const dayIncome = day.incomes?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
       const dayExpense = day.expenses?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
@@ -114,13 +127,17 @@ const App: React.FC = () => {
     let currentBalance = 0;
 
     for (const day of DAYS_OF_WEEK) {
-      balances[day.id] = currentBalance;
       const data = weekData[day.id];
+      const effectiveInitial = data?.manualInitialAmount ?? currentBalance;
+      
+      balances[day.id] = currentBalance;
+      
       if (data) {
         const income = data.incomes?.reduce((s, t) => s + (t.amount || 0), 0) || 0;
         const expense = data.expenses?.reduce((s, t) => s + (t.amount || 0), 0) || 0;
         const toBox = data.toBox?.reduce((s, t) => s + (t.amount || 0), 0) || 0;
-        currentBalance = currentBalance + income - expense - toBox;
+        
+        currentBalance = effectiveInitial + income - expense - toBox;
       }
     }
     return balances;
@@ -147,7 +164,6 @@ const App: React.FC = () => {
                 alt="Avícola Alpina" 
                 className="h-12 w-auto rounded-lg bg-white p-1 shadow-md shadow-indigo-900/20"
                 onError={(e) => {
-                  // Fallback if image fails (e.g. 404)
                   (e.target as HTMLImageElement).style.display = 'none';
                 }}
               />
@@ -183,6 +199,15 @@ const App: React.FC = () => {
               >
                 <Download size={14} />
                 <span className="hidden lg:inline">Exportar</span>
+              </button>
+
+              <button 
+                type="button"
+                onClick={handleReset}
+                className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-red-300 bg-red-950/30 hover:bg-red-900/50 hover:text-red-200 rounded-lg transition-colors border border-red-900/50"
+              >
+                <RotateCcw size={14} />
+                <span className="hidden lg:inline">Reiniciar</span>
               </button>
             </div>
           </div>

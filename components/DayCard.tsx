@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Archive, TrendingUp, TrendingDown, Briefcase, History, Wallet } from 'lucide-react';
+import { Plus, Archive, TrendingUp, TrendingDown, Briefcase, History, Wallet, RotateCcw, Edit2, Check, X } from 'lucide-react';
 import { DayData, Transaction, TransactionType } from '../types';
 import { TransactionItem } from './TransactionItem';
 import { formatCurrency, generateId } from '../utils';
@@ -7,13 +7,20 @@ import { formatCurrency, generateId } from '../utils';
 interface DayCardProps {
   dayData: DayData;
   onUpdate: (updatedDay: DayData) => void;
-  previousBalance?: number;
+  previousBalance: number; // This is the automatic calculated balance from prev day
 }
 
 export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBalance = 0 }) => {
   
   // Guard clause to prevent crashes if data is missing
   if (!dayData) return null;
+
+  const [isEditingInitial, setIsEditingInitial] = React.useState(false);
+  const [tempInitial, setTempInitial] = React.useState('');
+  
+  // Determine if we are using a manual override or the automatic calculation
+  const isManualInitial = dayData.manualInitialAmount !== undefined;
+  const effectiveInitialAmount = isManualInitial ? dayData.manualInitialAmount! : previousBalance;
 
   const handleAddTransaction = (type: TransactionType) => {
     const newTransaction: Transaction = {
@@ -43,12 +50,54 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
     onUpdate({ ...dayData, [type]: updatedList });
   };
 
+  const saveInitialAmount = () => {
+    // Parse formatted string: remove dots, keep negatives if any (though logic below restricts to positive)
+    const val = parseFloat(tempInitial.replace(/\./g, '').replace(/,/g, '.'));
+    if (!isNaN(val)) {
+      onUpdate({ ...dayData, manualInitialAmount: val });
+    }
+    setIsEditingInitial(false);
+  };
+
+  const resetInitialAmount = () => {
+    onUpdate({ ...dayData, manualInitialAmount: undefined });
+  };
+
+  const startEditingInitial = () => {
+    // Format existing amount when starting edit
+    const formatted = new Intl.NumberFormat('es-AR').format(effectiveInitialAmount);
+    setTempInitial(formatted);
+    setIsEditingInitial(true);
+  };
+
+  const handleInitialChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    // Strict positive for Initial Amount based on request "solo el A CAJA debe permitir negativos"
+    const digits = val.replace(/\D/g, ''); 
+    
+    if (digits === '') {
+      setTempInitial('');
+      return;
+    }
+
+    const numVal = parseInt(digits, 10);
+    if (!isNaN(numVal)) {
+      // Format with thousands separators
+      const formatted = new Intl.NumberFormat('es-AR').format(numVal);
+      setTempInitial(formatted);
+    }
+  };
+
+  const handleInitialKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') saveInitialAmount();
+    if (e.key === 'Escape') setIsEditingInitial(false);
+  };
+
   const totalIncome = React.useMemo(() => dayData.incomes.reduce((acc, curr) => acc + curr.amount, 0), [dayData.incomes]);
   const totalExpense = React.useMemo(() => dayData.expenses.reduce((acc, curr) => acc + curr.amount, 0), [dayData.expenses]);
   const totalToBox = React.useMemo(() => dayData.toBox.reduce((acc, curr) => acc + curr.amount, 0), [dayData.toBox]);
   
-  const totalOficina = previousBalance + totalIncome - totalExpense - totalToBox;
-  const showInitialAmount = dayData.id !== 'monday' && previousBalance > 0;
+  const totalOficina = effectiveInitialAmount + totalIncome - totalExpense - totalToBox;
 
   const MetricDisplay = ({ label, value, icon: Icon, colorClass, borderClass }: { label: string; value: number; icon: any; colorClass: string; borderClass?: string }) => (
     <div className={`flex items-center justify-between p-2 rounded-lg bg-slate-800 border ${borderClass || 'border-slate-700'}`}>
@@ -68,12 +117,6 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
           <h2 className="text-lg font-bold text-slate-100 uppercase tracking-wide flex-1 pl-1">{dayData.name}</h2>
         </div>
         <div className="space-y-1.5">
-          {showInitialAmount && (
-            <div className="flex justify-between items-center px-2 py-1 bg-slate-800 rounded text-xs text-slate-400 border border-slate-700">
-              <span className="flex items-center gap-1"><History size={12}/> Inicial</span>
-              <span className="font-mono text-slate-300">{formatCurrency(previousBalance)}</span>
-            </div>
-          )}
           <MetricDisplay label="Oficina" value={totalOficina} icon={Briefcase} colorClass="text-blue-400" borderClass="border-blue-900/30 bg-blue-950/20" />
           <MetricDisplay label="Caja" value={totalToBox} icon={Wallet} colorClass="text-indigo-400" borderClass="border-indigo-900/30 bg-indigo-950/20" />
         </div>
@@ -82,7 +125,54 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
       {/* Content Columns - Scrollable Area */}
       <div className="flex-1 overflow-y-auto p-3 space-y-3 bg-slate-950 custom-scrollbar">
         
-        {/* Incomes Container - Dark Mode */}
+        {/* Initial Amount Section */}
+        <div className="rounded-lg bg-slate-800/40 border border-slate-700/50 overflow-hidden shadow-sm">
+           <div className="flex justify-between items-center px-3 py-2 bg-slate-800 border-b border-slate-700">
+             <h3 className="font-bold text-xs text-slate-300 uppercase flex items-center gap-1.5 tracking-wider">
+               <History size={14} className="text-slate-400"/> 
+               Monto Inicial
+             </h3>
+             {isManualInitial && !isEditingInitial && (
+                <button onClick={resetInitialAmount} title="Restaurar a Automático" className="p-1 rounded hover:bg-slate-700 text-slate-400 hover:text-blue-400 transition-colors">
+                  <RotateCcw size={12} />
+                </button>
+             )}
+           </div>
+           <div className="p-2">
+             {isEditingInitial ? (
+                <div className="flex items-center gap-2">
+                   <div className="relative flex-1">
+                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-500 text-xs">$</span>
+                      <input 
+                        type="text" 
+                        inputMode="numeric"
+                        autoFocus
+                        value={tempInitial} 
+                        onChange={handleInitialChange}
+                        onKeyDown={handleInitialKeyDown}
+                        className="w-full bg-slate-900 border border-indigo-500 rounded px-2 pl-4 py-1 text-sm font-mono text-white focus:outline-none"
+                      />
+                   </div>
+                   <button onClick={saveInitialAmount} className="p-1 bg-indigo-600 rounded text-white"><Check size={14}/></button>
+                   <button onClick={() => setIsEditingInitial(false)} className="p-1 bg-slate-700 rounded text-slate-300"><X size={14}/></button>
+                </div>
+             ) : (
+                <div onClick={startEditingInitial} className={`cursor-pointer p-2 rounded border border-transparent hover:border-slate-600 hover:bg-slate-800 transition-all flex justify-between items-center group ${isManualInitial ? 'bg-slate-800/50' : ''}`}>
+                  <span className={`text-xs ${isManualInitial ? 'text-indigo-300 font-medium' : 'text-slate-500 italic'}`}>
+                    {isManualInitial ? 'Manual' : 'Automático'}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className={`font-mono font-semibold text-sm ${isManualInitial ? 'text-indigo-200' : 'text-slate-400'}`}>
+                      {formatCurrency(effectiveInitialAmount)}
+                    </span>
+                    <Edit2 size={12} className="opacity-0 group-hover:opacity-100 text-slate-500" />
+                  </div>
+                </div>
+             )}
+           </div>
+        </div>
+
+        {/* Incomes Container */}
         <div className="rounded-lg bg-emerald-950/40 border border-emerald-900/50 overflow-hidden shadow-sm">
           <div className="flex justify-between items-center px-3 py-2 bg-emerald-950 border-b border-emerald-900">
             <h3 className="font-bold text-xs text-emerald-200 uppercase flex items-center gap-1.5 tracking-wider">
@@ -99,7 +189,7 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
           </div>
         </div>
 
-        {/* Expenses Container - Dark Mode */}
+        {/* Expenses Container */}
         <div className="rounded-lg bg-rose-950/40 border border-rose-900/50 overflow-hidden shadow-sm">
           <div className="flex justify-between items-center px-3 py-2 bg-rose-950 border-b border-rose-900">
             <h3 className="font-bold text-xs text-rose-200 uppercase flex items-center gap-1.5 tracking-wider">
@@ -116,7 +206,7 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
           </div>
         </div>
 
-        {/* To Box Container - Dark Mode */}
+        {/* To Box Container */}
         <div className="rounded-lg bg-indigo-950/40 border border-indigo-900/50 overflow-hidden shadow-sm">
           <div className="flex justify-between items-center px-3 py-2 bg-indigo-950 border-b border-indigo-900">
             <h3 className="font-bold text-xs text-indigo-200 uppercase flex items-center gap-1.5 tracking-wider">
