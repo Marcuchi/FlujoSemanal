@@ -33,7 +33,8 @@ const App: React.FC = () => {
   React.useEffect(() => {
     if (db) {
       // --- MODO NUBE (Firebase) ---
-      const dataRef = ref(db, 'weekData');
+      // TypeScript doesn't narrow imported mutable variables, so we assert not null with !
+      const dataRef = ref(db!, 'weekData');
       
       const unsubscribe = onValue(dataRef, (snapshot) => {
         const data = snapshot.val();
@@ -55,7 +56,7 @@ const App: React.FC = () => {
           // Inicializar DB si está vacía
           const initial = createInitialState();
           // Limpiamos undefined antes de guardar
-          set(ref(db, 'weekData'), JSON.parse(JSON.stringify(initial)));
+          set(ref(db!, 'weekData'), JSON.parse(JSON.stringify(initial)));
           setWeekData(initial);
         }
       }, (error) => {
@@ -87,7 +88,7 @@ const App: React.FC = () => {
       // JSON.parse reconstruye el objeto limpio y seguro para enviar.
       const cleanData = JSON.parse(JSON.stringify(newData));
 
-      set(ref(db, 'weekData'), cleanData).catch(err => {
+      set(ref(db!, 'weekData'), cleanData).catch(err => {
         console.error("Error guardando en Firebase", err);
       });
       // Actualizamos estado local optimísticamente
