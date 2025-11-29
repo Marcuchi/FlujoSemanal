@@ -207,6 +207,9 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
               <TrendingUp size={14} className="text-emerald-400"/> 
               Ingresos
             </h3>
+            <span className="text-[10px] font-mono font-bold text-emerald-300 bg-emerald-900/60 px-1.5 py-0.5 rounded border border-emerald-800/50">
+              {formatCurrency(totalIncome + totalDeliveries)}
+            </span>
           </div>
           
           <div className="p-2 space-y-2">
@@ -214,7 +217,10 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
             {/* Ventas Mostrador -> Renamed to General */}
             <div>
               <div className="flex justify-between items-center mb-1 px-1">
-                <span className="text-[10px] uppercase font-bold text-emerald-500/80 tracking-wide">General</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] uppercase font-bold text-emerald-500/80 tracking-wide">General</span>
+                  <span className="text-[10px] font-mono font-bold text-emerald-400/90">{formatCurrency(totalIncome)}</span>
+                </div>
                 <button onClick={() => handleAddTransaction('incomes')} className="p-0.5 rounded bg-emerald-900/50 hover:bg-emerald-800 text-emerald-200 border border-emerald-800/50 transition-colors">
                   <Plus size={12} />
                 </button>
@@ -239,9 +245,12 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
             {/* Repartos */}
             <div>
               <div className="flex justify-between items-center mb-1 px-1">
-                <span className="text-[10px] uppercase font-bold text-teal-500/80 tracking-wide flex items-center gap-1">
-                   <Truck size={10} /> Repartos
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] uppercase font-bold text-teal-500/80 tracking-wide flex items-center gap-1">
+                     <Truck size={10} /> Repartos
+                  </span>
+                  <span className="text-[10px] font-mono font-bold text-teal-400/90">{formatCurrency(totalDeliveries)}</span>
+                </div>
                 <button onClick={() => handleAddTransaction('deliveries')} className="p-0.5 rounded bg-teal-900/50 hover:bg-teal-800 text-teal-200 border border-teal-800/50 transition-colors">
                   <Plus size={12} />
                 </button>
@@ -268,8 +277,13 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
         <div className="rounded-lg bg-rose-950/40 border border-rose-900/50 overflow-hidden shadow-sm">
           <div className="flex justify-between items-center px-3 py-2 bg-rose-950 border-b border-rose-900">
             <h3 className="font-bold text-xs text-rose-200 uppercase flex items-center gap-1.5 tracking-wider">
-              <TrendingDown size={14} className="text-rose-400"/> 
-              Egresos
+              <div className="flex items-center gap-1.5">
+                <TrendingDown size={14} className="text-rose-400"/> 
+                Egresos
+              </div>
+              <span className="ml-2 text-[10px] font-mono font-bold text-rose-300 bg-rose-900/60 px-1.5 py-0.5 rounded border border-rose-800/50">
+                {formatCurrency(totalExpense)}
+              </span>
             </h3>
             <button onClick={() => handleAddTransaction('expenses')} className="p-1 rounded bg-rose-900 hover:bg-rose-800 text-rose-100 transition-colors border border-rose-800">
               <Plus size={14} />
@@ -285,8 +299,13 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
         <div className="rounded-lg bg-indigo-950/40 border border-indigo-900/50 overflow-hidden shadow-sm">
           <div className="flex justify-between items-center px-3 py-2 bg-indigo-950 border-b border-indigo-900">
             <h3 className="font-bold text-xs text-indigo-200 uppercase flex items-center gap-1.5 tracking-wider">
-              <Archive size={14} className="text-indigo-400"/> 
-              A Caja
+              <div className="flex items-center gap-1.5">
+                <Archive size={14} className="text-indigo-400"/> 
+                A Caja
+              </div>
+              <span className="ml-2 text-[10px] font-mono font-bold text-indigo-300 bg-indigo-900/60 px-1.5 py-0.5 rounded border border-indigo-800/50">
+                {formatCurrency(totalToBox)}
+              </span>
             </h3>
             <button onClick={() => handleAddTransaction('toBox')} className="p-1 rounded bg-indigo-900 hover:bg-indigo-800 text-indigo-100 transition-colors border border-indigo-800">
               <Plus size={14} />
