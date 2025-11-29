@@ -56,7 +56,7 @@ export const addWeeks = (date: Date, weeks: number): Date => {
 
 // --- CSV Helpers ---
 
-export const exportToCSV = (data: WeekData, history: HistoryItem[] = [], referenceDate: Date = new Date()) => {
+export const exportToCSV = (data: WeekData, history: HistoryItem[] = []) => {
   const headers = ['DayID', 'DayName', 'Type', 'Title', 'Amount', 'Metadata']; 
   const rows: string[] = [headers.join(',')];
 
@@ -101,9 +101,8 @@ export const exportToCSV = (data: WeekData, history: HistoryItem[] = [], referen
   const url = URL.createObjectURL(blob);
   link.setAttribute("href", url);
   
-  // Use the reference date (the viewed week) for the filename
-  const weekKey = getWeekKey(referenceDate);
-  link.setAttribute("download", `flujo_semanal_${weekKey}.csv`);
+  const dateStr = new Date().toISOString().slice(0, 10);
+  link.setAttribute("download", `flujo_semanal_${dateStr}.csv`);
   
   document.body.appendChild(link);
   link.click();

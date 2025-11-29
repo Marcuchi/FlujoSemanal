@@ -189,8 +189,7 @@ const App: React.FC = () => {
   };
 
   const handleExport = () => {
-    // Pass the currently viewed date to ensure the filename matches the viewed week
-    exportToCSV(weekData, history, currentDate);
+    exportToCSV(weekData, history);
   };
 
   const handleReset = () => {
