@@ -13,9 +13,50 @@ export const generateId = (): string => {
   return Date.now().toString(36) + Math.random().toString(36).substring(2);
 };
 
-// CSV Helpers
+// --- Date & Week Helpers ---
 
-export const exportToCSV = (data: WeekData, history: HistoryItem[] = []) => {
+export const getMonday = (d: Date): Date => {
+  const date = new Date(d);
+  const day = date.getDay();
+  const diff = date.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
+  date.setDate(diff);
+  date.setHours(0, 0, 0, 0);
+  return date;
+};
+
+export const getWeekKey = (date: Date): string => {
+  const monday = getMonday(date);
+  const year = monday.getFullYear();
+  // Simple week identifier: Year-Month-DayOfMonday (e.g. 2024-04-15)
+  // This ensures unique keys per week and is readable
+  const m = (monday.getMonth() + 1).toString().padStart(2, '0');
+  const d = monday.getDate().toString().padStart(2, '0');
+  return `${year}-${m}-${d}`;
+};
+
+export const getWeekRangeLabel = (date: Date): string => {
+  const monday = getMonday(date);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+
+  const options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' };
+  // remove trailing dots from short months if browser adds them, though 'es-AR' usually doesn't
+  const start = monday.toLocaleDateString('es-AR', options).replace('.', '');
+  const end = sunday.toLocaleDateString('es-AR', options).replace('.', '');
+  const year = monday.getFullYear();
+
+  return `${start} - ${end} ${year}`;
+};
+
+export const addWeeks = (date: Date, weeks: number): Date => {
+  const newDate = new Date(date);
+  newDate.setDate(newDate.getDate() + (weeks * 7));
+  return newDate;
+};
+
+// --- CSV Helpers ---
+
+export const exportToCSV = (data: WeekData, history: HistoryItem[] = [], referenceDate: Date = new Date()) => {
   const headers = ['DayID', 'DayName', 'Type', 'Title', 'Amount', 'Metadata']; 
   const rows: string[] = [headers.join(',')];
 
@@ -60,8 +101,9 @@ export const exportToCSV = (data: WeekData, history: HistoryItem[] = []) => {
   const url = URL.createObjectURL(blob);
   link.setAttribute("href", url);
   
-  const dateStr = new Date().toISOString().slice(0, 10);
-  link.setAttribute("download", `flujo_semanal_${dateStr}.csv`);
+  // Use the reference date (the viewed week) for the filename
+  const weekKey = getWeekKey(referenceDate);
+  link.setAttribute("download", `flujo_semanal_${weekKey}.csv`);
   
   document.body.appendChild(link);
   link.click();

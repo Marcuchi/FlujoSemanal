@@ -1,13 +1,13 @@
 import React from 'react';
-import { Download, Upload, RotateCcw, PieChart as PieChartIcon, History } from 'lucide-react';
-import { ref, onValue, set } from 'firebase/database';
+import { Download, Upload, RotateCcw, PieChart as PieChartIcon, History, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
+import { ref, onValue, set, get, child } from 'firebase/database';
 import { db } from './firebaseConfig';
 import { DAYS_OF_WEEK, WeekData, DayData, HistoryItem } from './types';
 import { DayCard } from './components/DayCard';
 import { Summary } from './components/Summary';
 import { WeeklyReportModal } from './components/WeeklyReportModal';
 import { HistoryModal } from './components/HistoryModal';
-import { exportToCSV, parseCSV } from './utils';
+import { exportToCSV, parseCSV, getWeekKey, getWeekRangeLabel, addWeeks, getMonday } from './utils';
 
 const createInitialState = (): WeekData => {
   const state: WeekData = {};
@@ -26,6 +26,7 @@ const createInitialState = (): WeekData => {
 };
 
 const App: React.FC = () => {
+  const [currentDate, setCurrentDate] = React.useState(new Date());
   const [weekData, setWeekData] = React.useState<WeekData>(createInitialState());
   const [history, setHistory] = React.useState<HistoryItem[]>([]);
   
@@ -33,13 +34,49 @@ const App: React.FC = () => {
   const [isOfflineMode, setIsOfflineMode] = React.useState(false);
   const [showReport, setShowReport] = React.useState(false);
   const [showHistory, setShowHistory] = React.useState(false);
+  const [loading, setLoading] = React.useState(true);
 
-  // Data Loading Effect
+  // Derived week key (e.g., "2024-04-15")
+  const currentWeekKey = React.useMemo(() => getWeekKey(currentDate), [currentDate]);
+
+  // --- Data Loading Effect ---
   React.useEffect(() => {
     if (db) {
-      // 1. Week Data Listener
-      const weekRef = ref(db!, 'weekData');
-      const unsubscribeWeek = onValue(weekRef, (snapshot) => {
+      setLoading(true);
+
+      // Check for migration from root to specific week
+      // This runs only once or when weekKey changes, but we want to check old data format first
+      const rootRef = ref(db!);
+      
+      // We listen to the specific week node
+      const weekDataRef = ref(db!, `weeks/${currentWeekKey}/data`);
+      const historyRef = ref(db!, `weeks/${currentWeekKey}/history`);
+
+      // 1. Migration Logic (Check if data exists in old 'weekData' root and move it to current week)
+      // This effectively "adopts" the existing data into the current week view
+      get(child(rootRef, 'weekData')).then((snapshot) => {
+        if (snapshot.exists()) {
+           // We found orphan data in root! Let's check if our current week is empty
+           get(weekDataRef).then((weekSnap) => {
+             if (!weekSnap.exists()) {
+                // Current week is empty, but we have root data. Move it here.
+                const oldData = snapshot.val();
+                set(weekDataRef, oldData);
+                // Also move history if exists
+                get(child(rootRef, 'history')).then((histSnap) => {
+                  if (histSnap.exists()) {
+                    set(historyRef, histSnap.val());
+                    set(ref(db!, 'history'), null); // Delete old root history
+                  }
+                });
+                set(ref(db!, 'weekData'), null); // Delete old root data
+             }
+           });
+        }
+      });
+
+      // 2. Week Data Listener
+      const unsubscribeWeek = onValue(weekDataRef, (snapshot) => {
         const data = snapshot.val();
         if (data) {
           const sanitizedData: WeekData = {};
@@ -51,22 +88,21 @@ const App: React.FC = () => {
               incomes: dayData.incomes || [],
               deliveries: dayData.deliveries || [],
               expenses: dayData.expenses || [],
-              salaries: dayData.salaries || [], // Load salaries
+              salaries: dayData.salaries || [],
               toBox: dayData.toBox || [],
               manualInitialAmount: dayData.manualInitialAmount,
-              initialBoxAmount: dayData.initialBoxAmount // Load Initial Box
+              initialBoxAmount: dayData.initialBoxAmount
             };
           });
           setWeekData(sanitizedData);
         } else {
-          const initial = createInitialState();
-          set(ref(db!, 'weekData'), JSON.parse(JSON.stringify(initial)));
-          setWeekData(initial);
+          // No data for this week yet
+          setWeekData(createInitialState());
         }
+        setLoading(false);
       });
 
-      // 2. History Listener
-      const historyRef = ref(db!, 'history');
+      // 3. History Listener
       const unsubscribeHistory = onValue(historyRef, (snapshot) => {
           const data = snapshot.val();
           setHistory(data || []);
@@ -77,50 +113,56 @@ const App: React.FC = () => {
         unsubscribeHistory();
       };
     } else {
-      // LocalStorage Fallback
+      // LocalStorage Fallback (Simplified for offline)
       setIsOfflineMode(true);
-      const saved = localStorage.getItem('weekData');
-      const savedHistory = localStorage.getItem('history');
+      // We use the weekKey in localStorage key to allow offline navigation too
+      const saved = localStorage.getItem(`weekData_${currentWeekKey}`);
+      const savedHistory = localStorage.getItem(`history_${currentWeekKey}`);
+      
       if (saved) {
         try {
           setWeekData(JSON.parse(saved));
         } catch (e) { console.error(e); }
+      } else {
+        setWeekData(createInitialState());
       }
+
       if (savedHistory) {
          try {
              setHistory(JSON.parse(savedHistory));
          } catch (e) { console.error(e); }
+      } else {
+        setHistory([]);
       }
+      setLoading(false);
     }
-  }, []);
+  }, [currentDate, currentWeekKey]);
+
+  // --- Save Functions ---
 
   const saveWeekData = (newData: WeekData) => {
-    // Sanitize data before saving (remove undefineds)
     const cleanData = JSON.parse(JSON.stringify(newData));
-    
-    // Explicitly handle fields that might be undefined to ensure they are null in Firebase (to delete them)
-    // or just rely on JSON.stringify stripping undefined. 
-    // For Firebase, it's safer to ensure the structure is valid.
-    
     if (db) {
-      set(ref(db!, 'weekData'), cleanData).catch(console.error);
-      setWeekData(newData); 
+      set(ref(db!, `weeks/${currentWeekKey}/data`), cleanData).catch(console.error);
+      setWeekData(newData); // Optimistic update
     } else {
       setWeekData(newData);
-      localStorage.setItem('weekData', JSON.stringify(newData));
+      localStorage.setItem(`weekData_${currentWeekKey}`, JSON.stringify(newData));
     }
   };
 
   const saveHistory = (newHistory: HistoryItem[]) => {
       if (db) {
           const cleanHistory = JSON.parse(JSON.stringify(newHistory));
-          set(ref(db!, 'history'), cleanHistory).catch(console.error);
+          set(ref(db!, `weeks/${currentWeekKey}/history`), cleanHistory).catch(console.error);
           setHistory(newHistory);
       } else {
           setHistory(newHistory);
-          localStorage.setItem('history', JSON.stringify(newHistory));
+          localStorage.setItem(`history_${currentWeekKey}`, JSON.stringify(newHistory));
       }
   };
+
+  // --- Handlers ---
 
   const handleUpdateDay = (updatedDay: DayData) => {
     const newWeekData = { ...weekData, [updatedDay.id]: updatedDay };
@@ -133,11 +175,8 @@ const App: React.FC = () => {
   };
 
   const handleRestoreHistory = (item: HistoryItem) => {
-      // 1. Remove from history
       const newHistory = history.filter(i => i.id !== item.id);
       saveHistory(newHistory);
-
-      // 2. Restore to Day
       const { originalDayId, originalType, deletedAt, ...transaction } = item;
       const day = weekData[originalDayId];
       if (day) {
@@ -150,26 +189,27 @@ const App: React.FC = () => {
   };
 
   const handleExport = () => {
-    exportToCSV(weekData, history);
+    // Pass the currently viewed date to ensure the filename matches the viewed week
+    exportToCSV(weekData, history, currentDate);
   };
 
   const handleReset = () => {
     const msg = db 
-      ? "¿Estás seguro de reiniciar la semana? Esto borrará TODOS los datos (incluido historial) en la NUBE." 
-      : "¿Estás seguro de reiniciar la semana? Esto borrará los datos LOCALES.";
+      ? `¿Estás seguro de reiniciar la semana actual (${getWeekRangeLabel(currentDate)})? Esto borrará los datos de esta semana.` 
+      : "Reiniciar borrará los datos LOCALES de esta semana.";
       
     if (window.confirm(msg)) {
       const emptyState = createInitialState();
-      
       if (db) {
-          set(ref(db!, 'weekData'), JSON.parse(JSON.stringify(emptyState)));
-          set(ref(db!, 'history'), []);
+          set(ref(db!, `weeks/${currentWeekKey}/data`), JSON.parse(JSON.stringify(emptyState)));
+          set(ref(db!, `weeks/${currentWeekKey}/history`), []);
       } else {
-          localStorage.removeItem('weekData');
-          localStorage.removeItem('history');
+          localStorage.removeItem(`weekData_${currentWeekKey}`);
+          localStorage.removeItem(`history_${currentWeekKey}`);
       }
-      
-      window.location.reload();
+      // Force reload only if really needed, but state update should be enough
+      setWeekData(emptyState);
+      setHistory([]);
     }
   };
 
@@ -196,6 +236,8 @@ const App: React.FC = () => {
 
   const handleImportClick = () => fileInputRef.current?.click();
 
+  // --- Calculations ---
+
   const totals = React.useMemo(() => (Object.values(weekData) as DayData[]).reduce(
     (acc, day) => {
       if (!day) return acc;
@@ -204,11 +246,11 @@ const App: React.FC = () => {
       const dayExpense = day.expenses?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
       const daySalaries = day.salaries?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
       const dayToBox = day.toBox?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
-      const initialBox = day.initialBoxAmount || 0; // Add initial box to total
+      const initialBox = day.initialBoxAmount || 0; 
 
       return {
         income: acc.income + dayIncome + dayDeliveries,
-        expense: acc.expense + dayExpense + daySalaries, // Include salaries in total expense
+        expense: acc.expense + dayExpense + daySalaries, 
         toBox: acc.toBox + dayToBox + initialBox,
       };
     },
@@ -224,7 +266,7 @@ const App: React.FC = () => {
     for (const day of DAYS_OF_WEEK) {
       const data = weekData[day.id];
       const effectiveInitial = data?.manualInitialAmount ?? currentBalance;
-      balances[day.id] = currentBalance;
+      balances[day.id] = currentBalance; // Balance available at start of day
       
       if (data) {
         const income = data.incomes?.reduce((s, t) => s + (t.amount || 0), 0) || 0;
@@ -233,12 +275,52 @@ const App: React.FC = () => {
         const salaries = data.salaries?.reduce((s, t) => s + (t.amount || 0), 0) || 0;
         const toBox = data.toBox?.reduce((s, t) => s + (t.amount || 0), 0) || 0;
         
-        // Subtract salaries in balance
+        // Final balance of the day, used for next day's initial
         currentBalance = effectiveInitial + income + deliveries - expense - salaries - toBox;
       }
     }
+    // Store Saturday closing balance for "next week" calculation logic
+    balances['saturday_close'] = currentBalance;
     return balances;
   }, [weekData]);
+
+  // --- Navigation & Logic ---
+
+  const handlePrevWeek = () => {
+    setCurrentDate(addWeeks(currentDate, -1));
+  };
+
+  const handleNextWeek = () => {
+    const nextDate = addWeeks(currentDate, 1);
+    const nextWeekKey = getWeekKey(nextDate);
+
+    // If online, check if next week exists. If not, carry over balances.
+    if (db) {
+        const nextWeekRef = ref(db!, `weeks/${nextWeekKey}/data`);
+        get(nextWeekRef).then((snapshot) => {
+            if (!snapshot.exists()) {
+                // Determine carry-over amounts from current week
+                // 1. Office Balance: Saturday Closing Balance
+                const carryOverOffice = runningBalances['saturday_close'] || 0;
+                
+                // 2. Box Balance: Total Accumulated Box
+                const carryOverBox = totals.toBox;
+
+                // Create new state with these initial values for Monday
+                const newState = createInitialState();
+                newState['monday'].manualInitialAmount = carryOverOffice;
+                newState['monday'].initialBoxAmount = carryOverBox;
+
+                set(nextWeekRef, JSON.parse(JSON.stringify(newState)));
+            }
+            // Navigate regardless (state listener will pick up the new data)
+            setCurrentDate(nextDate);
+        });
+    } else {
+        // Offline mode: just navigate
+        setCurrentDate(nextDate);
+    }
+  };
 
   return (
     <div className="h-screen bg-slate-950 flex flex-col overflow-hidden text-slate-100">
@@ -247,6 +329,7 @@ const App: React.FC = () => {
       <WeeklyReportModal isOpen={showReport} onClose={() => setShowReport(false)} weekData={weekData} />
       <HistoryModal isOpen={showHistory} onClose={() => setShowHistory(false)} history={history} onRestore={handleRestoreHistory} />
 
+      {/* Main Header */}
       <header className="bg-slate-900 border-b border-slate-800 shadow-md flex-none z-20">
         <div className="max-w-full px-4 py-3">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -314,7 +397,41 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      <main className="flex-1 overflow-x-auto overflow-y-hidden bg-slate-950 p-4">
+      {/* Week Navigation Bar */}
+      <div className="bg-slate-900/80 border-b border-slate-800 flex items-center justify-center py-2 relative z-10 backdrop-blur-sm">
+        <div className="flex items-center gap-6 bg-slate-800/50 px-4 py-1.5 rounded-full border border-slate-700/50">
+            <button 
+                onClick={handlePrevWeek}
+                className="p-1 hover:bg-slate-700 rounded-full text-slate-400 hover:text-white transition-colors"
+                title="Semana Anterior"
+            >
+                <ChevronLeft size={20} />
+            </button>
+            
+            <div className="flex items-center gap-2 text-sm font-medium text-slate-200">
+                <Calendar size={14} className="text-indigo-400" />
+                <span>{getWeekRangeLabel(currentDate)}</span>
+            </div>
+
+            <button 
+                onClick={handleNextWeek}
+                className="p-1 hover:bg-slate-700 rounded-full text-slate-400 hover:text-white transition-colors"
+                title="Siguiente Semana"
+            >
+                <ChevronRight size={20} />
+            </button>
+        </div>
+      </div>
+
+      <main className="flex-1 overflow-x-auto overflow-y-hidden bg-slate-950 p-4 relative">
+        {loading && (
+             <div className="absolute inset-0 bg-slate-950/80 z-50 flex items-center justify-center">
+                 <div className="flex flex-col items-center gap-3">
+                    <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                    <span className="text-slate-400 text-sm">Cargando semana...</span>
+                 </div>
+             </div>
+        )}
         <div className="flex h-full gap-4 min-w-max pb-2">
           {DAYS_OF_WEEK.map((dayDef) => (
             <DayCard
