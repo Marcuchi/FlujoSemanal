@@ -1,12 +1,15 @@
 import React from 'react';
-import { Download, Upload, RotateCcw, PieChart as PieChartIcon, History, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
+import { Download, Upload, PieChart as PieChartIcon, History, ChevronLeft, ChevronRight, Calendar, Menu, LayoutGrid, Scale } from 'lucide-react';
 import { ref, onValue, set, get, child } from 'firebase/database';
 import { db } from './firebaseConfig';
-import { DAYS_OF_WEEK, WeekData, DayData, HistoryItem } from './types';
+import { DAYS_OF_WEEK, WeekData, DayData, HistoryItem, AppMode } from './types';
 import { DayCard } from './components/DayCard';
 import { Summary } from './components/Summary';
 import { WeeklyReportModal } from './components/WeeklyReportModal';
 import { HistoryModal } from './components/HistoryModal';
+import { WeekPickerModal } from './components/WeekPickerModal';
+import { MenuModal } from './components/MenuModal';
+import { KilosApp } from './components/KilosApp';
 import { exportToCSV, parseCSV, getWeekKey, getWeekRangeLabel, addWeeks, getMonday } from './utils';
 
 const createInitialState = (): WeekData => {
@@ -29,18 +32,24 @@ const App: React.FC = () => {
   const [currentDate, setCurrentDate] = React.useState(new Date());
   const [weekData, setWeekData] = React.useState<WeekData>(createInitialState());
   const [history, setHistory] = React.useState<HistoryItem[]>([]);
+  const [currentApp, setCurrentApp] = React.useState<AppMode>('FLOW');
   
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [isOfflineMode, setIsOfflineMode] = React.useState(false);
   const [showReport, setShowReport] = React.useState(false);
   const [showHistory, setShowHistory] = React.useState(false);
+  const [showWeekPicker, setShowWeekPicker] = React.useState(false);
+  const [showMenu, setShowMenu] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
 
   // Derived week key (e.g., "2024-04-15")
   const currentWeekKey = React.useMemo(() => getWeekKey(currentDate), [currentDate]);
 
-  // --- Data Loading Effect ---
+  // --- Data Loading Effect (Only for Flow App currently, Kilos has internal loading) ---
   React.useEffect(() => {
+    // Only fetch Flow data if current app is FLOW to allow Kilos to manage its own listeners if preferred
+    // However, to keep totals available or mixed, we can keep fetching. 
+    // For now, let's keep the existing flow data logic active always to prevent state loss on switch
     if (db) {
       setLoading(true);
 
@@ -193,6 +202,22 @@ const App: React.FC = () => {
   };
 
   const handleReset = () => {
+    // If we are in Kilos App, reset Kilos data
+    if (currentApp === 'KILOS') {
+        const msg = "Reiniciar borrará los datos de KILOS de esta semana. ¿Seguro?";
+        if (window.confirm(msg)) {
+            if (db) {
+                set(ref(db!, `weeks/${currentWeekKey}/kilos`), null);
+            } else {
+                localStorage.removeItem(`kilos_${currentWeekKey}`);
+            }
+            // KilosApp component listens to this via firebase, so we might need to force update if local
+            window.location.reload(); 
+        }
+        return;
+    }
+
+    // Default Flow Reset
     const msg = db 
       ? `¿Estás seguro de reiniciar la semana actual (${getWeekRangeLabel(currentDate)})? Esto borrará los datos de esta semana.` 
       : "Reiniciar borrará los datos LOCALES de esta semana.";
@@ -206,7 +231,6 @@ const App: React.FC = () => {
           localStorage.removeItem(`weekData_${currentWeekKey}`);
           localStorage.removeItem(`history_${currentWeekKey}`);
       }
-      // Force reload only if really needed, but state update should be enough
       setWeekData(emptyState);
       setHistory([]);
     }
@@ -321,14 +345,12 @@ const App: React.FC = () => {
     }
   };
 
-  return (
-    <div className="h-screen bg-slate-950 flex flex-col overflow-hidden text-slate-100">
-      <input type="file" accept=".csv" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
+  const handleDateSelect = (date: Date) => {
+    setCurrentDate(date);
+    setShowWeekPicker(false);
+  };
 
-      <WeeklyReportModal isOpen={showReport} onClose={() => setShowReport(false)} weekData={weekData} />
-      <HistoryModal isOpen={showHistory} onClose={() => setShowHistory(false)} history={history} onRestore={handleRestoreHistory} />
-
-      {/* Main Header */}
+  const Header = () => (
       <header className="bg-slate-900 border-b border-slate-800 shadow-md flex-none z-20">
         <div className="max-w-full px-4 py-3">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -337,68 +359,98 @@ const App: React.FC = () => {
               <img 
                 src="https://avicolaalpina.com.ar/wp-content/uploads/2025/04/logoCompleto0.png" 
                 alt="Avícola Alpina" 
-                className="h-12 w-auto object-contain"
+                className={`h-12 w-auto object-contain transition-all ${currentApp === 'KILOS' ? 'grayscale opacity-80' : ''}`}
                 onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
               />
               <div>
                 <h1 className="text-xl font-bold text-slate-100 leading-tight flex items-center gap-2">
-                  Flujo<span className="text-indigo-400">Semanal</span>
+                  {currentApp === 'FLOW' ? (
+                      <>Flujo<span className="text-indigo-400">Semanal</span></>
+                  ) : (
+                      <>Control<span className="text-orange-400">Kilos</span></>
+                  )}
                   {isOfflineMode && <span className="text-[10px] bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded ml-2 border border-slate-600">MODO LOCAL</span>}
                 </h1>
                 <p className="text-xs text-slate-400 hidden sm:block">Avícola Alpina</p>
               </div>
             </div>
 
-            <div className="flex-1 overflow-x-auto no-scrollbar mx-4">
-               <Summary totalIncome={totals.income} totalExpense={totals.expense} netTotal={netTotal} totalToBox={totals.toBox} />
-            </div>
+            {currentApp === 'FLOW' && (
+                <div className="flex-1 overflow-x-auto no-scrollbar mx-4">
+                   <Summary totalIncome={totals.income} totalExpense={totals.expense} netTotal={netTotal} totalToBox={totals.toBox} />
+                </div>
+            )}
+            
+            {currentApp === 'KILOS' && <div className="flex-1"></div>}
             
             <div className="flex items-center gap-2 flex-shrink-0">
-              <button 
-                type="button"
-                onClick={() => setShowReport(true)}
-                className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-100 bg-indigo-600 hover:bg-indigo-500 rounded-lg transition-colors shadow-sm shadow-indigo-900/50"
-              >
-                <PieChartIcon size={14} />
-                <span className="hidden lg:inline">Informe Semanal</span>
-              </button>
+              
+              {currentApp === 'FLOW' && (
+                  <>
+                      <button 
+                        type="button"
+                        onClick={() => setShowReport(true)}
+                        className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-100 bg-indigo-600 hover:bg-indigo-500 rounded-lg transition-colors shadow-sm shadow-indigo-900/50"
+                      >
+                        <PieChartIcon size={14} />
+                        <span className="hidden lg:inline">Informe Semanal</span>
+                      </button>
 
-              <button 
-                type="button"
-                onClick={() => setShowHistory(true)}
-                className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 hover:text-white rounded-lg transition-colors border border-slate-700 relative"
-              >
-                <History size={14} />
-                <span className="hidden lg:inline">Historial</span>
-                {history.length > 0 && (
-                    <span className="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-red-500 text-[8px] text-white">
-                        {history.length}
-                    </span>
-                )}
-              </button>
+                      <button 
+                        type="button"
+                        onClick={() => setShowHistory(true)}
+                        className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 hover:text-white rounded-lg transition-colors border border-slate-700 relative"
+                      >
+                        <History size={14} />
+                        <span className="hidden lg:inline">Historial</span>
+                        {history.length > 0 && (
+                            <span className="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-red-500 text-[8px] text-white">
+                                {history.length}
+                            </span>
+                        )}
+                      </button>
 
-              <button type="button" onClick={handleImportClick} className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 hover:text-white rounded-lg transition-colors border border-slate-700">
-                <Upload size={14} />
-                <span className="hidden lg:inline">Importar</span>
-              </button>
+                      <button type="button" onClick={handleImportClick} className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 hover:text-white rounded-lg transition-colors border border-slate-700">
+                        <Upload size={14} />
+                        <span className="hidden lg:inline">Importar</span>
+                      </button>
 
-              <button type="button" onClick={handleExport} className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 hover:text-white rounded-lg transition-colors border border-slate-700">
-                <Download size={14} />
-                <span className="hidden lg:inline">Exportar</span>
-              </button>
+                      <button type="button" onClick={handleExport} className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 hover:text-white rounded-lg transition-colors border border-slate-700">
+                        <Download size={14} />
+                        <span className="hidden lg:inline">Exportar</span>
+                      </button>
+                  </>
+              )}
 
-              <button type="button" onClick={handleReset} className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-red-300 bg-red-950/30 hover:bg-red-900/50 hover:text-red-200 rounded-lg transition-colors border border-red-900/50">
-                <RotateCcw size={14} />
-                <span className="hidden lg:inline">Reiniciar</span>
+              <button type="button" onClick={() => setShowMenu(true)} className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 hover:text-white rounded-lg transition-colors border border-slate-700">
+                <Menu size={14} />
+                <span className="hidden lg:inline">Menú</span>
               </button>
             </div>
           </div>
         </div>
       </header>
+  );
 
-      {/* Week Navigation Bar */}
-      <div className="bg-slate-900/80 border-b border-slate-800 flex items-center justify-center py-2 relative z-10 backdrop-blur-sm">
-        <div className="flex items-center gap-6 bg-slate-800/50 px-4 py-1.5 rounded-full border border-slate-700/50">
+  return (
+    <div className="h-screen bg-slate-950 flex flex-col overflow-hidden text-slate-100">
+      <input type="file" accept=".csv" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
+
+      <WeeklyReportModal isOpen={showReport} onClose={() => setShowReport(false)} weekData={weekData} />
+      <HistoryModal isOpen={showHistory} onClose={() => setShowHistory(false)} history={history} onRestore={handleRestoreHistory} />
+      <MenuModal 
+        isOpen={showMenu} 
+        onClose={() => setShowMenu(false)} 
+        onReset={handleReset} 
+        currentApp={currentApp}
+        onSwitchApp={setCurrentApp}
+      />
+
+      <Header />
+
+      {/* Week Navigation Bar (Shared) */}
+      <div className="bg-slate-900/80 border-b border-slate-800 flex items-center justify-center py-2 relative z-10 backdrop-blur-sm flex-none">
+        <div className="flex items-center gap-6 bg-slate-800/50 px-4 py-1.5 rounded-full border border-slate-700/50 relative">
             <button 
                 onClick={handlePrevWeek}
                 className="p-1 hover:bg-slate-700 rounded-full text-slate-400 hover:text-white transition-colors"
@@ -407,10 +459,20 @@ const App: React.FC = () => {
                 <ChevronLeft size={20} />
             </button>
             
-            <div className="flex items-center gap-2 text-sm font-medium text-slate-200">
-                <Calendar size={14} className="text-indigo-400" />
+            <button 
+                onClick={() => setShowWeekPicker(!showWeekPicker)}
+                className="flex items-center gap-2 text-sm font-medium text-slate-200 hover:text-white px-2 py-1 rounded hover:bg-slate-700/50 transition-colors"
+            >
+                <Calendar size={14} className={currentApp === 'FLOW' ? "text-indigo-400" : "text-orange-400"} />
                 <span>{getWeekRangeLabel(currentDate)}</span>
-            </div>
+            </button>
+            
+            <WeekPickerModal 
+               isOpen={showWeekPicker} 
+               onClose={() => setShowWeekPicker(false)} 
+               currentDate={currentDate}
+               onSelectDate={handleDateSelect}
+            />
 
             <button 
                 onClick={handleNextWeek}
@@ -422,26 +484,28 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      <main className="flex-1 overflow-x-auto overflow-y-hidden bg-slate-950 p-4 relative">
+      <main className="flex-1 overflow-hidden relative">
         {loading && (
              <div className="absolute inset-0 bg-slate-950/80 z-50 flex items-center justify-center">
-                 <div className="flex flex-col items-center gap-3">
-                    <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
-                    <span className="text-slate-400 text-sm">Cargando semana...</span>
-                 </div>
+                 <div className={`w-8 h-8 border-4 border-t-transparent rounded-full animate-spin ${currentApp === 'FLOW' ? 'border-indigo-500' : 'border-orange-500'}`}></div>
              </div>
         )}
-        <div className="flex h-full gap-4 min-w-max pb-2">
-          {DAYS_OF_WEEK.map((dayDef) => (
-            <DayCard
-              key={dayDef.id}
-              dayData={weekData[dayDef.id]}
-              onUpdate={handleUpdateDay}
-              previousBalance={runningBalances[dayDef.id]}
-              onAddToHistory={handleAddToHistory}
-            />
-          ))}
-        </div>
+        
+        {currentApp === 'FLOW' ? (
+            <div className="flex h-full gap-4 min-w-max pb-2 p-4 overflow-x-auto">
+              {DAYS_OF_WEEK.map((dayDef) => (
+                <DayCard
+                  key={dayDef.id}
+                  dayData={weekData[dayDef.id]}
+                  onUpdate={handleUpdateDay}
+                  previousBalance={runningBalances[dayDef.id]}
+                  onAddToHistory={handleAddToHistory}
+                />
+              ))}
+            </div>
+        ) : (
+            <KilosApp db={db} weekKey={currentWeekKey} />
+        )}
       </main>
     </div>
   );

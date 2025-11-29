@@ -1,3 +1,4 @@
+
 export interface Transaction {
   id: string;
   title: string;
@@ -25,6 +26,50 @@ export interface HistoryItem extends Transaction {
 }
 
 export type WeekData = Record<string, DayData>;
+
+// --- KILOS APP TYPES ---
+
+export const DRIVERS_LIST = [
+  'Amilcar',
+  'Diego Malageño',
+  'Reina Alba',
+  'Nico',
+  'Merlo',
+  'Sahar',
+  'Ledesma',
+  'Tomas',
+  'Sanchez',
+  'Ortega',
+  'Alexis'
+];
+
+export const ROUTES_LIST = [
+  'Alta Gracia',
+  'Calera',
+  'Centro Garbino',
+  'Carlos Paz',
+  'Gran Cordoba',
+  'Malvinas'
+];
+
+export interface KilosDayData {
+  id: string;
+  // Particulares (Array to allow multiple entries)
+  public: number[]; 
+  // Choferes (Keyed by driver name)
+  drivers: Record<string, number>;
+  // Reparto Zonas (Keyed by route name)
+  routes_out: Record<string, number>;
+  // Devolución Zonas (Keyed by route name)
+  routes_in: Record<string, number>;
+  // Camara
+  camera_plus: number;
+  camera_minus: number;
+}
+
+export type KilosWeekData = Record<string, KilosDayData>;
+
+export type AppMode = 'FLOW' | 'KILOS';
 
 export const DAYS_OF_WEEK = [
   { id: 'monday', name: 'Lunes' },
