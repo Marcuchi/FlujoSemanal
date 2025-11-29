@@ -255,7 +255,7 @@ const App: React.FC = () => {
               <img 
                 src="https://avicolaalpina.com.ar/wp-content/uploads/2025/04/logoCompleto0.png" 
                 alt="Avícola Alpina" 
-                className="h-12 w-auto rounded-lg bg-white p-1 shadow-md shadow-indigo-900/20"
+                className="h-10 w-auto rounded-lg bg-white p-1 shadow-md shadow-indigo-900/20"
                 onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
               />
               <div>
