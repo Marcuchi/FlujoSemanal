@@ -82,6 +82,7 @@ export interface CCTransaction {
 export interface CCAccountData {
   initialBalance: number;
   transactions: CCTransaction[];
+  type?: 'REGULAR' | 'TEMPORARY'; // Added to distinguish account types
 }
 
 export type CCData = Record<string, CCAccountData>;

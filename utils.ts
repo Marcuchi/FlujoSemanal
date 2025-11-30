@@ -72,6 +72,7 @@ export const exportToCSV = (data: WeekData, history: HistoryItem[] = [], filenam
     }
 
     const addRows = (list: Transaction[], type: string) => {
+        if (!list) return;
         list.forEach(t => {
             rows.push(`${day.id},${day.name},${type},"${t.title.replace(/"/g, '""')}",${t.amount},`);
         });
@@ -80,7 +81,7 @@ export const exportToCSV = (data: WeekData, history: HistoryItem[] = [], filenam
     addRows(day.incomes, 'incomes');
     addRows(day.deliveries, 'deliveries');
     addRows(day.expenses, 'expenses');
-    addRows(day.salaries, 'salaries'); // Export Salaries
+    addRows(day.salaries, 'salaries'); 
     addRows(day.toBox, 'toBox');
   });
 
@@ -98,7 +99,8 @@ export const exportToCSV = (data: WeekData, history: HistoryItem[] = [], filenam
 };
 
 export const exportMonthToCSV = (monthLabel: string, weeksData: Record<string, WeekData>) => {
-    const headers = ['WeekStart', 'DayID', 'DayName', 'Category', 'Title', 'Amount'];
+    // We add 'WeekKey' as first column to distinguish weeks
+    const headers = ['WeekKey', 'DayID', 'DayName', 'Type', 'Title', 'Amount'];
     const rows: string[] = [headers.join(',')];
 
     Object.entries(weeksData).forEach(([weekKey, weekData]) => {
@@ -109,34 +111,91 @@ export const exportMonthToCSV = (monthLabel: string, weeksData: Record<string, W
             };
 
             // Initials
-            if (day.manualInitialAmount !== undefined) addRow('Initial Office', 'Monto Inicial Manual', day.manualInitialAmount);
-            if (day.id === 'monday' && day.initialBoxAmount !== undefined) addRow('Initial Box', 'Caja Inicial', day.initialBoxAmount);
+            if (day.manualInitialAmount !== undefined) addRow('initial', 'Monto Inicial Manual', day.manualInitialAmount);
+            if (day.id === 'monday' && day.initialBoxAmount !== undefined) addRow('initialBox', 'Caja Inicial', day.initialBoxAmount);
 
             // Transactions
-            day.incomes.forEach(t => addRow('Ingresos (General)', t.title, t.amount));
-            day.deliveries.forEach(t => addRow('Ingresos (Reparto)', t.title, t.amount));
-            day.expenses.forEach(t => addRow('Egresos (Gastos)', t.title, t.amount));
-            day.salaries.forEach(t => addRow('Egresos (Sueldos)', t.title, t.amount));
-            day.toBox.forEach(t => addRow('A Caja', t.title, t.amount));
+            (day.incomes || []).forEach(t => addRow('incomes', t.title, t.amount));
+            (day.deliveries || []).forEach(t => addRow('deliveries', t.title, t.amount));
+            (day.expenses || []).forEach(t => addRow('expenses', t.title, t.amount));
+            (day.salaries || []).forEach(t => addRow('salaries', t.title, t.amount));
+            (day.toBox || []).forEach(t => addRow('toBox', t.title, t.amount));
         });
     });
 
     downloadCSV(rows.join("\n"), `flujo_mensual_${monthLabel}.csv`);
 };
 
-const downloadCSV = (content: string, filename: string) => {
-    const blob = new Blob(["\uFEFF" + content], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", filename);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+export const parseMonthCSV = (csvText: string): Record<string, WeekData> | null => {
+    try {
+        const rows = parseCSVRows(csvText);
+        if (rows.length < 2) return null;
+
+        const monthlyData: Record<string, WeekData> = {};
+
+        for (let i = 1; i < rows.length; i++) {
+            const cols = rows[i];
+            if (cols.length < 6) continue;
+
+            const [weekKey, dayId, , type, title, amountStr] = cols;
+            const amount = parseFloat(amountStr) || 0;
+
+            // Initialize week if not exists
+            if (!monthlyData[weekKey]) {
+                monthlyData[weekKey] = createEmptyWeek();
+            }
+
+            const dayData = monthlyData[weekKey][dayId];
+            if (!dayData) continue; // Should not happen if createEmptyWeek is correct
+
+             if (type === 'initial') {
+                dayData.manualInitialAmount = amount;
+                continue;
+             }
+             if (type === 'initialBox') {
+                dayData.initialBoxAmount = amount;
+                continue;
+             }
+
+             const transaction: Transaction = {
+                id: generateId() + Math.random().toString(36).substring(2),
+                title: title,
+                amount: amount
+             };
+
+             if (type === 'incomes') dayData.incomes.push(transaction);
+             else if (type === 'deliveries') dayData.deliveries.push(transaction);
+             else if (type === 'expenses') dayData.expenses.push(transaction);
+             else if (type === 'salaries') dayData.salaries.push(transaction);
+             else if (type === 'toBox') dayData.toBox.push(transaction);
+        }
+
+        return monthlyData;
+
+    } catch (e) {
+        console.error("Error parsing month CSV", e);
+        return null;
+    }
 };
 
-export const parseCSV = (csvText: string): { weekData: WeekData, history: HistoryItem[] } | null => {
-  try {
+const createEmptyWeek = (): WeekData => {
+    const state: WeekData = {};
+    DAYS_OF_WEEK.forEach((day) => {
+      state[day.id] = {
+        id: day.id,
+        name: day.name,
+        incomes: [],
+        deliveries: [],
+        expenses: [],
+        salaries: [],
+        toBox: [],
+      };
+    });
+    return state;
+};
+
+// Helper to handle CSV parsing logic (rows, quotes) centrally
+const parseCSVRows = (csvText: string): string[][] => {
     const rows: string[][] = [];
     let currentRow: string[] = [];
     let currentField = '';
@@ -179,25 +238,37 @@ export const parseCSV = (csvText: string): { weekData: WeekData, history: Histor
       currentRow.push(currentField);
       rows.push(currentRow);
     }
+    return rows;
+};
 
+const downloadCSV = (content: string, filename: string) => {
+    const blob = new Blob(["\uFEFF" + content], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+};
+
+export const parseCSV = (csvText: string): { weekData: WeekData, history: HistoryItem[] } | null => {
+  try {
+    const rows = parseCSVRows(csvText);
     if (rows.length < 2) return null;
 
-    const newState: WeekData = {};
+    const newState = createEmptyWeek();
     const newHistory: HistoryItem[] = [];
-    
-    DAYS_OF_WEEK.forEach(d => {
-      newState[d.id] = {
-        id: d.id,
-        name: d.name,
-        incomes: [],
-        deliveries: [],
-        expenses: [],
-        salaries: [], // Init salaries
-        toBox: []
-      };
-    });
-
     let isHistorySection = false;
+
+    // Detect if this is a monthly export file being loaded as a week
+    // Monthly headers: WeekKey,DayID,DayName,Type,Title,Amount
+    // Weekly headers: DayID,DayName,Type,Title,Amount,Metadata
+    const header = rows[0];
+    if (header[0] === 'WeekKey') {
+        alert("Este parece ser un archivo Mensual. Por favor usa 'Importar Mes Completo'.");
+        return null;
+    }
 
     for (let i = 1; i < rows.length; i++) {
       const cols = rows[i];
@@ -251,7 +322,7 @@ export const parseCSV = (csvText: string): { weekData: WeekData, history: Histor
           if (cleanType === 'incomes') newState[cleanDayId].incomes.push(transaction);
           else if (cleanType === 'deliveries') newState[cleanDayId].deliveries.push(transaction);
           else if (cleanType === 'expenses') newState[cleanDayId].expenses.push(transaction);
-          else if (cleanType === 'salaries') newState[cleanDayId].salaries.push(transaction); // Parse salaries
+          else if (cleanType === 'salaries') newState[cleanDayId].salaries.push(transaction); 
           else if (cleanType === 'toBox') newState[cleanDayId].toBox.push(transaction);
       }
     }

@@ -11,11 +11,12 @@ import { HistoryModal } from './components/HistoryModal';
 import { WeekPickerModal } from './components/WeekPickerModal';
 import { MenuModal } from './components/MenuModal';
 import { ExportModal } from './components/ExportModal';
+import { ImportModal } from './components/ImportModal';
 import { NotesModal } from './components/NotesModal';
 import { KilosApp } from './components/KilosApp';
 import { CurrentAccountsApp } from './components/CurrentAccountsApp';
 import { ChequesApp } from './components/ChequesApp';
-import { exportToCSV, exportMonthToCSV, parseCSV, getWeekKey, getWeekRangeLabel, addWeeks, getMonday, generateId } from './utils';
+import { exportToCSV, exportMonthToCSV, parseCSV, parseMonthCSV, getWeekKey, getWeekRangeLabel, addWeeks, getMonday, generateId } from './utils';
 
 const createInitialState = (): WeekData => {
   const state: WeekData = {};
@@ -44,12 +45,15 @@ const App: React.FC = () => {
   const [showNotes, setShowNotes] = React.useState(false);
   
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [importMode, setImportMode] = React.useState<'WEEK' | 'MONTH'>('WEEK');
+
   const [isOfflineMode, setIsOfflineMode] = React.useState(false);
   const [showReport, setShowReport] = React.useState(false);
   const [showHistory, setShowHistory] = React.useState(false);
   const [showWeekPicker, setShowWeekPicker] = React.useState(false);
   const [showMenu, setShowMenu] = React.useState(false);
   const [showExportModal, setShowExportModal] = React.useState(false);
+  const [showImportModal, setShowImportModal] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
 
   // Derived week key (e.g., "2024-04-15")
@@ -268,18 +272,25 @@ const App: React.FC = () => {
             const keyMonth = iterDate.getMonth() + 1;
             const targetMonth = parseInt(month);
             
-            if (keyMonth === targetMonth) {
+            // Allow weeks that start in prev month but overlap, or weeks fully in month
+            // Simple logic: if week key month matches, or if date is in month
+            if (keyMonth === targetMonth || iterDate.getMonth() + 1 === targetMonth) {
                 weeksToFetch.push(key);
             }
+            
             iterDate = addWeeks(iterDate, 1);
-            if (iterDate.getMonth() + 1 !== targetMonth && weeksToFetch.length > 0) {
-                 break;
+            if (iterDate.getMonth() + 1 > targetMonth && targetMonth !== 12) {
+                 // Check if first day of next week is still in month? No, break if we passed it
+                 if (iterDate.getDate() > 7) break; 
             }
         }
+        
+        // Remove duplicates
+        const uniqueKeys = Array.from(new Set(weeksToFetch));
 
         const monthlyData: Record<string, WeekData> = {};
 
-        await Promise.all(weeksToFetch.map(async (key) => {
+        await Promise.all(uniqueKeys.map(async (key) => {
              const snap = await get(ref(db!, `weeks/${key}/data`));
              if (snap.exists()) {
                  monthlyData[key] = snap.val();
@@ -333,23 +344,60 @@ const App: React.FC = () => {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       const text = event.target?.result as string;
-      const result = parseCSV(text);
-      if (result) {
-        if (window.confirm('Esto sobrescribirá datos actuales. ¿Continuar?')) {
-          saveWeekData(result.weekData);
-          saveHistory(result.history);
-        }
+      
+      if (importMode === 'WEEK') {
+          const result = parseCSV(text);
+          if (result) {
+            if (window.confirm('Esto sobrescribirá datos actuales de esta semana. ¿Continuar?')) {
+              saveWeekData(result.weekData);
+              saveHistory(result.history);
+            }
+          } else {
+            alert('Error al leer el archivo CSV de Semana.');
+          }
       } else {
-        alert('Error al leer el archivo CSV.');
+          // Import Month
+          const result = parseMonthCSV(text);
+          if (result) {
+             const keys = Object.keys(result);
+             if (window.confirm(`Se han detectado datos de ${keys.length} semanas. ¿Importar y sobrescribir estas semanas?`)) {
+                 setLoading(true);
+                 if (db) {
+                     await Promise.all(keys.map(key => 
+                         set(ref(db!, `weeks/${key}/data`), JSON.parse(JSON.stringify(result[key])))
+                     ));
+                     alert("Importación mensual completada.");
+                     // Refresh current week if it was affected
+                     if (keys.includes(currentWeekKey)) {
+                         setWeekData(result[currentWeekKey]);
+                     }
+                 } else {
+                     keys.forEach(key => {
+                         localStorage.setItem(`weekData_${key}`, JSON.stringify(result[key]));
+                     });
+                     if (keys.includes(currentWeekKey)) {
+                         setWeekData(result[currentWeekKey]);
+                     }
+                     alert("Importación local completada.");
+                 }
+                 setLoading(false);
+             }
+          } else {
+              alert('Error al leer el archivo CSV Mensual. Asegúrate de usar un archivo generado por "Exportar Mes Completo".');
+          }
       }
+
       if (fileInputRef.current) fileInputRef.current.value = '';
     };
     reader.readAsText(file);
   };
 
-  const handleImportClick = () => fileInputRef.current?.click();
+  const handleImportClick = (mode: 'WEEK' | 'MONTH') => {
+      setImportMode(mode);
+      fileInputRef.current?.click();
+  };
 
   // --- Calculations ---
 
@@ -506,7 +554,7 @@ const App: React.FC = () => {
                         )}
                       </button>
 
-                      <button type="button" onClick={handleImportClick} className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 hover:text-white rounded-lg transition-colors border border-slate-700">
+                      <button type="button" onClick={() => setShowImportModal(true)} className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 hover:text-white rounded-lg transition-colors border border-slate-700">
                         <Upload size={14} />
                         <span className="hidden lg:inline">Importar</span>
                       </button>
@@ -551,6 +599,12 @@ const App: React.FC = () => {
         onExportWeek={handleExportWeek}
         onExportMonth={handleExportMonth}
         isOffline={!db}
+      />
+      <ImportModal 
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onImportWeek={() => handleImportClick('WEEK')}
+        onImportMonth={() => handleImportClick('MONTH')}
       />
       <NotesModal 
         isOpen={showNotes}
@@ -617,7 +671,7 @@ const App: React.FC = () => {
         )}
         
         {currentApp === 'FLOW' && (
-            <div className="flex h-full gap-4 min-w-max pb-2 p-4 overflow-x-auto">
+            <div className="flex h-full gap-4 w-full pb-2 p-4 overflow-x-auto">
               {DAYS_OF_WEEK.map((dayDef) => (
                 <DayCard
                   key={dayDef.id}

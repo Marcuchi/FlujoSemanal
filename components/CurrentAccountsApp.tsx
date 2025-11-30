@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Database, ref, onValue, set } from 'firebase/database';
-import { ArrowLeft, Plus, Trash2, Edit2, Save, X, DollarSign, Calendar, FileText, ArrowUpDown, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Edit2, Save, X, DollarSign, Calendar, FileText, ArrowUpDown, AlertTriangle, Clock } from 'lucide-react';
 import { CCData, CCAccountData, CCTransaction } from '../types';
 import { generateId } from '../utils';
 
@@ -81,7 +81,7 @@ export const CurrentAccountsApp: React.FC<CurrentAccountsAppProps> = ({ db }) =>
   };
 
   const getAccountData = (name: string): CCAccountData => {
-      return data[name] || { initialBalance: 0, transactions: [] };
+      return data[name] || { initialBalance: 0, transactions: [], type: 'REGULAR' };
   };
 
   const calculateBalance = (account: CCAccountData) => {
@@ -96,8 +96,9 @@ export const CurrentAccountsApp: React.FC<CurrentAccountsAppProps> = ({ db }) =>
 
   // --- Handlers ---
 
-  const handleCreateAccount = () => {
-      const name = window.prompt("Nombre de la nueva cuenta:");
+  const handleCreateAccount = (type: 'REGULAR' | 'TEMPORARY') => {
+      const typeLabel = type === 'REGULAR' ? 'Fija' : 'Temporal';
+      const name = window.prompt(`Nombre de la nueva cuenta (${typeLabel}):`);
       if (!name || name.trim() === "") return;
       
       if (data[name]) {
@@ -105,7 +106,14 @@ export const CurrentAccountsApp: React.FC<CurrentAccountsAppProps> = ({ db }) =>
           return;
       }
       
-      saveData({ ...data, [name]: { initialBalance: 0, transactions: [] } });
+      saveData({ 
+          ...data, 
+          [name]: { 
+              initialBalance: 0, 
+              transactions: [],
+              type: type 
+          } 
+      });
   };
 
   const handleDeleteAccount = (name: string) => {
@@ -199,11 +207,93 @@ export const CurrentAccountsApp: React.FC<CurrentAccountsAppProps> = ({ db }) =>
 
   // --- VIEW 1: DASHBOARD (List of Accounts) ---
   if (!selectedAccount) {
-      const accountNames = Object.keys(data).sort();
+      const allAccounts = Object.keys(data).sort();
       
+      const regularAccounts = allAccounts.filter(name => {
+          const type = data[name].type;
+          return !type || type === 'REGULAR';
+      });
+
+      const temporaryAccounts = allAccounts.filter(name => data[name].type === 'TEMPORARY');
+      
+      const renderAccountCard = (name: string, isTemporary: boolean) => {
+        const accData = getAccountData(name);
+        const balance = calculateBalance(accData);
+        const hasTransactions = (accData.transactions || []).length > 0;
+        
+        // Deletion Rules:
+        // Regular: Can delete if NO transactions.
+        // Temporary: Can delete if BALANCE is 0 (can have history, but must be settled).
+        const canDelete = isTemporary ? balance === 0 : !hasTransactions;
+
+        if (isDeleteMode) {
+            if (canDelete) {
+                // DELETABLE STATE
+                return (
+                    <button 
+                        key={name}
+                        onClick={() => handleDeleteAccount(name)}
+                        className="bg-rose-950/20 border-2 border-dashed border-rose-500/50 hover:bg-rose-900/30 hover:border-rose-400 transition-all rounded-2xl p-6 flex flex-col items-center justify-center gap-4 group cursor-pointer animate-pulse"
+                    >
+                        <div className="h-16 w-16 rounded-full bg-rose-900/50 border border-rose-700 flex items-center justify-center">
+                            <Trash2 size={32} className="text-rose-400" />
+                        </div>
+                        <div className="text-center">
+                            <h3 className="text-lg font-bold text-rose-300 line-through decoration-rose-500">{name}</h3>
+                            <p className="text-xs text-rose-400 font-bold mt-2">ELIMINAR</p>
+                        </div>
+                    </button>
+                );
+            } else {
+                // LOCKED STATE
+                return (
+                    <div 
+                        key={name}
+                        className="bg-slate-900/30 border border-slate-800 rounded-2xl p-6 flex flex-col items-center justify-center gap-4 opacity-40 cursor-not-allowed grayscale"
+                    >
+                        <div className="h-16 w-16 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center">
+                            <span className="text-2xl font-bold text-slate-600">{name.charAt(0)}</span>
+                        </div>
+                        <div className="text-center">
+                            <h3 className="text-lg font-bold text-slate-500">{name}</h3>
+                            <p className="text-xs text-slate-600 mt-1 flex items-center justify-center gap-1">
+                                <AlertTriangle size={10} /> {isTemporary ? 'Saldo pendiente' : 'Contiene datos'}
+                            </p>
+                        </div>
+                    </div>
+                );
+            }
+        }
+
+        // NORMAL STATE
+        const borderColor = isTemporary ? 'border-amber-500/30' : 'border-slate-800';
+        const hoverBorder = isTemporary ? 'hover:border-amber-500' : 'hover:border-emerald-500/50';
+        const letterColor = isTemporary ? 'text-amber-400' : 'text-slate-400';
+        const letterHover = isTemporary ? 'group-hover:text-amber-300' : 'group-hover:text-emerald-400';
+
+        return (
+            <button 
+                key={name}
+                onClick={() => setSelectedAccount(name)}
+                className={`bg-slate-900 border ${borderColor} ${hoverBorder} hover:bg-slate-800 transition-all rounded-2xl p-6 flex flex-col items-center justify-center gap-4 group shadow-lg`}
+            >
+                <div className="h-16 w-16 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <span className={`text-2xl font-bold ${letterColor} ${letterHover}`}>{name.charAt(0)}</span>
+                </div>
+                <div className="text-center">
+                    <h3 className="text-lg font-bold text-slate-200">{name}</h3>
+                    <p className="text-xs text-slate-500 uppercase tracking-wider mt-1">Saldo Actual</p>
+                    <p className={`text-2xl font-mono font-bold mt-1 ${balance > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
+                        {formatCurrency(balance)}
+                    </p>
+                </div>
+            </button>
+        );
+      };
+
       return (
         <div className="h-full flex flex-col bg-slate-950 p-4 sm:p-8 overflow-y-auto">
-            <div className="flex flex-col sm:flex-row items-center justify-between mb-6 max-w-5xl mx-auto w-full gap-4">
+            <div className="flex flex-col sm:flex-row items-center justify-between mb-8 max-w-6xl mx-auto w-full gap-4">
                 <h2 className="text-2xl font-bold text-emerald-400 uppercase tracking-widest text-center sm:text-left">Cuentas Corrientes</h2>
                 
                 {/* Delete Mode Toggle */}
@@ -220,88 +310,56 @@ export const CurrentAccountsApp: React.FC<CurrentAccountsAppProps> = ({ db }) =>
                 </div>
             </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto w-full">
-                {accountNames.map(name => {
-                    const accData = getAccountData(name);
-                    const balance = calculateBalance(accData);
-                    const hasTransactions = (accData.transactions || []).length > 0;
-                    const canDelete = !hasTransactions;
-
-                    // Logic for card interaction based on mode
-                    if (isDeleteMode) {
-                        if (canDelete) {
-                            // DELETABLE STATE
-                            return (
-                                <button 
-                                    key={name}
-                                    onClick={() => handleDeleteAccount(name)}
-                                    className="bg-rose-950/20 border-2 border-dashed border-rose-500/50 hover:bg-rose-900/30 hover:border-rose-400 transition-all rounded-2xl p-6 flex flex-col items-center justify-center gap-4 group cursor-pointer animate-pulse"
-                                >
-                                    <div className="h-16 w-16 rounded-full bg-rose-900/50 border border-rose-700 flex items-center justify-center">
-                                        <Trash2 size={32} className="text-rose-400" />
-                                    </div>
-                                    <div className="text-center">
-                                        <h3 className="text-lg font-bold text-rose-300 line-through decoration-rose-500">{name}</h3>
-                                        <p className="text-xs text-rose-400 font-bold mt-2">ELIMINAR CUENTA VACÍA</p>
-                                    </div>
-                                </button>
-                            );
-                        } else {
-                            // LOCKED STATE (Protected)
-                            return (
-                                <div 
-                                    key={name}
-                                    className="bg-slate-900/30 border border-slate-800 rounded-2xl p-6 flex flex-col items-center justify-center gap-4 opacity-40 cursor-not-allowed grayscale"
-                                >
-                                    <div className="h-16 w-16 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center">
-                                        <span className="text-2xl font-bold text-slate-600">{name.charAt(0)}</span>
-                                    </div>
-                                    <div className="text-center">
-                                        <h3 className="text-lg font-bold text-slate-500">{name}</h3>
-                                        <p className="text-xs text-slate-600 mt-1 flex items-center justify-center gap-1">
-                                            <AlertTriangle size={10} /> Contiene datos
-                                        </p>
-                                    </div>
+            <div className="max-w-6xl mx-auto w-full space-y-12">
+                
+                {/* SECTION 1: REGULAR ACCOUNTS */}
+                <div>
+                    <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4 border-b border-slate-800 pb-2">
+                        Cuentas Fijas
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        {regularAccounts.map(name => renderAccountCard(name, false))}
+                        
+                        {!isDeleteMode && (
+                            <button 
+                                onClick={() => handleCreateAccount('REGULAR')}
+                                className="bg-slate-900/50 border border-dashed border-slate-800 hover:border-emerald-500/50 hover:bg-slate-900 transition-all rounded-2xl p-6 flex flex-col items-center justify-center gap-4 group shadow-lg min-h-[200px]"
+                            >
+                                <div className="h-16 w-16 rounded-full bg-slate-800/50 border border-slate-700/50 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                    <Plus size={32} className="text-slate-500 group-hover:text-emerald-400" />
                                 </div>
-                            );
-                        }
-                    }
+                                <div className="text-center">
+                                    <h3 className="text-sm font-bold text-slate-300 group-hover:text-emerald-300">Agregar Fija</h3>
+                                </div>
+                            </button>
+                        )}
+                    </div>
+                </div>
 
-                    // NORMAL STATE
-                    return (
-                        <button 
-                            key={name}
-                            onClick={() => setSelectedAccount(name)}
-                            className="bg-slate-900 border border-slate-800 hover:border-emerald-500/50 hover:bg-slate-800 transition-all rounded-2xl p-6 flex flex-col items-center justify-center gap-4 group shadow-lg"
-                        >
-                            <div className="h-16 w-16 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                <span className="text-2xl font-bold text-slate-400 group-hover:text-emerald-400">{name.charAt(0)}</span>
-                            </div>
-                            <div className="text-center">
-                                <h3 className="text-lg font-bold text-slate-200">{name}</h3>
-                                <p className="text-xs text-slate-500 uppercase tracking-wider mt-1">Saldo Actual</p>
-                                <p className={`text-2xl font-mono font-bold mt-1 ${balance > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
-                                    {formatCurrency(balance)}
-                                </p>
-                            </div>
-                        </button>
-                    );
-                })}
+                {/* SECTION 2: TEMPORARY ACCOUNTS */}
+                <div>
+                    <h3 className="text-sm font-bold text-amber-500/70 uppercase tracking-wider mb-4 border-b border-slate-800 pb-2 flex items-center gap-2">
+                        <Clock size={16} /> Cuentas Temporales
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        {temporaryAccounts.map(name => renderAccountCard(name, true))}
 
-                {/* Create New Account Button (Hide in Delete Mode) */}
-                {!isDeleteMode && (
-                    <button 
-                        onClick={handleCreateAccount}
-                        className="bg-slate-900/50 border border-dashed border-slate-800 hover:border-emerald-500/50 hover:bg-slate-900 transition-all rounded-2xl p-6 flex flex-col items-center justify-center gap-4 group shadow-lg"
-                    >
-                        <div className="h-16 w-16 rounded-full bg-slate-800/50 border border-slate-700/50 flex items-center justify-center group-hover:scale-110 transition-transform">
-                            <Plus size={32} className="text-slate-500 group-hover:text-emerald-400" />
-                        </div>
-                        <div className="text-center">
-                            <h3 className="text-lg font-bold text-slate-300 group-hover:text-emerald-300">Agregar Cuenta Corriente</h3>
-                        </div>
-                    </button>
-                )}
+                        {!isDeleteMode && (
+                            <button 
+                                onClick={() => handleCreateAccount('TEMPORARY')}
+                                className="bg-slate-900/50 border border-dashed border-amber-900/30 hover:border-amber-500/50 hover:bg-slate-900 transition-all rounded-2xl p-6 flex flex-col items-center justify-center gap-4 group shadow-lg min-h-[200px]"
+                            >
+                                <div className="h-16 w-16 rounded-full bg-slate-800/50 border border-slate-700/50 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                    <Plus size={32} className="text-slate-500 group-hover:text-amber-400" />
+                                </div>
+                                <div className="text-center">
+                                    <h3 className="text-sm font-bold text-slate-300 group-hover:text-amber-300">Agregar Temporal</h3>
+                                </div>
+                            </button>
+                        )}
+                    </div>
+                </div>
+
             </div>
         </div>
       );
@@ -309,6 +367,7 @@ export const CurrentAccountsApp: React.FC<CurrentAccountsAppProps> = ({ db }) =>
 
   // --- VIEW 2: DETAIL (Specific Account Ledger) ---
   const accountData = getAccountData(selectedAccount);
+  const isTemp = accountData.type === 'TEMPORARY';
   
   // Calculate running balance chronologically FIRST
   let runningBalance = accountData.initialBalance || 0;
@@ -333,8 +392,9 @@ export const CurrentAccountsApp: React.FC<CurrentAccountsAppProps> = ({ db }) =>
             >
                 <ArrowLeft size={20} />
             </button>
-            <h2 className="text-xl font-bold text-emerald-400 uppercase tracking-wider flex-1">
+            <h2 className={`text-xl font-bold uppercase tracking-wider flex-1 ${isTemp ? 'text-amber-400' : 'text-emerald-400'}`}>
                 Cuenta: <span className="text-white">{selectedAccount}</span>
+                {isTemp && <span className="ml-2 text-xs bg-amber-900/30 text-amber-500 px-2 py-0.5 rounded border border-amber-900/50 align-middle">TEMPORAL</span>}
             </h2>
             <div className="bg-slate-950 px-4 py-2 rounded-lg border border-slate-800 flex flex-col items-end">
                 <span className="text-[10px] text-slate-500 uppercase font-bold">Saldo Total</span>
@@ -358,17 +418,17 @@ export const CurrentAccountsApp: React.FC<CurrentAccountsAppProps> = ({ db }) =>
                     {isEditingInitial ? (
                         <div className="flex items-center gap-2">
                              <div className="relative">
-                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-emerald-500/50 text-xs">$</span>
+                                <span className={`absolute left-2 top-1/2 -translate-y-1/2 text-xs ${isTemp ? 'text-amber-500/50' : 'text-emerald-500/50'}`}>$</span>
                                 <input 
                                     type="text" 
                                     inputMode="numeric"
                                     value={tempInitial} 
                                     onChange={handleInitialChange}
-                                    className="bg-slate-950 border border-emerald-500/50 rounded px-2 pl-5 py-1 text-right text-emerald-400 w-32 focus:outline-none font-mono"
+                                    className={`bg-slate-950 border rounded px-2 pl-5 py-1 text-right w-32 focus:outline-none font-mono ${isTemp ? 'border-amber-500/50 text-amber-400' : 'border-emerald-500/50 text-emerald-400'}`}
                                     autoFocus
                                 />
                              </div>
-                             <button onClick={handleUpdateInitial} className="p-1.5 bg-emerald-600 rounded text-white"><Save size={16}/></button>
+                             <button onClick={handleUpdateInitial} className={`p-1.5 rounded text-white ${isTemp ? 'bg-amber-600' : 'bg-emerald-600'}`}><Save size={16}/></button>
                              <button onClick={() => setIsEditingInitial(false)} className="p-1.5 bg-slate-700 rounded text-slate-300"><X size={16}/></button>
                         </div>
                     ) : (
@@ -380,7 +440,7 @@ export const CurrentAccountsApp: React.FC<CurrentAccountsAppProps> = ({ db }) =>
                                     setTempInitial(new Intl.NumberFormat('es-AR').format(val)); 
                                     setIsEditingInitial(true); 
                                 }}
-                                className="p-1.5 hover:bg-slate-800 rounded text-slate-500 hover:text-emerald-400 transition-colors"
+                                className={`p-1.5 hover:bg-slate-800 rounded text-slate-500 transition-colors ${isTemp ? 'hover:text-amber-400' : 'hover:text-emerald-400'}`}
                              >
                                 <Edit2 size={16} />
                              </button>
@@ -390,7 +450,7 @@ export const CurrentAccountsApp: React.FC<CurrentAccountsAppProps> = ({ db }) =>
 
                 {/* Add Transaction Form (Now at Top) */}
                 <form onSubmit={handleAddTransaction} className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-lg">
-                    <h3 className="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-3">Nuevo Movimiento</h3>
+                    <h3 className={`text-xs font-bold uppercase tracking-wider mb-3 ${isTemp ? 'text-amber-400' : 'text-emerald-400'}`}>Nuevo Movimiento</h3>
                     <div className="flex flex-col md:flex-row gap-3">
                         <div className="relative">
                             <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" size={14} />
@@ -399,7 +459,7 @@ export const CurrentAccountsApp: React.FC<CurrentAccountsAppProps> = ({ db }) =>
                                 required
                                 value={newDate}
                                 onChange={e => setNewDate(e.target.value)}
-                                className="w-full md:w-auto bg-slate-950 border border-slate-700 rounded-lg py-2 pl-8 pr-3 text-sm text-white focus:border-emerald-500 focus:outline-none"
+                                className={`w-full md:w-auto bg-slate-950 border border-slate-700 rounded-lg py-2 pl-8 pr-3 text-sm text-white focus:outline-none ${isTemp ? 'focus:border-amber-500' : 'focus:border-emerald-500'}`}
                             />
                         </div>
                         <div className="relative flex-1">
@@ -410,19 +470,19 @@ export const CurrentAccountsApp: React.FC<CurrentAccountsAppProps> = ({ db }) =>
                                 required
                                 value={newDesc}
                                 onChange={e => setNewDesc(e.target.value)}
-                                className="w-full bg-slate-950 border border-slate-700 rounded-lg py-2 pl-8 pr-3 text-sm text-white focus:border-emerald-500 focus:outline-none"
+                                className={`w-full bg-slate-950 border border-slate-700 rounded-lg py-2 pl-8 pr-3 text-sm text-white focus:outline-none ${isTemp ? 'focus:border-amber-500' : 'focus:border-emerald-500'}`}
                             />
                         </div>
                         <div className="grid grid-cols-2 gap-3 md:w-64">
                             <div className="relative">
-                                <DollarSign className="absolute left-2 top-1/2 -translate-y-1/2 text-emerald-500" size={12} />
+                                <DollarSign className={`absolute left-2 top-1/2 -translate-y-1/2 ${isTemp ? 'text-amber-500' : 'text-emerald-500'}`} size={12} />
                                 <input 
                                     type="text" 
                                     inputMode="numeric"
                                     placeholder="Entrega"
                                     value={deliveryDisplay}
                                     onChange={(e) => handleMoneyInput(e, setDeliveryDisplay, setRawDelivery)}
-                                    className="w-full bg-slate-950 border border-emerald-900/50 rounded-lg py-2 pl-6 pr-2 text-sm text-emerald-300 placeholder-emerald-900/50 focus:border-emerald-500 focus:outline-none font-mono"
+                                    className={`w-full bg-slate-950 border rounded-lg py-2 pl-6 pr-2 text-sm font-mono focus:outline-none ${isTemp ? 'border-amber-900/50 text-amber-300 placeholder-amber-900/50 focus:border-amber-500' : 'border-emerald-900/50 text-emerald-300 placeholder-emerald-900/50 focus:border-emerald-500'}`}
                                 />
                             </div>
                             <div className="relative">
@@ -439,7 +499,7 @@ export const CurrentAccountsApp: React.FC<CurrentAccountsAppProps> = ({ db }) =>
                         </div>
                         <button 
                             type="submit"
-                            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold p-2 rounded-lg transition-colors flex items-center justify-center shadow-lg shadow-emerald-900/20"
+                            className={`text-white font-bold p-2 rounded-lg transition-colors flex items-center justify-center shadow-lg ${isTemp ? 'bg-amber-600 hover:bg-amber-500 shadow-amber-900/20' : 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-900/20'}`}
                         >
                             <Plus size={20} />
                         </button>
@@ -452,12 +512,12 @@ export const CurrentAccountsApp: React.FC<CurrentAccountsAppProps> = ({ db }) =>
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-slate-950 border-b border-slate-800 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                                    <th className="p-4 cursor-pointer hover:text-emerald-400 flex items-center gap-2 select-none" onClick={() => setSortNewest(!sortNewest)}>
+                                    <th className={`p-4 cursor-pointer flex items-center gap-2 select-none ${isTemp ? 'hover:text-amber-400' : 'hover:text-emerald-400'}`} onClick={() => setSortNewest(!sortNewest)}>
                                         Fecha
-                                        <ArrowUpDown size={14} className={sortNewest ? "text-emerald-500" : "text-slate-600"} />
+                                        <ArrowUpDown size={14} className={sortNewest ? (isTemp ? "text-amber-500" : "text-emerald-500") : "text-slate-600"} />
                                     </th>
                                     <th className="p-4">Descripción</th>
-                                    <th className="p-4 text-right text-emerald-500">Entrega (Paga)</th>
+                                    <th className={`p-4 text-right ${isTemp ? 'text-amber-500' : 'text-emerald-500'}`}>Entrega (Paga)</th>
                                     <th className="p-4 text-right text-rose-500">Debe (Saca)</th>
                                     <th className="p-4 text-right text-white bg-slate-900/50">Deuda</th>
                                     <th className="p-4 w-10"></th>
@@ -468,7 +528,7 @@ export const CurrentAccountsApp: React.FC<CurrentAccountsAppProps> = ({ db }) =>
                                     <tr key={t.id} className="hover:bg-slate-800/30 transition-colors group">
                                         <td className="p-3 text-sm text-slate-300 whitespace-nowrap font-mono">{t.date.split('-').reverse().join('/')}</td>
                                         <td className="p-3 text-sm text-white font-medium">{t.description}</td>
-                                        <td className="p-3 text-right font-mono text-emerald-400">
+                                        <td className={`p-3 text-right font-mono ${isTemp ? 'text-amber-400' : 'text-emerald-400'}`}>
                                             {t.delivery > 0 ? formatCurrency(t.delivery) : '-'}
                                         </td>
                                         <td className="p-3 text-right font-mono text-rose-400">
