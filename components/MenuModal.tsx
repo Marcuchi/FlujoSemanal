@@ -19,6 +19,19 @@ export const MenuModal: React.FC<MenuModalProps> = ({ isOpen, onClose, onReset, 
     onClose();
   };
 
+  const handleResetClick = () => {
+    const password = window.prompt("⚠️ ZONA DE PELIGRO ⚠️\n\nEsta acción borrará los datos. Para confirmar, ingrese la contraseña de seguridad:");
+    
+    if (password === null) return; // Cancelado por el usuario
+
+    if (password === "secreta") {
+        onReset();
+        onClose();
+    } else {
+        alert("Contraseña incorrecta. Acción cancelada.");
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden relative">
@@ -157,10 +170,7 @@ export const MenuModal: React.FC<MenuModalProps> = ({ isOpen, onClose, onReset, 
             <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">Zona de Peligro</h3>
             
             <button 
-              onClick={() => {
-                onReset();
-                onClose();
-              }}
+              onClick={handleResetClick}
               className="w-full flex items-center justify-between p-3 rounded-lg bg-red-950/20 border border-red-900/30 hover:bg-red-900/30 hover:border-red-800/50 transition-colors group"
             >
                <div className="flex items-center gap-3">
