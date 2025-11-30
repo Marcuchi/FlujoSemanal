@@ -1,4 +1,4 @@
-import { initializeApp } from "firebase/app";
+import firebase from "firebase/compat/app";
 import { getDatabase, Database } from "firebase/database";
 
 // Safely access import.meta.env to avoid TS errors when vite types are missing
@@ -20,8 +20,10 @@ let db: Database | null = null;
 
 try {
   // Intentamos inicializar Firebase
-  const app = initializeApp(firebaseConfig);
-  db = getDatabase(app);
+  // Use compat initialization to resolve 'initializeApp' missing export error in some TS environments
+  const app = firebase.initializeApp(firebaseConfig);
+  // Cast app to any to ensure compatibility with modular getDatabase if types mismatch
+  db = getDatabase(app as any);
 } catch (error) {
   console.error("Error inicializando Firebase. La aplicación funcionará en modo Local Storage.", error);
   // db se mantiene como null, lo que activará el fallback en App.tsx

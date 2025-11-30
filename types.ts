@@ -86,7 +86,27 @@ export interface CCAccountData {
 
 export type CCData = Record<string, CCAccountData>;
 
-export type AppMode = 'FLOW' | 'KILOS' | 'CC';
+// --- CHEQUES APP TYPES ---
+
+export interface Cheque {
+  id: string;
+  date: string; // Fecha de ingreso/registro
+  bank: string;
+  number: string;
+  amount: number;
+  paymentDate: string; // Fecha de Cobro
+  holder: string; // Titular
+  deliveredBy: string; // Quien Entrego
+}
+
+// --- GLOBAL NOTES ---
+export interface Note {
+  id: string;
+  content: string;
+  createdAt: string;
+}
+
+export type AppMode = 'FLOW' | 'KILOS' | 'CC' | 'CHEQUES';
 
 export const DAYS_OF_WEEK = [
   { id: 'monday', name: 'Lunes' },

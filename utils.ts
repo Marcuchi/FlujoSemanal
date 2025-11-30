@@ -56,7 +56,7 @@ export const addWeeks = (date: Date, weeks: number): Date => {
 
 // --- CSV Helpers ---
 
-export const exportToCSV = (data: WeekData, history: HistoryItem[] = []) => {
+export const exportToCSV = (data: WeekData, history: HistoryItem[] = [], filenamePrefix: string = 'flujo_semanal') => {
   const headers = ['DayID', 'DayName', 'Type', 'Title', 'Amount', 'Metadata']; 
   const rows: string[] = [headers.join(',')];
 
@@ -94,19 +94,45 @@ export const exportToCSV = (data: WeekData, history: HistoryItem[] = []) => {
       });
   }
 
-  const csvContent = rows.join("\n");
-  const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
-  
-  const link = document.createElement("a");
-  const url = URL.createObjectURL(blob);
-  link.setAttribute("href", url);
-  
-  const dateStr = new Date().toISOString().slice(0, 10);
-  link.setAttribute("download", `flujo_semanal_${dateStr}.csv`);
-  
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  downloadCSV(rows.join("\n"), `${filenamePrefix}_${new Date().toISOString().slice(0, 10)}.csv`);
+};
+
+export const exportMonthToCSV = (monthLabel: string, weeksData: Record<string, WeekData>) => {
+    const headers = ['WeekStart', 'DayID', 'DayName', 'Category', 'Title', 'Amount'];
+    const rows: string[] = [headers.join(',')];
+
+    Object.entries(weeksData).forEach(([weekKey, weekData]) => {
+        Object.values(weekData).forEach((day) => {
+            // Helpers
+            const addRow = (type: string, title: string, amount: number) => {
+                rows.push(`${weekKey},${day.id},${day.name},${type},"${title.replace(/"/g, '""')}",${amount}`);
+            };
+
+            // Initials
+            if (day.manualInitialAmount !== undefined) addRow('Initial Office', 'Monto Inicial Manual', day.manualInitialAmount);
+            if (day.id === 'monday' && day.initialBoxAmount !== undefined) addRow('Initial Box', 'Caja Inicial', day.initialBoxAmount);
+
+            // Transactions
+            day.incomes.forEach(t => addRow('Ingresos (General)', t.title, t.amount));
+            day.deliveries.forEach(t => addRow('Ingresos (Reparto)', t.title, t.amount));
+            day.expenses.forEach(t => addRow('Egresos (Gastos)', t.title, t.amount));
+            day.salaries.forEach(t => addRow('Egresos (Sueldos)', t.title, t.amount));
+            day.toBox.forEach(t => addRow('A Caja', t.title, t.amount));
+        });
+    });
+
+    downloadCSV(rows.join("\n"), `flujo_mensual_${monthLabel}.csv`);
+};
+
+const downloadCSV = (content: string, filename: string) => {
+    const blob = new Blob(["\uFEFF" + content], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 };
 
 export const parseCSV = (csvText: string): { weekData: WeekData, history: HistoryItem[] } | null => {

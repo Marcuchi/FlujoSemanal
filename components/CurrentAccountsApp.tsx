@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Database, ref, onValue, set } from 'firebase/database';
-import { ArrowLeft, Plus, Trash2, Edit2, Save, X, DollarSign, Calendar, FileText, ArrowUpDown } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Edit2, Save, X, DollarSign, Calendar, FileText, ArrowUpDown, AlertTriangle } from 'lucide-react';
 import { CCData, CCAccountData, CCTransaction } from '../types';
 import { generateId } from '../utils';
 
@@ -25,6 +25,9 @@ export const CurrentAccountsApp: React.FC<CurrentAccountsAppProps> = ({ db }) =>
 
   // Sorting State
   const [sortNewest, setSortNewest] = React.useState(true);
+
+  // Dashboard State
+  const [isDeleteMode, setIsDeleteMode] = React.useState(false);
 
   // New Transaction State
   const [newDate, setNewDate] = React.useState(new Date().toISOString().slice(0, 10));
@@ -103,6 +106,14 @@ export const CurrentAccountsApp: React.FC<CurrentAccountsAppProps> = ({ db }) =>
       }
       
       saveData({ ...data, [name]: { initialBalance: 0, transactions: [] } });
+  };
+
+  const handleDeleteAccount = (name: string) => {
+      if (window.confirm(`¿Estás seguro de eliminar permanentemente la cuenta "${name}"?`)) {
+          const newData = { ...data };
+          delete newData[name];
+          saveData(newData);
+      }
   };
 
   const handleUpdateInitial = () => {
@@ -192,13 +203,71 @@ export const CurrentAccountsApp: React.FC<CurrentAccountsAppProps> = ({ db }) =>
       
       return (
         <div className="h-full flex flex-col bg-slate-950 p-4 sm:p-8 overflow-y-auto">
-            <h2 className="text-2xl font-bold text-emerald-400 mb-6 text-center uppercase tracking-widest">Cuentas Corrientes</h2>
+            <div className="flex flex-col sm:flex-row items-center justify-between mb-6 max-w-5xl mx-auto w-full gap-4">
+                <h2 className="text-2xl font-bold text-emerald-400 uppercase tracking-widest text-center sm:text-left">Cuentas Corrientes</h2>
+                
+                {/* Delete Mode Toggle */}
+                <div className="flex items-center gap-3 bg-slate-900 p-2 rounded-xl border border-slate-800 shadow-sm">
+                    <span className={`text-xs font-bold uppercase tracking-wider ${isDeleteMode ? 'text-rose-400' : 'text-slate-500'}`}>
+                        {isDeleteMode ? 'Modo Eliminar' : 'Gestión'}
+                    </span>
+                    <button 
+                        onClick={() => setIsDeleteMode(!isDeleteMode)}
+                        className={`w-12 h-6 rounded-full p-1 transition-colors duration-300 ease-in-out relative ${isDeleteMode ? 'bg-rose-900' : 'bg-slate-700'}`}
+                    >
+                        <div className={`w-4 h-4 bg-white rounded-full shadow-md transform transition-transform duration-300 ${isDeleteMode ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                    </button>
+                </div>
+            </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto w-full">
                 {accountNames.map(name => {
                     const accData = getAccountData(name);
                     const balance = calculateBalance(accData);
-                    
+                    const hasTransactions = (accData.transactions || []).length > 0;
+                    const canDelete = !hasTransactions;
+
+                    // Logic for card interaction based on mode
+                    if (isDeleteMode) {
+                        if (canDelete) {
+                            // DELETABLE STATE
+                            return (
+                                <button 
+                                    key={name}
+                                    onClick={() => handleDeleteAccount(name)}
+                                    className="bg-rose-950/20 border-2 border-dashed border-rose-500/50 hover:bg-rose-900/30 hover:border-rose-400 transition-all rounded-2xl p-6 flex flex-col items-center justify-center gap-4 group cursor-pointer animate-pulse"
+                                >
+                                    <div className="h-16 w-16 rounded-full bg-rose-900/50 border border-rose-700 flex items-center justify-center">
+                                        <Trash2 size={32} className="text-rose-400" />
+                                    </div>
+                                    <div className="text-center">
+                                        <h3 className="text-lg font-bold text-rose-300 line-through decoration-rose-500">{name}</h3>
+                                        <p className="text-xs text-rose-400 font-bold mt-2">ELIMINAR CUENTA VACÍA</p>
+                                    </div>
+                                </button>
+                            );
+                        } else {
+                            // LOCKED STATE (Protected)
+                            return (
+                                <div 
+                                    key={name}
+                                    className="bg-slate-900/30 border border-slate-800 rounded-2xl p-6 flex flex-col items-center justify-center gap-4 opacity-40 cursor-not-allowed grayscale"
+                                >
+                                    <div className="h-16 w-16 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center">
+                                        <span className="text-2xl font-bold text-slate-600">{name.charAt(0)}</span>
+                                    </div>
+                                    <div className="text-center">
+                                        <h3 className="text-lg font-bold text-slate-500">{name}</h3>
+                                        <p className="text-xs text-slate-600 mt-1 flex items-center justify-center gap-1">
+                                            <AlertTriangle size={10} /> Contiene datos
+                                        </p>
+                                    </div>
+                                </div>
+                            );
+                        }
+                    }
+
+                    // NORMAL STATE
                     return (
                         <button 
                             key={name}
@@ -219,18 +288,20 @@ export const CurrentAccountsApp: React.FC<CurrentAccountsAppProps> = ({ db }) =>
                     );
                 })}
 
-                {/* Create New Account Button */}
-                <button 
-                    onClick={handleCreateAccount}
-                    className="bg-slate-900/50 border border-dashed border-slate-800 hover:border-emerald-500/50 hover:bg-slate-900 transition-all rounded-2xl p-6 flex flex-col items-center justify-center gap-4 group shadow-lg"
-                >
-                    <div className="h-16 w-16 rounded-full bg-slate-800/50 border border-slate-700/50 flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <Plus size={32} className="text-slate-500 group-hover:text-emerald-400" />
-                    </div>
-                    <div className="text-center">
-                        <h3 className="text-lg font-bold text-slate-300 group-hover:text-emerald-300">Agregar Cuenta Corriente</h3>
-                    </div>
-                </button>
+                {/* Create New Account Button (Hide in Delete Mode) */}
+                {!isDeleteMode && (
+                    <button 
+                        onClick={handleCreateAccount}
+                        className="bg-slate-900/50 border border-dashed border-slate-800 hover:border-emerald-500/50 hover:bg-slate-900 transition-all rounded-2xl p-6 flex flex-col items-center justify-center gap-4 group shadow-lg"
+                    >
+                        <div className="h-16 w-16 rounded-full bg-slate-800/50 border border-slate-700/50 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <Plus size={32} className="text-slate-500 group-hover:text-emerald-400" />
+                        </div>
+                        <div className="text-center">
+                            <h3 className="text-lg font-bold text-slate-300 group-hover:text-emerald-300">Agregar Cuenta Corriente</h3>
+                        </div>
+                    </button>
+                )}
             </div>
         </div>
       );

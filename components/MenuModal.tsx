@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { X, LayoutGrid, RotateCcw, ArrowRight, Scale, BookUser } from 'lucide-react';
+import { X, LayoutGrid, RotateCcw, ArrowRight, Scale, BookUser, Banknote } from 'lucide-react';
 import { AppMode } from '../types';
 
 interface MenuModalProps {
@@ -20,7 +20,7 @@ export const MenuModal: React.FC<MenuModalProps> = ({ isOpen, onClose, onReset, 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden relative">
         
         <button 
@@ -116,6 +116,35 @@ export const MenuModal: React.FC<MenuModalProps> = ({ isOpen, onClose, onReset, 
                   <span className="relative flex h-2 w-2">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
+                  ACTIVO
+                </div>
+              )}
+            </button>
+
+            {/* Cheques App */}
+            <button 
+              onClick={() => handleAppClick('CHEQUES')}
+              className={`group flex items-center justify-between p-4 rounded-xl border transition-all ${
+                currentApp === 'CHEQUES' 
+                  ? 'bg-violet-600/10 border-violet-500/50 hover:bg-violet-600/20' 
+                  : 'bg-slate-800/40 border-slate-700/50 hover:bg-slate-800 hover:border-slate-600'
+              }`}
+            >
+              <div className="flex items-center gap-4">
+                <div className={`p-3 rounded-lg shadow-lg ${currentApp === 'CHEQUES' ? 'bg-violet-600 text-white shadow-violet-900/50' : 'bg-slate-700 text-slate-400'}`}>
+                  <Banknote size={24} />
+                </div>
+                <div className="text-left">
+                  <h3 className={`font-bold transition-colors ${currentApp === 'CHEQUES' ? 'text-white' : 'text-slate-300 group-hover:text-white'}`}>Cheques en Cartera</h3>
+                  <p className="text-xs text-slate-400">Listado de cheques y vencimientos</p>
+                </div>
+              </div>
+              {currentApp === 'CHEQUES' && (
+                <div className="flex items-center gap-2 text-violet-400 text-xs font-semibold px-2 py-1 bg-violet-950/50 rounded border border-violet-900/50">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-violet-500"></span>
                   </span>
                   ACTIVO
                 </div>
