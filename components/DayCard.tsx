@@ -332,7 +332,7 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
             <div>
               <div className="flex justify-between items-center mb-1 px-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] uppercase font-bold text-emerald-500/80 tracking-wide">General</span>
+                  <span className="text-xs uppercase font-extrabold text-emerald-500/80 tracking-wide">General</span>
                   <span className="text-[10px] font-mono font-bold text-emerald-400/90">{formatCurrency(totalIncome)}</span>
                 </div>
                 <button onClick={() => handleAddTransaction('incomes')} className="p-0.5 rounded bg-emerald-900/50 hover:bg-emerald-800 text-emerald-200 border border-emerald-800/50 transition-colors">
@@ -360,8 +360,8 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
             <div>
               <div className="flex justify-between items-center mb-1 px-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] uppercase font-bold text-teal-500/80 tracking-wide flex items-center gap-1">
-                     <Truck size={10} /> Repartos
+                  <span className="text-xs uppercase font-extrabold text-teal-500/80 tracking-wide flex items-center gap-1">
+                     <Truck size={12} /> Repartos
                   </span>
                   <span className="text-[10px] font-mono font-bold text-teal-400/90">{formatCurrency(totalDeliveries)}</span>
                 </div>
@@ -405,7 +405,7 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
             <div>
               <div className="flex justify-between items-center mb-1 px-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] uppercase font-bold text-rose-500/80 tracking-wide">Gastos</span>
+                  <span className="text-xs uppercase font-extrabold text-rose-500/80 tracking-wide">Gastos</span>
                   <span className="text-[10px] font-mono font-bold text-rose-400/90">{formatCurrency(totalExpense)}</span>
                 </div>
                 <button onClick={() => handleAddTransaction('expenses')} className="p-0.5 rounded bg-rose-900/50 hover:bg-rose-800 text-rose-200 border border-rose-800/50 transition-colors">
@@ -433,8 +433,8 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
              <div>
               <div className="flex justify-between items-center mb-1 px-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] uppercase font-bold text-amber-500/80 tracking-wide flex items-center gap-1">
-                     <Users size={10} /> Adelantos/Sueldos
+                  <span className="text-xs uppercase font-extrabold text-amber-500/80 tracking-wide flex items-center gap-1">
+                     <Users size={12} /> Adelantos/Sueldos
                   </span>
                   <span className="text-[10px] font-mono font-bold text-amber-400/90">{formatCurrency(totalSalaries)}</span>
                 </div>

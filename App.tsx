@@ -1,8 +1,9 @@
+
 import React from 'react';
-import { Download, Upload, PieChart as PieChartIcon, History, ChevronLeft, ChevronRight, Calendar, Menu, LayoutGrid, Scale, BookUser, StickyNote, Database } from 'lucide-react';
+import { Download, Upload, PieChart as PieChartIcon, History, ChevronLeft, ChevronRight, Calendar, Menu, LayoutGrid, Scale, BookUser, Banknote, Database, StickyNote } from 'lucide-react';
 import { ref, onValue, set, get, child } from 'firebase/database';
 import { db } from './firebaseConfig';
-import { DAYS_OF_WEEK, WeekData, DayData, HistoryItem, AppMode, Note } from './types';
+import { DAYS_OF_WEEK, WeekData, DayData, HistoryItem, AppMode } from './types';
 import { DayCard } from './components/DayCard';
 import { Summary } from './components/Summary';
 import { WeeklyReportModal } from './components/WeeklyReportModal';
@@ -11,7 +12,6 @@ import { WeekPickerModal } from './components/WeekPickerModal';
 import { MenuModal } from './components/MenuModal';
 import { ExportModal } from './components/ExportModal';
 import { ImportModal } from './components/ImportModal';
-import { NotesModal } from './components/NotesModal';
 import { KilosApp } from './components/KilosApp';
 import { CurrentAccountsApp } from './components/CurrentAccountsApp';
 import { ChequesApp } from './components/ChequesApp';
@@ -27,7 +27,7 @@ const createInitialState = (): WeekData => {
       incomes: [],
       deliveries: [],
       expenses: [],
-      salaries: [], // Init salaries
+      salaries: [],
       toBox: [],
     };
   });
@@ -39,10 +39,6 @@ const App: React.FC = () => {
   const [weekData, setWeekData] = React.useState<WeekData>(createInitialState());
   const [history, setHistory] = React.useState<HistoryItem[]>([]);
   const [currentApp, setCurrentApp] = React.useState<AppMode>('FLOW');
-  
-  // Notes State
-  const [notes, setNotes] = React.useState<Note[]>([]);
-  const [showNotes, setShowNotes] = React.useState(false);
   
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [importMode, setImportMode] = React.useState<'WEEK' | 'MONTH'>('WEEK');
@@ -64,19 +60,19 @@ const App: React.FC = () => {
     if (db) {
       setLoading(true);
 
-      const rootRef = ref(db!);
+      const rootRef = ref(db!, `weeks`);
       const weekDataRef = ref(db!, `weeks/${currentWeekKey}/data`);
       const historyRef = ref(db!, `weeks/${currentWeekKey}/history`);
-      const notesRef = ref(db!, `notes/${currentApp}`); // App specific notes
 
       // 1. Migration Logic
-      get(child(rootRef, 'weekData')).then((snapshot) => {
+      const globalRootRef = ref(db!);
+      get(child(globalRootRef, 'weekData')).then((snapshot) => {
         if (snapshot.exists()) {
            get(weekDataRef).then((weekSnap) => {
              if (!weekSnap.exists()) {
                 const oldData = snapshot.val();
                 set(weekDataRef, oldData);
-                get(child(rootRef, 'history')).then((histSnap) => {
+                get(child(globalRootRef, 'history')).then((histSnap) => {
                   if (histSnap.exists()) {
                     set(historyRef, histSnap.val());
                     set(ref(db!, 'history'), null);
@@ -120,27 +116,15 @@ const App: React.FC = () => {
           setHistory(data || []);
       });
 
-      // 4. Notes Listener (App Specific)
-      const unsubscribeNotes = onValue(notesRef, (snapshot) => {
-         const val = snapshot.val();
-         if (val) {
-             setNotes(Object.values(val));
-         } else {
-             setNotes([]);
-         }
-      });
-
       return () => {
         unsubscribeWeek();
         unsubscribeHistory();
-        unsubscribeNotes();
       };
     } else {
       // LocalStorage Fallback
       setIsOfflineMode(true);
       const saved = localStorage.getItem(`weekData_${currentWeekKey}`);
       const savedHistory = localStorage.getItem(`history_${currentWeekKey}`);
-      const savedNotes = localStorage.getItem(`notes_${currentApp}`);
       
       if (saved) {
         try { setWeekData(JSON.parse(saved)); } catch (e) { console.error(e); }
@@ -154,15 +138,9 @@ const App: React.FC = () => {
         setHistory([]);
       }
 
-      if (savedNotes) {
-          try { setNotes(JSON.parse(savedNotes)); } catch (e) { setNotes([]); }
-      } else {
-          setNotes([]);
-      }
-
       setLoading(false);
     }
-  }, [currentDate, currentWeekKey, currentApp]); // Re-run when currentApp changes
+  }, [currentDate, currentWeekKey, currentApp]);
 
   // --- Save Functions ---
 
@@ -185,41 +163,6 @@ const App: React.FC = () => {
       } else {
           setHistory(newHistory);
           localStorage.setItem(`history_${currentWeekKey}`, JSON.stringify(newHistory));
-      }
-  };
-
-  const saveNotes = (newNotes: Note[]) => {
-      // Convert array to object for Firebase to keep ID as key, easier for updates
-      const notesObj = newNotes.reduce((acc, note) => ({ ...acc, [note.id]: note }), {});
-      
-      if (db) {
-          set(ref(db!, `notes/${currentApp}`), notesObj);
-      } else {
-          setNotes(newNotes);
-          localStorage.setItem(`notes_${currentApp}`, JSON.stringify(newNotes));
-      }
-  };
-
-  // --- Notes Handlers ---
-
-  const handleAddNote = (content: string) => {
-      const newNote: Note = {
-          id: generateId(),
-          content,
-          createdAt: new Date().toISOString()
-      };
-      saveNotes([...notes, newNote]);
-  };
-
-  const handleUpdateNote = (id: string, content: string) => {
-      const updatedNotes = notes.map(n => n.id === id ? { ...n, content } : n);
-      saveNotes(updatedNotes);
-  };
-
-  const handleDeleteNote = (id: string) => {
-      if (window.confirm("¿Eliminar nota?")) {
-          const updatedNotes = notes.filter(n => n.id !== id);
-          saveNotes(updatedNotes);
       }
   };
 
@@ -272,22 +215,17 @@ const App: React.FC = () => {
             const keyMonth = iterDate.getMonth() + 1;
             const targetMonth = parseInt(month);
             
-            // Allow weeks that start in prev month but overlap, or weeks fully in month
-            // Simple logic: if week key month matches, or if date is in month
             if (keyMonth === targetMonth || iterDate.getMonth() + 1 === targetMonth) {
                 weeksToFetch.push(key);
             }
             
             iterDate = addWeeks(iterDate, 1);
             if (iterDate.getMonth() + 1 > targetMonth && targetMonth !== 12) {
-                 // Check if first day of next week is still in month? No, break if we passed it
                  if (iterDate.getDate() > 7) break; 
             }
         }
         
-        // Remove duplicates
         const uniqueKeys = Array.from(new Set(weeksToFetch));
-
         const monthlyData: Record<string, WeekData> = {};
 
         await Promise.all(uniqueKeys.map(async (key) => {
@@ -369,7 +307,6 @@ const App: React.FC = () => {
                          set(ref(db!, `weeks/${key}/data`), JSON.parse(JSON.stringify(result[key])))
                      ));
                      alert("Importación mensual completada.");
-                     // Refresh current week if it was affected
                      if (keys.includes(currentWeekKey)) {
                          setWeekData(result[currentWeekKey]);
                      }
@@ -451,21 +388,30 @@ const App: React.FC = () => {
   const handleNextWeek = () => {
     const nextDate = addWeeks(currentDate, 1);
     const nextWeekKey = getWeekKey(nextDate);
+    
+    // Logic to carry over balances from current week to next if next doesn't exist
+    const carryOverOffice = runningBalances['saturday_close'] || 0;
+    const carryOverTreasury = totals.toBox; // Current week's total treasury
 
     if (db) {
         const nextWeekRef = ref(db!, `weeks/${nextWeekKey}/data`);
         get(nextWeekRef).then((snapshot) => {
             if (!snapshot.exists()) {
-                const carryOverOffice = runningBalances['saturday_close'] || 0;
-                const carryOverBox = totals.toBox;
                 const newState = createInitialState();
                 newState['monday'].manualInitialAmount = carryOverOffice;
-                newState['monday'].initialBoxAmount = carryOverBox;
+                newState['monday'].initialBoxAmount = carryOverTreasury;
                 set(nextWeekRef, JSON.parse(JSON.stringify(newState)));
             }
             setCurrentDate(nextDate);
         });
     } else {
+        const savedNext = localStorage.getItem(`weekData_${nextWeekKey}`);
+        if (!savedNext) {
+             const newState = createInitialState();
+             newState['monday'].manualInitialAmount = carryOverOffice;
+             newState['monday'].initialBoxAmount = carryOverTreasury;
+             localStorage.setItem(`weekData_${nextWeekKey}`, JSON.stringify(newState));
+        }
         setCurrentDate(nextDate);
     }
   };
@@ -570,17 +516,6 @@ const App: React.FC = () => {
                   </>
               )}
 
-              {/* GLOBAL NOTES BUTTON */}
-              <button 
-                type="button" 
-                onClick={() => setShowNotes(true)}
-                className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-amber-200 bg-amber-900/30 hover:bg-amber-900/50 hover:text-amber-100 rounded-lg transition-colors border border-amber-900/50"
-                title="Anotaciones"
-              >
-                <StickyNote size={14} />
-                <span className="hidden lg:inline">Anotaciones</span>
-              </button>
-
               <button type="button" onClick={() => setShowMenu(true)} className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 hover:text-white rounded-lg transition-colors border border-slate-700">
                 <Menu size={14} />
                 <span className="hidden lg:inline">Menú</span>
@@ -610,15 +545,6 @@ const App: React.FC = () => {
         onImportWeek={() => handleImportClick('WEEK')}
         onImportMonth={() => handleImportClick('MONTH')}
       />
-      <NotesModal 
-        isOpen={showNotes}
-        onClose={() => setShowNotes(false)}
-        notes={notes}
-        onAdd={handleAddNote}
-        onUpdate={handleUpdateNote}
-        onDelete={handleDeleteNote}
-        currentAppName={getAppName()}
-      />
       <MenuModal 
         isOpen={showMenu} 
         onClose={() => setShowMenu(false)} 
@@ -629,7 +555,6 @@ const App: React.FC = () => {
 
       <Header />
 
-      {/* Week Navigation Bar (Shared) - Hidden for CC and CHEQUES and GENERAL_DATA */}
       {currentApp !== 'CC' && currentApp !== 'CHEQUES' && currentApp !== 'GENERAL_DATA' && (
         <div className="bg-slate-900/80 border-b border-slate-800 flex items-center justify-center py-2 relative z-40 backdrop-blur-sm flex-none">
           <div className="flex items-center gap-6 bg-slate-800/50 px-4 py-1.5 rounded-full border border-slate-700/50 relative">
@@ -643,66 +568,48 @@ const App: React.FC = () => {
               
               <button 
                   onClick={() => setShowWeekPicker(!showWeekPicker)}
-                  className="flex items-center gap-2 text-sm font-medium text-slate-200 hover:text-white px-2 py-1 rounded hover:bg-slate-700/50 transition-colors"
+                  className="text-sm font-bold text-slate-200 hover:text-indigo-400 transition-colors flex items-center gap-2 px-2 py-1 rounded hover:bg-slate-800 cursor-pointer min-w-[140px] justify-center"
               >
-                  <Calendar size={14} className={currentApp === 'FLOW' ? "text-indigo-400" : (currentApp === 'KILOS' ? "text-orange-400" : "text-emerald-400")} />
-                  <span>{getWeekRangeLabel(currentDate)}</span>
+                  <Calendar size={14} className="text-indigo-500" />
+                  {getWeekRangeLabel(currentDate)}
               </button>
-              
-              <WeekPickerModal 
-                isOpen={showWeekPicker} 
-                onClose={() => setShowWeekPicker(false)} 
-                currentDate={currentDate}
-                onSelectDate={handleDateSelect}
-              />
 
               <button 
                   onClick={handleNextWeek}
                   className="p-1 hover:bg-slate-700 rounded-full text-slate-400 hover:text-white transition-colors"
-                  title="Siguiente Semana"
+                  title="Semana Siguiente"
               >
                   <ChevronRight size={20} />
               </button>
+              
+              <WeekPickerModal 
+                  isOpen={showWeekPicker} 
+                  onClose={() => setShowWeekPicker(false)} 
+                  currentDate={currentDate} 
+                  onSelectDate={handleDateSelect} 
+              />
           </div>
         </div>
       )}
 
-      <main className="flex-1 overflow-hidden relative">
-        {loading && (
-             <div className="absolute inset-0 bg-slate-950/80 z-50 flex items-center justify-center">
-                 <div className={`w-8 h-8 border-4 border-t-transparent rounded-full animate-spin ${currentApp === 'FLOW' ? 'border-indigo-500' : 'border-emerald-500'}`}></div>
-             </div>
-        )}
-        
+      <main className="flex-1 overflow-x-auto overflow-y-hidden bg-slate-950 relative z-0">
         {currentApp === 'FLOW' && (
-            <div className="flex h-full gap-4 w-full pb-2 p-4 overflow-x-auto">
-              {DAYS_OF_WEEK.map((dayDef) => (
-                <DayCard
-                  key={dayDef.id}
-                  dayData={weekData[dayDef.id]}
-                  onUpdate={handleUpdateDay}
-                  previousBalance={runningBalances[dayDef.id]}
-                  onAddToHistory={handleAddToHistory}
-                />
-              ))}
+            <div className="h-full flex flex-row p-4 gap-4 w-full">
+                {DAYS_OF_WEEK.map((day) => (
+                    <DayCard 
+                        key={day.id} 
+                        dayData={weekData[day.id]} 
+                        onUpdate={handleUpdateDay}
+                        previousBalance={runningBalances[day.id]}
+                        onAddToHistory={handleAddToHistory}
+                    />
+                ))}
             </div>
         )}
-
-        {currentApp === 'KILOS' && (
-            <KilosApp db={db} weekKey={currentWeekKey} />
-        )}
-
-        {currentApp === 'CC' && (
-            <CurrentAccountsApp db={db} />
-        )}
-
-        {currentApp === 'CHEQUES' && (
-            <ChequesApp db={db} />
-        )}
-
-        {currentApp === 'GENERAL_DATA' && (
-            <GeneralDataApp db={db} />
-        )}
+        {currentApp === 'KILOS' && <KilosApp db={db} weekKey={currentWeekKey} />}
+        {currentApp === 'CC' && <CurrentAccountsApp db={db} />}
+        {currentApp === 'CHEQUES' && <ChequesApp db={db} />}
+        {currentApp === 'GENERAL_DATA' && <GeneralDataApp db={db} />}
       </main>
     </div>
   );

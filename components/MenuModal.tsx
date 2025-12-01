@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { X, LayoutGrid, RotateCcw, ArrowRight, Scale, BookUser, Banknote, Database } from 'lucide-react';
+import { X, LayoutGrid, Scale, BookUser, Banknote, Database } from 'lucide-react';
 import { AppMode } from '../types';
 
 interface MenuModalProps {
@@ -11,7 +11,7 @@ interface MenuModalProps {
   onSwitchApp: (app: AppMode) => void;
 }
 
-export const MenuModal: React.FC<MenuModalProps> = ({ isOpen, onClose, onReset, currentApp, onSwitchApp }) => {
+export const MenuModal: React.FC<MenuModalProps> = ({ isOpen, onClose, currentApp, onSwitchApp }) => {
   if (!isOpen) return null;
 
   const handleAppClick = (app: AppMode) => {
@@ -19,21 +19,8 @@ export const MenuModal: React.FC<MenuModalProps> = ({ isOpen, onClose, onReset, 
     onClose();
   };
 
-  const handleResetClick = () => {
-    const password = window.prompt("⚠️ ZONA DE PELIGRO ⚠️\n\nEsta acción borrará los datos. Para confirmar, ingrese la contraseña de seguridad:");
-    
-    if (password === null) return; // Cancelado por el usuario
-
-    if (password === "secreta") {
-        onReset();
-        onClose();
-    } else {
-        alert("Contraseña incorrecta. Acción cancelada.");
-    }
-  };
-
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden relative">
         
         <button 
@@ -45,7 +32,7 @@ export const MenuModal: React.FC<MenuModalProps> = ({ isOpen, onClose, onReset, 
 
         <div className="p-6 sm:p-8">
           <h2 className="text-2xl font-bold text-slate-100 mb-2">Menú Principal</h2>
-          <p className="text-slate-400 text-sm mb-8">Selecciona una aplicación o acción.</p>
+          <p className="text-slate-400 text-sm mb-8">Selecciona una aplicación.</p>
 
           <div className="grid gap-4">
             {/* Flow App */}
@@ -121,7 +108,7 @@ export const MenuModal: React.FC<MenuModalProps> = ({ isOpen, onClose, onReset, 
                 </div>
                 <div className="text-left">
                   <h3 className={`font-bold transition-colors ${currentApp === 'CC' ? 'text-white' : 'text-slate-300 group-hover:text-white'}`}>Cuentas Corrientes</h3>
-                  <p className="text-xs text-slate-400">Nico, Amilcar, Alexis, Oviedo, Bravo</p>
+                  <p className="text-xs text-slate-400">Gestión de cuentas</p>
                 </div>
               </div>
               {currentApp === 'CC' && (
@@ -193,26 +180,6 @@ export const MenuModal: React.FC<MenuModalProps> = ({ isOpen, onClose, onReset, 
               )}
             </button>
 
-          </div>
-
-          <div className="mt-8 pt-6 border-t border-slate-800">
-            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">Zona de Peligro</h3>
-            
-            <button 
-              onClick={handleResetClick}
-              className="w-full flex items-center justify-between p-3 rounded-lg bg-red-950/20 border border-red-900/30 hover:bg-red-900/30 hover:border-red-800/50 transition-colors group"
-            >
-               <div className="flex items-center gap-3">
-                 <div className="p-2 rounded bg-red-900/20 text-red-400 group-hover:text-red-300">
-                    <RotateCcw size={18} />
-                 </div>
-                 <div className="text-left">
-                    <div className="text-sm font-semibold text-red-400 group-hover:text-red-300">Reiniciar {currentApp === 'FLOW' ? 'Semana' : 'Tabla'} Actual</div>
-                    <div className="text-[10px] text-red-500/60">Borra todos los datos de la vista actual</div>
-                 </div>
-               </div>
-               <ArrowRight size={16} className="text-red-900 group-hover:text-red-500 transition-colors" />
-            </button>
           </div>
         </div>
 
