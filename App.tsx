@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Download, Upload, PieChart as PieChartIcon, History, ChevronLeft, ChevronRight, Calendar, Menu, LayoutGrid, Scale, BookUser, Banknote, Database, StickyNote } from 'lucide-react';
 import { ref, onValue, set, get, child } from 'firebase/database';
@@ -283,7 +282,8 @@ const App: React.FC = () => {
     };
 
     syncFromPrevious();
-  }, [currentWeekKey, loading, currentApp, weekData]); 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentWeekKey, loading, currentApp]); 
 
   const handleExportWeek = () => {
     exportToCSV(weekData, history);
@@ -483,9 +483,6 @@ const App: React.FC = () => {
   const handleNextWeek = () => {
     const nextDate = addWeeks(currentDate, 1);
     setCurrentDate(nextDate);
-    // Note: We removed the manual data pushing logic. 
-    // The useEffect[syncFromPrevious] will handle data sync automatically 
-    // when the new week (currentWeekKey) loads.
   };
 
   const handleDateSelect = (date: Date) => {
