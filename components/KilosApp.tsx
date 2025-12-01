@@ -31,6 +31,45 @@ const formatNumber = (value: number) => {
   return new Intl.NumberFormat('es-AR').format(value);
 };
 
+const InputCell = ({ value, onChange, colorClass = "text-slate-200 focus:border-blue-500", bgClass = "bg-slate-900/50" }: any) => {
+  const [localValue, setLocalValue] = React.useState(value === 0 ? '' : String(value));
+
+  React.useEffect(() => {
+    const numericLocal = parseFloat(localValue.replace(/,/g, '.')) || 0;
+    // Only update local value if the prop value is significantly different
+    // This allows typing "10," without it immediately reverting to "10"
+    if (Math.abs(numericLocal - value) > 0.001) {
+       setLocalValue(value === 0 ? '' : String(value));
+    }
+  }, [value]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    // Allow digits, minus, dot, comma
+    if (/^[-0-9.,]*$/.test(val)) {
+        setLocalValue(val);
+        onChange(val);
+    }
+  };
+
+  const handleBlur = () => {
+     // On blur, clean up formatting by syncing with prop value
+     setLocalValue(value === 0 ? '' : String(value));
+  };
+
+  return (
+      <input 
+          type="text" 
+          inputMode="decimal"
+          value={localValue}
+          onChange={handleChange}
+          onBlur={handleBlur}
+          placeholder="0"
+          className={`w-full ${bgClass} border border-slate-700/50 rounded px-2 py-1 text-right ${colorClass} focus:outline-none transition-all font-mono text-sm appearance-none`}
+      />
+  );
+};
+
 export const KilosApp: React.FC<KilosAppProps> = ({ db, weekKey }) => {
   const [data, setData] = React.useState<KilosWeekData>(createInitialKilosState());
   const [loading, setLoading] = React.useState(true);
@@ -94,21 +133,24 @@ export const KilosApp: React.FC<KilosAppProps> = ({ db, weekKey }) => {
   // --- Handlers ---
 
   const handleDeepChange = (dayId: string, category: 'drivers' | 'routes_out' | 'routes_in', key: string, value: string) => {
-      const num = parseFloat(value) || 0;
+      const normalized = value.replace(/,/g, '.');
+      const num = parseFloat(normalized) || 0;
       const updatedCategory = { ...data[dayId][category], [key]: num };
       const updatedDay = { ...data[dayId], [category]: updatedCategory };
       saveData({ ...data, [dayId]: updatedDay });
   };
 
   const handleSimpleChange = (dayId: string, field: 'camera_plus' | 'camera_minus', value: string) => {
-      const num = parseFloat(value) || 0;
+      const normalized = value.replace(/,/g, '.');
+      const num = parseFloat(normalized) || 0;
       const updatedDay = { ...data[dayId], [field]: num };
       saveData({ ...data, [dayId]: updatedDay });
   };
 
   // Public Row Handlers
   const handlePublicRowChange = (dayId: string, index: number, value: string) => {
-      const num = parseFloat(value) || 0;
+      const normalized = value.replace(/,/g, '.');
+      const num = parseFloat(normalized) || 0;
       const currentList = [...data[dayId].public];
       // Pad array if needed
       while (currentList.length <= index) currentList.push(0);
@@ -175,16 +217,6 @@ export const KilosApp: React.FC<KilosAppProps> = ({ db, weekKey }) => {
   }, [data]);
 
   if (loading) return <div className="text-white p-8 animate-pulse">Cargando Tabla de Kilos...</div>;
-
-  const InputCell = ({ value, onChange, colorClass = "text-slate-200 focus:border-blue-500", bgClass = "bg-slate-900/50" }: any) => (
-      <input 
-          type="number" 
-          value={value === 0 ? '' : value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder="0"
-          className={`w-full ${bgClass} border border-slate-700/50 rounded px-2 py-1 text-right ${colorClass} focus:outline-none transition-all font-mono text-sm`}
-      />
-  );
 
   return (
     <div className="flex flex-col h-full bg-slate-950 p-2 sm:p-4 overflow-hidden">
