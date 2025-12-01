@@ -389,29 +389,47 @@ const App: React.FC = () => {
     const nextDate = addWeeks(currentDate, 1);
     const nextWeekKey = getWeekKey(nextDate);
     
-    // Logic to carry over balances from current week to next if next doesn't exist
+    // Logic to carry over balances from current week to next
     const carryOverOffice = runningBalances['saturday_close'] || 0;
-    const carryOverTreasury = totals.toBox; // Current week's total treasury
+    const carryOverTreasury = totals.toBox; 
 
     if (db) {
         const nextWeekRef = ref(db!, `weeks/${nextWeekKey}/data`);
         get(nextWeekRef).then((snapshot) => {
-            if (!snapshot.exists()) {
-                const newState = createInitialState();
-                newState['monday'].manualInitialAmount = carryOverOffice;
-                newState['monday'].initialBoxAmount = carryOverTreasury;
-                set(nextWeekRef, JSON.parse(JSON.stringify(newState)));
+            let nextWeekData: WeekData;
+            
+            if (snapshot.exists()) {
+                nextWeekData = snapshot.val();
+            } else {
+                nextWeekData = createInitialState();
             }
+
+            // Force update Monday's initials to reflect current week's closing
+            // We ensure monday exists in case of corrupted data
+            if (!nextWeekData['monday']) nextWeekData['monday'] = createInitialState()['monday'];
+            
+            nextWeekData['monday'].manualInitialAmount = carryOverOffice;
+            nextWeekData['monday'].initialBoxAmount = carryOverTreasury;
+
+            set(nextWeekRef, JSON.parse(JSON.stringify(nextWeekData)));
             setCurrentDate(nextDate);
         });
     } else {
         const savedNext = localStorage.getItem(`weekData_${nextWeekKey}`);
-        if (!savedNext) {
-             const newState = createInitialState();
-             newState['monday'].manualInitialAmount = carryOverOffice;
-             newState['monday'].initialBoxAmount = carryOverTreasury;
-             localStorage.setItem(`weekData_${nextWeekKey}`, JSON.stringify(newState));
+        let nextWeekData: WeekData;
+
+        if (savedNext) {
+             nextWeekData = JSON.parse(savedNext);
+        } else {
+             nextWeekData = createInitialState();
         }
+
+        if (!nextWeekData['monday']) nextWeekData['monday'] = createInitialState()['monday'];
+        
+        nextWeekData['monday'].manualInitialAmount = carryOverOffice;
+        nextWeekData['monday'].initialBoxAmount = carryOverTreasury;
+
+        localStorage.setItem(`weekData_${nextWeekKey}`, JSON.stringify(nextWeekData));
         setCurrentDate(nextDate);
     }
   };

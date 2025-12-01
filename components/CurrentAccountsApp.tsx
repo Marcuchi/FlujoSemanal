@@ -426,7 +426,7 @@ export const CurrentAccountsApp: React.FC<CurrentAccountsAppProps> = ({ db }) =>
                                 <input 
                                     type="text" 
                                     inputMode="numeric"
-                                    placeholder="Entrega"
+                                    placeholder="Haber"
                                     value={deliveryDisplay}
                                     onChange={(e) => handleMoneyInput(e, setDeliveryDisplay, setRawDelivery)}
                                     className="w-full bg-slate-950 border rounded-lg py-2 pl-6 pr-2 text-sm font-mono focus:outline-none border-emerald-900/50 text-emerald-300 placeholder-emerald-900/50 focus:border-emerald-500"
@@ -464,8 +464,8 @@ export const CurrentAccountsApp: React.FC<CurrentAccountsAppProps> = ({ db }) =>
                                         <ArrowUpDown size={14} className={sortNewest ? "text-emerald-500" : "text-slate-600"} />
                                     </th>
                                     <th className="p-4">Descripción</th>
-                                    <th className="p-4 text-right text-emerald-500">Entrega (Paga)</th>
-                                    <th className="p-4 text-right text-rose-500">Debe (Saca)</th>
+                                    <th className="p-4 text-right text-emerald-500">Haber</th>
+                                    <th className="p-4 text-right text-rose-500">Debe</th>
                                     <th className="p-4 text-right text-white bg-slate-900/50">Deuda</th>
                                     <th className="p-4 w-10"></th>
                                 </tr>
@@ -473,15 +473,15 @@ export const CurrentAccountsApp: React.FC<CurrentAccountsAppProps> = ({ db }) =>
                             <tbody className="divide-y divide-slate-800">
                                 {displayTransactions.map((t) => (
                                     <tr key={t.id} className="hover:bg-slate-800/30 transition-colors group">
-                                        <td className="p-3 text-sm text-slate-300 whitespace-nowrap font-mono">{t.date.split('-').reverse().join('/')}</td>
+                                        <td className="p-3 text-sm text-white whitespace-nowrap font-mono">{t.date.split('-').reverse().join('/')}</td>
                                         <td className="p-3 text-sm text-white font-medium">{t.description}</td>
                                         <td className="p-3 text-right font-mono text-emerald-400">
-                                            {t.delivery > 0 ? formatCurrency(t.delivery) : '-'}
+                                            {t.delivery > 0 ? formatCurrency(t.delivery) : <span className="text-white">-</span>}
                                         </td>
                                         <td className="p-3 text-right font-mono text-rose-400">
-                                            {t.debit > 0 ? formatCurrency(t.debit) : '-'}
+                                            {t.debit > 0 ? formatCurrency(t.debit) : <span className="text-white">-</span>}
                                         </td>
-                                        <td className="p-3 text-right font-mono font-bold text-slate-200 bg-slate-900/30">
+                                        <td className="p-3 text-right font-mono font-bold text-white bg-slate-900/30">
                                             {formatCurrency(t.balanceAfter)}
                                         </td>
                                         <td className="p-3 text-center">

@@ -27,7 +27,7 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, his
       case 'deliveries': return { label: 'Reparto', color: 'text-teal-400' };
       case 'expenses': return { label: 'Gasto', color: 'text-rose-400' };
       case 'salaries': return { label: 'Adelanto', color: 'text-amber-400' };
-      case 'toBox': return { label: 'A Caja', color: 'text-indigo-400' };
+      case 'toBox': return { label: 'A Tesoro', color: 'text-indigo-400' };
       default: return { label: 'Item', color: 'text-slate-400' };
     }
   };
@@ -38,7 +38,7 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, his
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-slate-950 border border-slate-800 rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
         
         {/* Header */}
