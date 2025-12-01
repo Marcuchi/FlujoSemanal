@@ -1,5 +1,7 @@
+
 import React from 'react';
 import { formatCurrency } from '../utils';
+import { ArrowLeft } from 'lucide-react';
 
 interface DataItem {
   name: string;
@@ -11,9 +13,11 @@ interface PieChartProps {
   data: DataItem[];
   title: string;
   emptyMessage: string;
+  othersList?: { name: string; value: number }[];
 }
 
-export const PieChart: React.FC<PieChartProps> = ({ data, title, emptyMessage }) => {
+export const PieChart: React.FC<PieChartProps> = ({ data, title, emptyMessage, othersList }) => {
+  const [showDetails, setShowDetails] = React.useState(false);
   const total = data.reduce((acc, item) => acc + item.value, 0);
   
   // Calculate paths
@@ -54,6 +58,38 @@ export const PieChart: React.FC<PieChartProps> = ({ data, title, emptyMessage })
     );
   });
 
+  // --- DETAILED LIST VIEW FOR 'OTHERS' ---
+  if (showDetails && othersList && othersList.length > 0) {
+    return (
+      <div className="flex flex-col h-full bg-slate-900/50 rounded-xl border border-slate-800 p-5 animate-in fade-in duration-200">
+        <div className="flex flex-row justify-between items-center mb-4 border-b border-slate-800 pb-3">
+          <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider">Detalle: Otros</h3>
+          <button 
+            onClick={() => setShowDetails(false)}
+            className="text-xs flex items-center gap-1 text-indigo-400 hover:text-indigo-300 transition-colors font-semibold"
+          >
+            <ArrowLeft size={14} /> Volver
+          </button>
+        </div>
+        
+        <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-2">
+           {othersList.map((item, idx) => (
+             <div key={idx} className="flex justify-between items-center p-2 rounded hover:bg-slate-800/30 border-b border-slate-800/50 last:border-0">
+                <span className="text-sm text-slate-300 capitalize">{item.name}</span>
+                <span className="text-sm font-mono font-bold text-slate-200">{formatCurrency(item.value)}</span>
+             </div>
+           ))}
+        </div>
+        
+        <div className="mt-3 pt-2 border-t border-slate-800 flex justify-between items-center text-xs text-slate-500">
+            <span>Total Otros</span>
+            <span className="font-mono">{formatCurrency(othersList.reduce((a,b) => a + b.value, 0))}</span>
+        </div>
+      </div>
+    );
+  }
+
+  // --- STANDARD CHART VIEW ---
   if (total === 0) {
     return (
       <div className="flex flex-col items-center justify-center p-6 bg-slate-900/50 rounded-xl border border-slate-800 h-full">
@@ -84,24 +120,32 @@ export const PieChart: React.FC<PieChartProps> = ({ data, title, emptyMessage })
 
         {/* Legend */}
         <div className="flex-1 w-full space-y-3 overflow-y-auto max-h-64 custom-scrollbar pr-2">
-          {data.map((item) => (
-            <div key={item.name} className="flex items-center justify-between text-sm group p-1 hover:bg-slate-800/30 rounded transition-colors">
-              <div className="flex items-center gap-3 overflow-hidden">
-                <span className="w-3 h-3 rounded-full flex-shrink-0 shadow-sm ring-2 ring-opacity-20 ring-white" style={{ backgroundColor: item.color }}></span>
-                <span className="text-slate-300 truncate font-medium group-hover:text-white transition-colors capitalize">
-                  {item.name}
-                </span>
+          {data.map((item) => {
+            const isOthers = item.name === 'Otros' && othersList && othersList.length > 0;
+            return (
+              <div 
+                key={item.name} 
+                onClick={() => isOthers ? setShowDetails(true) : undefined}
+                className={`flex items-center justify-between text-sm group p-1 rounded transition-colors ${isOthers ? 'cursor-pointer hover:bg-indigo-900/20 border border-transparent hover:border-indigo-500/30' : 'hover:bg-slate-800/30'}`}
+                title={isOthers ? "Ver detalles" : ""}
+              >
+                <div className="flex items-center gap-3 overflow-hidden">
+                  <span className="w-3 h-3 rounded-full flex-shrink-0 shadow-sm ring-2 ring-opacity-20 ring-white" style={{ backgroundColor: item.color }}></span>
+                  <span className={`truncate font-medium capitalize transition-colors ${isOthers ? 'text-indigo-300 group-hover:text-indigo-200 underline decoration-dotted decoration-indigo-500/50' : 'text-slate-300 group-hover:text-white'}`}>
+                    {item.name}
+                  </span>
+                </div>
+                <div className="flex gap-4">
+                   <span className="text-slate-500 font-mono text-xs pt-0.5">
+                    {((item.value / total) * 100).toFixed(1)}%
+                  </span>
+                  <span className={`font-mono font-bold ${isOthers ? 'text-indigo-200' : 'text-slate-200'}`}>
+                    {formatCurrency(item.value)}
+                  </span>
+                </div>
               </div>
-              <div className="flex gap-4">
-                 <span className="text-slate-500 font-mono text-xs pt-0.5">
-                  {((item.value / total) * 100).toFixed(1)}%
-                </span>
-                <span className="text-slate-200 font-mono font-bold">
-                  {formatCurrency(item.value)}
-                </span>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
