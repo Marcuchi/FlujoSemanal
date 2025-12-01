@@ -1,6 +1,7 @@
 
+
 import React from 'react';
-import { Download, Upload, PieChart as PieChartIcon, History, ChevronLeft, ChevronRight, Calendar, Menu, LayoutGrid, Scale, BookUser, StickyNote } from 'lucide-react';
+import { Download, Upload, PieChart as PieChartIcon, History, ChevronLeft, ChevronRight, Calendar, Menu, LayoutGrid, Scale, BookUser, StickyNote, Database } from 'lucide-react';
 import { ref, onValue, set, get, child } from 'firebase/database';
 import { db } from './firebaseConfig';
 import { DAYS_OF_WEEK, WeekData, DayData, HistoryItem, AppMode, Note } from './types';
@@ -16,6 +17,7 @@ import { NotesModal } from './components/NotesModal';
 import { KilosApp } from './components/KilosApp';
 import { CurrentAccountsApp } from './components/CurrentAccountsApp';
 import { ChequesApp } from './components/ChequesApp';
+import { GeneralDataApp } from './components/GeneralDataApp';
 import { exportToCSV, exportMonthToCSV, parseCSV, parseMonthCSV, getWeekKey, getWeekRangeLabel, addWeeks, getMonday, generateId } from './utils';
 
 const createInitialState = (): WeekData => {
@@ -481,6 +483,7 @@ const App: React.FC = () => {
           case 'KILOS': return 'Control de Kilos';
           case 'CC': return 'Cuentas Corrientes';
           case 'CHEQUES': return 'Cheques en Cartera';
+          case 'GENERAL_DATA': return 'Datos Generales';
           default: return 'Flujo Semanal';
       }
   };
@@ -494,6 +497,9 @@ const App: React.FC = () => {
       }
       if (currentApp === 'CHEQUES') {
           return <>Cheques<span className="text-violet-400">Cartera</span></>;
+      }
+      if (currentApp === 'GENERAL_DATA') {
+          return <>Datos<span className="text-cyan-400">Generales</span></>;
       }
       return <>Flujo<span className="text-indigo-400">Semanal</span></>;
   };
@@ -625,8 +631,8 @@ const App: React.FC = () => {
 
       <Header />
 
-      {/* Week Navigation Bar (Shared) - Hidden for CC and CHEQUES */}
-      {currentApp !== 'CC' && currentApp !== 'CHEQUES' && (
+      {/* Week Navigation Bar (Shared) - Hidden for CC and CHEQUES and GENERAL_DATA */}
+      {currentApp !== 'CC' && currentApp !== 'CHEQUES' && currentApp !== 'GENERAL_DATA' && (
         <div className="bg-slate-900/80 border-b border-slate-800 flex items-center justify-center py-2 relative z-50 backdrop-blur-sm flex-none">
           <div className="flex items-center gap-6 bg-slate-800/50 px-4 py-1.5 rounded-full border border-slate-700/50 relative">
               <button 
@@ -694,6 +700,10 @@ const App: React.FC = () => {
 
         {currentApp === 'CHEQUES' && (
             <ChequesApp db={db} />
+        )}
+
+        {currentApp === 'GENERAL_DATA' && (
+            <GeneralDataApp db={db} />
         )}
       </main>
     </div>

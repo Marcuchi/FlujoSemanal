@@ -100,6 +100,47 @@ export interface Cheque {
   deliveredBy: string; // Quien Entrego
 }
 
+// --- GENERAL DATA APP TYPES ---
+
+export interface GeneralItem {
+  id: string;
+  name: string;
+}
+
+export interface Client {
+  id: string;
+  name: string;
+  cuil: string;
+  phone: string;
+  location: string;
+}
+
+export interface Supplier {
+  id: string;
+  name: string;
+  product: string;
+  price: number;
+  phone: string;
+}
+
+export interface Employee {
+  id: string;
+  firstName: string;
+  lastName: string;
+  dni: string;
+  cuil: string;
+  address: string;
+  startDate: string; // YYYY-MM-DD
+  birthDate: string; // YYYY-MM-DD
+  phone: string;
+}
+
+export interface GeneralData {
+  clients: Client[];
+  suppliers: Supplier[];
+  employees: Employee[];
+}
+
 // --- GLOBAL NOTES ---
 export interface Note {
   id: string;
@@ -107,7 +148,7 @@ export interface Note {
   createdAt: string;
 }
 
-export type AppMode = 'FLOW' | 'KILOS' | 'CC' | 'CHEQUES';
+export type AppMode = 'FLOW' | 'KILOS' | 'CC' | 'CHEQUES' | 'GENERAL_DATA';
 
 export const DAYS_OF_WEEK = [
   { id: 'monday', name: 'Lunes' },

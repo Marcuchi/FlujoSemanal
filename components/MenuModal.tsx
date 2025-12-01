@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { X, LayoutGrid, RotateCcw, ArrowRight, Scale, BookUser, Banknote } from 'lucide-react';
+import { X, LayoutGrid, RotateCcw, ArrowRight, Scale, BookUser, Banknote, Database } from 'lucide-react';
 import { AppMode } from '../types';
 
 interface MenuModalProps {
@@ -158,6 +158,35 @@ export const MenuModal: React.FC<MenuModalProps> = ({ isOpen, onClose, onReset, 
                   <span className="relative flex h-2 w-2">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-violet-500"></span>
+                  </span>
+                  ACTIVO
+                </div>
+              )}
+            </button>
+
+             {/* General Data App */}
+             <button 
+              onClick={() => handleAppClick('GENERAL_DATA')}
+              className={`group flex items-center justify-between p-4 rounded-xl border transition-all ${
+                currentApp === 'GENERAL_DATA' 
+                  ? 'bg-cyan-600/10 border-cyan-500/50 hover:bg-cyan-600/20' 
+                  : 'bg-slate-800/40 border-slate-700/50 hover:bg-slate-800 hover:border-slate-600'
+              }`}
+            >
+              <div className="flex items-center gap-4">
+                <div className={`p-3 rounded-lg shadow-lg ${currentApp === 'GENERAL_DATA' ? 'bg-cyan-600 text-white shadow-cyan-900/50' : 'bg-slate-700 text-slate-400'}`}>
+                  <Database size={24} />
+                </div>
+                <div className="text-left">
+                  <h3 className={`font-bold transition-colors ${currentApp === 'GENERAL_DATA' ? 'text-white' : 'text-slate-300 group-hover:text-white'}`}>Datos Generales</h3>
+                  <p className="text-xs text-slate-400">Clientes, Proveedores y Empleados</p>
+                </div>
+              </div>
+              {currentApp === 'GENERAL_DATA' && (
+                <div className="flex items-center gap-2 text-cyan-400 text-xs font-semibold px-2 py-1 bg-cyan-950/50 rounded border border-cyan-900/50">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
                   </span>
                   ACTIVO
                 </div>
