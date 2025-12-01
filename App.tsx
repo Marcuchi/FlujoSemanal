@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { Download, Upload, PieChart as PieChartIcon, History, ChevronLeft, ChevronRight, Calendar, Menu, LayoutGrid, Scale, BookUser, Banknote, Database, StickyNote } from 'lucide-react';
 import { ref, onValue, set, get, child } from 'firebase/database';
@@ -100,7 +101,9 @@ const App: React.FC = () => {
               salaries: dayData.salaries || [],
               toBox: dayData.toBox || [],
               manualInitialAmount: dayData.manualInitialAmount,
-              initialBoxAmount: dayData.initialBoxAmount
+              manualInitialModified: dayData.manualInitialModified,
+              initialBoxAmount: dayData.initialBoxAmount,
+              initialBoxModified: dayData.initialBoxModified
             };
           });
           setWeekData(sanitizedData);
@@ -404,12 +407,18 @@ const App: React.FC = () => {
                 nextWeekData = createInitialState();
             }
 
-            // Force update Monday's initials to reflect current week's closing
-            // We ensure monday exists in case of corrupted data
+            // Force update Monday's initials ONLY IF they haven't been manually modified by user
             if (!nextWeekData['monday']) nextWeekData['monday'] = createInitialState()['monday'];
             
-            nextWeekData['monday'].manualInitialAmount = carryOverOffice;
-            nextWeekData['monday'].initialBoxAmount = carryOverTreasury;
+            // CHECK FLAGS: If manualInitialModified is TRUE, we do NOT overwrite
+            if (!nextWeekData['monday'].manualInitialModified) {
+                nextWeekData['monday'].manualInitialAmount = carryOverOffice;
+            }
+
+            // CHECK FLAGS: If initialBoxModified is TRUE, we do NOT overwrite
+            if (!nextWeekData['monday'].initialBoxModified) {
+                nextWeekData['monday'].initialBoxAmount = carryOverTreasury;
+            }
 
             set(nextWeekRef, JSON.parse(JSON.stringify(nextWeekData)));
             setCurrentDate(nextDate);
@@ -426,8 +435,14 @@ const App: React.FC = () => {
 
         if (!nextWeekData['monday']) nextWeekData['monday'] = createInitialState()['monday'];
         
-        nextWeekData['monday'].manualInitialAmount = carryOverOffice;
-        nextWeekData['monday'].initialBoxAmount = carryOverTreasury;
+        // CHECK FLAGS (LocalStorage version)
+        if (!nextWeekData['monday'].manualInitialModified) {
+             nextWeekData['monday'].manualInitialAmount = carryOverOffice;
+        }
+
+        if (!nextWeekData['monday'].initialBoxModified) {
+             nextWeekData['monday'].initialBoxAmount = carryOverTreasury;
+        }
 
         localStorage.setItem(`weekData_${nextWeekKey}`, JSON.stringify(nextWeekData));
         setCurrentDate(nextDate);

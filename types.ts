@@ -15,7 +15,9 @@ export interface DayData {
   salaries: Transaction[]; // New subgroup for Adelantos/Sueldos
   toBox: Transaction[];
   manualInitialAmount?: number;
+  manualInitialModified?: boolean; // Flag to track if user manually set this
   initialBoxAmount?: number; // New field for Monday's Initial Box
+  initialBoxModified?: boolean; // Flag to track if user manually set this
 }
 
 export type TransactionType = 'incomes' | 'deliveries' | 'expenses' | 'salaries' | 'toBox';

@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { Plus, Archive, TrendingUp, TrendingDown, Briefcase, History, Wallet, RotateCcw, Edit2, Check, X, Truck, Users } from 'lucide-react';
 import { DayData, Transaction, TransactionType, HistoryItem } from '../types';
@@ -98,13 +99,13 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
   const saveInitialAmount = () => {
     const val = parseFloat(tempInitial.replace(/\./g, '').replace(/,/g, '.'));
     if (!isNaN(val)) {
-      onUpdate({ ...dayData, manualInitialAmount: val });
+      onUpdate({ ...dayData, manualInitialAmount: val, manualInitialModified: true });
     }
     setIsEditingInitial(false);
   };
 
   const resetInitialAmount = () => {
-    onUpdate({ ...dayData, manualInitialAmount: undefined });
+    onUpdate({ ...dayData, manualInitialAmount: undefined, manualInitialModified: false });
   };
 
   const startEditingInitial = () => {
@@ -139,9 +140,9 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
   const saveBoxInitial = () => {
       const val = parseFloat(tempBoxInitial.replace(/\./g, '').replace(/,/g, '.'));
       if (!isNaN(val)) {
-        onUpdate({ ...dayData, initialBoxAmount: val });
+        onUpdate({ ...dayData, initialBoxAmount: val, initialBoxModified: true });
       } else if (tempBoxInitial === '') {
-        onUpdate({ ...dayData, initialBoxAmount: 0 });
+        onUpdate({ ...dayData, initialBoxAmount: 0, initialBoxModified: true });
       }
       setIsEditingBoxInitial(false);
   };
