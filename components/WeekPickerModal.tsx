@@ -76,7 +76,7 @@ export const WeekPickerModal: React.FC<WeekPickerModalProps> = ({ isOpen, onClos
   const today = new Date();
 
   return (
-    <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 animate-in fade-in zoom-in duration-200">
+    <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-40 animate-in fade-in zoom-in duration-200">
         <div className="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-4 w-72">
             
             {/* Header */}

@@ -1,5 +1,3 @@
-
-
 import React from 'react';
 import { Download, Upload, PieChart as PieChartIcon, History, ChevronLeft, ChevronRight, Calendar, Menu, LayoutGrid, Scale, BookUser, StickyNote, Database } from 'lucide-react';
 import { ref, onValue, set, get, child } from 'firebase/database';
@@ -633,7 +631,7 @@ const App: React.FC = () => {
 
       {/* Week Navigation Bar (Shared) - Hidden for CC and CHEQUES and GENERAL_DATA */}
       {currentApp !== 'CC' && currentApp !== 'CHEQUES' && currentApp !== 'GENERAL_DATA' && (
-        <div className="bg-slate-900/80 border-b border-slate-800 flex items-center justify-center py-2 relative z-50 backdrop-blur-sm flex-none">
+        <div className="bg-slate-900/80 border-b border-slate-800 flex items-center justify-center py-2 relative z-40 backdrop-blur-sm flex-none">
           <div className="flex items-center gap-6 bg-slate-800/50 px-4 py-1.5 rounded-full border border-slate-700/50 relative">
               <button 
                   onClick={handlePrevWeek}
