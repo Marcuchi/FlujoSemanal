@@ -28,7 +28,7 @@ export const Summary: React.FC<SummaryProps> = ({ totalIncome, totalExpense, tot
       <div className="h-8 w-px bg-slate-700 hidden sm:block"></div>
       <SummaryItem label="Ingresos Totales Netos" value={netTotal} icon={Scale} colorClass="text-cyan-400" />
       <div className="h-8 w-px bg-slate-700 hidden sm:block"></div>
-      <SummaryItem label="Total en Caja" value={totalToBox} icon={Wallet} colorClass="text-indigo-400" />
+      <SummaryItem label="Total en Tesoro" value={totalToBox} icon={Wallet} colorClass="text-indigo-400" />
     </div>
   );
 };

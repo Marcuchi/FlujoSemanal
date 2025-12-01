@@ -29,7 +29,8 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
   onMove
 }) => {
   const isBox = type === 'toBox';
-  const isNew = transaction.amount === 0 && (transaction.title === '' || (isBox && transaction.title === 'Caja'));
+  // Check for 'Tesoro' as default title instead of 'Caja'
+  const isNew = transaction.amount === 0 && (transaction.title === '' || (isBox && (transaction.title === 'Caja' || transaction.title === 'Tesoro')));
   const [isEditing, setIsEditing] = React.useState(isNew);
   
   const [tempTitle, setTempTitle] = React.useState(transaction.title);
@@ -41,7 +42,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
 
   React.useEffect(() => {
     if (isEditing) {
-      if (isBox && tempTitle === 'Caja') {
+      if (isBox && (tempTitle === 'Caja' || tempTitle === 'Tesoro')) {
         amountInputRef.current?.focus();
       } else {
         titleInputRef.current?.focus();
