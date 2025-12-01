@@ -1,6 +1,4 @@
 
-
-
 import React from 'react';
 import { Plus, Archive, TrendingUp, TrendingDown, Briefcase, History, Wallet, RotateCcw, Edit2, Check, X, Truck, Users } from 'lucide-react';
 import { DayData, Transaction, TransactionType, HistoryItem } from '../types';
@@ -233,7 +231,7 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
 
       <div className="flex-1 overflow-y-auto p-3 space-y-3 bg-slate-950 custom-scrollbar">
         
-        {/* Oficina Inicial - MOVED TO TOP */}
+        {/* Oficina Inicial - ALWAYS AT TOP */}
         <div className="rounded-lg bg-slate-800/40 border border-slate-700/50 overflow-hidden shadow-sm">
            <div className="flex justify-between items-center px-3 py-2 bg-slate-800 border-b border-slate-700">
              <h3 className="font-bold text-xs text-slate-300 uppercase flex items-center gap-1.5 tracking-wider">
@@ -280,7 +278,7 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
            </div>
         </div>
 
-        {/* Monday Specific: Tesoro Inicial - MOVED BELOW OFICINA INICIAL */}
+        {/* Monday Specific: Tesoro Inicial - BELOW OFICINA INICIAL */}
         {isMonday && (
             <div className="rounded-lg bg-slate-800/40 border border-slate-700/50 overflow-hidden shadow-sm">
                 <div className="flex justify-between items-center px-3 py-2 bg-slate-800 border-b border-slate-700">
@@ -347,7 +345,7 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
             <div>
               <div className="flex justify-between items-center mb-1 px-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs uppercase font-extrabold text-emerald-500/80 tracking-wide">General</span>
+                  <span className="text-xs uppercase font-extrabold text-emerald-500/80 tracking-wide text-xs">General</span>
                   <span className="text-[10px] font-mono font-bold text-emerald-400/90">{formatCurrency(totalIncome)}</span>
                 </div>
                 <button onClick={() => handleAddTransaction('incomes')} className="p-0.5 rounded bg-emerald-900/50 hover:bg-emerald-800 text-emerald-200 border border-emerald-800/50 transition-colors">
@@ -375,7 +373,7 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
             <div>
               <div className="flex justify-between items-center mb-1 px-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs uppercase font-extrabold text-teal-500/80 tracking-wide flex items-center gap-1">
+                  <span className="text-xs uppercase font-extrabold text-teal-500/80 tracking-wide flex items-center gap-1 text-xs">
                      <Truck size={12} /> Repartos
                   </span>
                   <span className="text-[10px] font-mono font-bold text-teal-400/90">{formatCurrency(totalDeliveries)}</span>
@@ -420,7 +418,7 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
             <div>
               <div className="flex justify-between items-center mb-1 px-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs uppercase font-extrabold text-rose-500/80 tracking-wide">Gastos</span>
+                  <span className="text-xs uppercase font-extrabold text-rose-500/80 tracking-wide text-xs">Gastos</span>
                   <span className="text-[10px] font-mono font-bold text-rose-400/90">{formatCurrency(totalExpense)}</span>
                 </div>
                 <button onClick={() => handleAddTransaction('expenses')} className="p-0.5 rounded bg-rose-900/50 hover:bg-rose-800 text-rose-200 border border-rose-800/50 transition-colors">
@@ -448,7 +446,7 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
              <div>
               <div className="flex justify-between items-center mb-1 px-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs uppercase font-extrabold text-amber-500/80 tracking-wide flex items-center gap-1">
+                  <span className="text-xs uppercase font-extrabold text-amber-500/80 tracking-wide flex items-center gap-1 text-xs">
                      <Users size={12} /> Adelantos/Sueldos
                   </span>
                   <span className="text-[10px] font-mono font-bold text-amber-400/90">{formatCurrency(totalSalaries)}</span>

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Download, Upload, PieChart as PieChartIcon, History, ChevronLeft, ChevronRight, Calendar, Menu, LayoutGrid, Scale, BookUser, Banknote, Database, StickyNote } from 'lucide-react';
 import { ref, onValue, set, get, child } from 'firebase/database';
@@ -151,7 +152,7 @@ const App: React.FC = () => {
     const cleanData = JSON.parse(JSON.stringify(newData));
     if (db) {
       set(ref(db!, `weeks/${currentWeekKey}/data`), cleanData).catch(console.error);
-      setWeekData(newData);
+      setWeekData(newData); // Optimistic update
     } else {
       setWeekData(newData);
       localStorage.setItem(`weekData_${currentWeekKey}`, JSON.stringify(newData));
@@ -196,14 +197,13 @@ const App: React.FC = () => {
   };
 
   // --- Retrospective Sync Effect ---
-  // This logic ensures that when you enter a week, it automatically pulls the 
-  // closing balances from the previous week and updates the current week's opening values
-  // if they haven't been manually modified.
+  // THIS IS THE ONLY SOURCE OF TRUTH FOR CARRYING OVER BALANCES
   React.useEffect(() => {
-    if (loading || ['CC', 'CHEQUES', 'GENERAL_DATA'].includes(currentApp)) return;
+    // Skip if loading or not in Flow app
+    if (loading || currentApp !== 'FLOW') return;
 
     const syncFromPrevious = async () => {
-        // 1. Identify Previous Week
+        // 1. Identify Previous Week strictly by calendar
         const prevDate = addWeeks(currentDate, -1);
         const prevWeekKey = getWeekKey(prevDate);
         
@@ -218,42 +218,45 @@ const App: React.FC = () => {
             if (saved) prevData = JSON.parse(saved);
         }
 
-        if (!prevData) return;
-
         // 3. Calculate Previous Closing Balances
-        let prevBalance = 0;
-        for (const day of DAYS_OF_WEEK) {
-            const d = prevData[day.id];
-            const effInitial = d?.manualInitialAmount ?? prevBalance;
-            if (d) {
-                const inc = d.incomes?.reduce((s:number, t:any)=>s+(t.amount||0),0)||0;
-                const del = d.deliveries?.reduce((s:number, t:any)=>s+(t.amount||0),0)||0;
-                const exp = d.expenses?.reduce((s:number, t:any)=>s+(t.amount||0),0)||0;
-                const sal = d.salaries?.reduce((s:number, t:any)=>s+(t.amount||0),0)||0;
-                const tob = d.toBox?.reduce((s:number, t:any)=>s+(t.amount||0),0)||0;
-                prevBalance = effInitial + inc + del - exp - sal - tob;
-            }
-        }
-        const prevOfficeClose = prevBalance;
-
-        // Treasury Total (Sum of all toBox + Monday Initial)
+        let prevOfficeClose = 0;
         let prevTreasury = 0;
-        Object.values(prevData).forEach((d: any) => {
-             const tob = d.toBox?.reduce((s:number, t:any)=>s+(t.amount||0),0)||0;
-             prevTreasury += tob;
-             if (d.id === 'monday') prevTreasury += (d.initialBoxAmount || 0);
-        });
 
-        // 4. Update Current Monday if needed
-        // Note: 'weekData' is state, we need to be careful not to create a loop.
-        // We only trigger update if values mismatch.
+        if (prevData) {
+            // Calculate Office Balance (Cascading)
+            let currentBalance = 0;
+            for (const day of DAYS_OF_WEEK) {
+                const d = prevData[day.id];
+                const effInitial = d?.manualInitialAmount ?? currentBalance;
+                
+                if (d) {
+                    const inc = d.incomes?.reduce((s:number, t:any)=>s+(t.amount||0),0)||0;
+                    const del = d.deliveries?.reduce((s:number, t:any)=>s+(t.amount||0),0)||0;
+                    const exp = d.expenses?.reduce((s:number, t:any)=>s+(t.amount||0),0)||0;
+                    const sal = d.salaries?.reduce((s:number, t:any)=>s+(t.amount||0),0)||0;
+                    const tob = d.toBox?.reduce((s:number, t:any)=>s+(t.amount||0),0)||0;
+                    currentBalance = effInitial + inc + del - exp - sal - tob;
+                }
+            }
+            prevOfficeClose = currentBalance;
+
+            // Calculate Treasury Total (Sum of all toBox + Monday Initial)
+            Object.values(prevData).forEach((d: any) => {
+                const tob = d.toBox?.reduce((s:number, t:any)=>s+(t.amount||0),0)||0;
+                prevTreasury += tob;
+                if (d.id === 'monday') prevTreasury += (d.initialBoxAmount || 0);
+            });
+        }
+
+        // 4. Update Current Monday
+        // Get current Monday from state
         const currentMonday = weekData['monday'];
-        if (!currentMonday) return;
+        if (!currentMonday) return; 
 
         let needsUpdate = false;
         const updatedMonday = { ...currentMonday };
 
-        // System Values (Always update to match reality of prev week)
+        // ALWAYS Update System Values (Backup for Restore Button)
         if (updatedMonday.systemInitialOffice !== prevOfficeClose) {
             updatedMonday.systemInitialOffice = prevOfficeClose;
             needsUpdate = true;
@@ -263,7 +266,7 @@ const App: React.FC = () => {
             needsUpdate = true;
         }
 
-        // Visible Values (Update only if NOT manually modified)
+        // Update Visible Values (Only if NOT manually modified)
         if (!updatedMonday.manualInitialModified && updatedMonday.manualInitialAmount !== prevOfficeClose) {
             updatedMonday.manualInitialAmount = prevOfficeClose;
             needsUpdate = true;
@@ -273,13 +276,14 @@ const App: React.FC = () => {
             needsUpdate = true;
         }
 
+        // Prevent infinite loops by only updating if there's a real change
         if (needsUpdate) {
             handleUpdateDay(updatedMonday);
         }
     };
 
     syncFromPrevious();
-  }, [currentWeekKey, loading, currentApp]); // Rely on loading to ensure weekData is initially populated
+  }, [currentWeekKey, loading, currentApp, weekData]); 
 
   const handleExportWeek = () => {
     exportToCSV(weekData, history);
@@ -335,6 +339,8 @@ const App: React.FC = () => {
   };
 
   const handleReset = () => {
+    // Password protection
+    
     if (currentApp === 'KILOS') {
         const msg = "Reiniciar borrará los datos de KILOS de esta semana. ¿Seguro?";
         if (window.confirm(msg)) {
@@ -470,90 +476,21 @@ const App: React.FC = () => {
     return balances;
   }, [weekData]);
 
-  // --- Navigation & Logic ---
+  // --- Navigation ---
 
   const handlePrevWeek = () => setCurrentDate(addWeeks(currentDate, -1));
 
   const handleNextWeek = () => {
     const nextDate = addWeeks(currentDate, 1);
-    const nextWeekKey = getWeekKey(nextDate);
-    
-    // Logic to carry over balances from current week to next
-    const carryOverOffice = runningBalances['saturday_close'] || 0;
-    const carryOverTreasury = totals.toBox; 
-
-    if (db) {
-        const nextWeekRef = ref(db!, `weeks/${nextWeekKey}/data`);
-        get(nextWeekRef).then((snapshot) => {
-            let nextWeekData: WeekData;
-            
-            if (snapshot.exists()) {
-                nextWeekData = snapshot.val();
-            } else {
-                nextWeekData = createInitialState();
-            }
-
-            if (!nextWeekData['monday']) nextWeekData['monday'] = createInitialState()['monday'];
-            
-            // ALWAYS update the system backup values
-            nextWeekData['monday'].systemInitialOffice = carryOverOffice;
-            nextWeekData['monday'].systemInitialBox = carryOverTreasury;
-
-            // CHECK FLAGS: Only overwrite visible value if user HAS NOT manually modified it
-            if (!nextWeekData['monday'].manualInitialModified) {
-                nextWeekData['monday'].manualInitialAmount = carryOverOffice;
-            }
-
-            if (!nextWeekData['monday'].initialBoxModified) {
-                nextWeekData['monday'].initialBoxAmount = carryOverTreasury;
-            }
-
-            set(nextWeekRef, JSON.parse(JSON.stringify(nextWeekData)));
-            setCurrentDate(nextDate);
-        });
-    } else {
-        const savedNext = localStorage.getItem(`weekData_${nextWeekKey}`);
-        let nextWeekData: WeekData;
-
-        if (savedNext) {
-             nextWeekData = JSON.parse(savedNext);
-        } else {
-             nextWeekData = createInitialState();
-        }
-
-        if (!nextWeekData['monday']) nextWeekData['monday'] = createInitialState()['monday'];
-        
-        // ALWAYS update the system backup values (LocalStorage)
-        nextWeekData['monday'].systemInitialOffice = carryOverOffice;
-        nextWeekData['monday'].systemInitialBox = carryOverTreasury;
-
-        if (!nextWeekData['monday'].manualInitialModified) {
-             nextWeekData['monday'].manualInitialAmount = carryOverOffice;
-        }
-
-        if (!nextWeekData['monday'].initialBoxModified) {
-             nextWeekData['monday'].initialBoxAmount = carryOverTreasury;
-        }
-
-        localStorage.setItem(`weekData_${nextWeekKey}`, JSON.stringify(nextWeekData));
-        setCurrentDate(nextDate);
-    }
+    setCurrentDate(nextDate);
+    // Note: We removed the manual data pushing logic. 
+    // The useEffect[syncFromPrevious] will handle data sync automatically 
+    // when the new week (currentWeekKey) loads.
   };
 
   const handleDateSelect = (date: Date) => {
     setCurrentDate(date);
     setShowWeekPicker(false);
-  };
-
-  const getAppName = () => {
-      switch(currentApp) {
-          case 'FLOW': return 'Flujo Semanal';
-          case 'KILOS': return 'Control de Kilos';
-          case 'CC': return 'Cuentas Corrientes';
-          case 'CHEQUES': return 'Cheques en Cartera';
-          case 'GENERAL_DATA': return 'Datos Generales';
-          default: return 'Flujo Semanal';
-      }
   };
 
   const getHeaderContent = () => {
