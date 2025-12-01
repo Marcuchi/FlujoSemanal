@@ -1,4 +1,3 @@
-
 import { WeekData, DAYS_OF_WEEK, DayData, Transaction, TransactionType, HistoryItem } from './types';
 
 export const formatCurrency = (value: number): string => {
@@ -66,14 +65,14 @@ export const exportToCSV = (data: WeekData, history: HistoryItem[] = [], filenam
     if (day.manualInitialAmount !== undefined) {
        let metadata = day.manualInitialModified ? 'MODIFIED' : '';
        if (day.systemInitialOffice !== undefined) metadata += `|SYS:${day.systemInitialOffice}`;
-       rows.push(`${day.id},${day.name},initial,"Monto Inicial Manual",${day.manualInitialAmount},"${metadata}"`);
+       rows.push(`${day.id},${day.name},initial,"Oficina Inicial",${day.manualInitialAmount},"${metadata}"`);
     }
 
     // Export Monday's Initial Box if exists
     if (day.id === 'monday' && day.initialBoxAmount !== undefined) {
        let metadata = day.initialBoxModified ? 'MODIFIED' : '';
        if (day.systemInitialBox !== undefined) metadata += `|SYS:${day.systemInitialBox}`;
-       rows.push(`${day.id},${day.name},initialBox,"Caja Inicial",${day.initialBoxAmount},"${metadata}"`);
+       rows.push(`${day.id},${day.name},initialBox,"Tesoro Inicial",${day.initialBoxAmount},"${metadata}"`);
     }
 
     const addRows = (list: Transaction[], type: string) => {
@@ -119,12 +118,12 @@ export const exportMonthToCSV = (monthLabel: string, weeksData: Record<string, W
             if (day.manualInitialAmount !== undefined) {
                 let meta = day.manualInitialModified ? 'MODIFIED' : '';
                 if (day.systemInitialOffice !== undefined) meta += `|SYS:${day.systemInitialOffice}`;
-                addRow('initial', 'Monto Inicial Manual', day.manualInitialAmount, meta);
+                addRow('initial', 'Oficina Inicial', day.manualInitialAmount, meta);
             }
             if (day.id === 'monday' && day.initialBoxAmount !== undefined) {
                 let meta = day.initialBoxModified ? 'MODIFIED' : '';
                 if (day.systemInitialBox !== undefined) meta += `|SYS:${day.systemInitialBox}`;
-                addRow('initialBox', 'Caja Inicial', day.initialBoxAmount, meta);
+                addRow('initialBox', 'Tesoro Inicial', day.initialBoxAmount, meta);
             }
 
             // Transactions

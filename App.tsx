@@ -1,6 +1,3 @@
-
-
-
 import React from 'react';
 import { Download, Upload, PieChart as PieChartIcon, History, ChevronLeft, ChevronRight, Calendar, Menu, LayoutGrid, Scale, BookUser, Banknote, Database, StickyNote } from 'lucide-react';
 import { ref, onValue, set, get, child } from 'firebase/database';
@@ -197,6 +194,92 @@ const App: React.FC = () => {
           handleUpdateDay(newDay);
       }
   };
+
+  // --- Retrospective Sync Effect ---
+  // This logic ensures that when you enter a week, it automatically pulls the 
+  // closing balances from the previous week and updates the current week's opening values
+  // if they haven't been manually modified.
+  React.useEffect(() => {
+    if (loading || ['CC', 'CHEQUES', 'GENERAL_DATA'].includes(currentApp)) return;
+
+    const syncFromPrevious = async () => {
+        // 1. Identify Previous Week
+        const prevDate = addWeeks(currentDate, -1);
+        const prevWeekKey = getWeekKey(prevDate);
+        
+        let prevData: WeekData | null = null;
+
+        // 2. Fetch Previous Data
+        if (db) {
+            const snap = await get(ref(db, `weeks/${prevWeekKey}/data`));
+            if (snap.exists()) prevData = snap.val();
+        } else {
+            const saved = localStorage.getItem(`weekData_${prevWeekKey}`);
+            if (saved) prevData = JSON.parse(saved);
+        }
+
+        if (!prevData) return;
+
+        // 3. Calculate Previous Closing Balances
+        let prevBalance = 0;
+        for (const day of DAYS_OF_WEEK) {
+            const d = prevData[day.id];
+            const effInitial = d?.manualInitialAmount ?? prevBalance;
+            if (d) {
+                const inc = d.incomes?.reduce((s:number, t:any)=>s+(t.amount||0),0)||0;
+                const del = d.deliveries?.reduce((s:number, t:any)=>s+(t.amount||0),0)||0;
+                const exp = d.expenses?.reduce((s:number, t:any)=>s+(t.amount||0),0)||0;
+                const sal = d.salaries?.reduce((s:number, t:any)=>s+(t.amount||0),0)||0;
+                const tob = d.toBox?.reduce((s:number, t:any)=>s+(t.amount||0),0)||0;
+                prevBalance = effInitial + inc + del - exp - sal - tob;
+            }
+        }
+        const prevOfficeClose = prevBalance;
+
+        // Treasury Total (Sum of all toBox + Monday Initial)
+        let prevTreasury = 0;
+        Object.values(prevData).forEach((d: any) => {
+             const tob = d.toBox?.reduce((s:number, t:any)=>s+(t.amount||0),0)||0;
+             prevTreasury += tob;
+             if (d.id === 'monday') prevTreasury += (d.initialBoxAmount || 0);
+        });
+
+        // 4. Update Current Monday if needed
+        // Note: 'weekData' is state, we need to be careful not to create a loop.
+        // We only trigger update if values mismatch.
+        const currentMonday = weekData['monday'];
+        if (!currentMonday) return;
+
+        let needsUpdate = false;
+        const updatedMonday = { ...currentMonday };
+
+        // System Values (Always update to match reality of prev week)
+        if (updatedMonday.systemInitialOffice !== prevOfficeClose) {
+            updatedMonday.systemInitialOffice = prevOfficeClose;
+            needsUpdate = true;
+        }
+        if (updatedMonday.systemInitialBox !== prevTreasury) {
+            updatedMonday.systemInitialBox = prevTreasury;
+            needsUpdate = true;
+        }
+
+        // Visible Values (Update only if NOT manually modified)
+        if (!updatedMonday.manualInitialModified && updatedMonday.manualInitialAmount !== prevOfficeClose) {
+            updatedMonday.manualInitialAmount = prevOfficeClose;
+            needsUpdate = true;
+        }
+        if (!updatedMonday.initialBoxModified && updatedMonday.initialBoxAmount !== prevTreasury) {
+            updatedMonday.initialBoxAmount = prevTreasury;
+            needsUpdate = true;
+        }
+
+        if (needsUpdate) {
+            handleUpdateDay(updatedMonday);
+        }
+    };
+
+    syncFromPrevious();
+  }, [currentWeekKey, loading, currentApp]); // Rely on loading to ensure weekData is initially populated
 
   const handleExportWeek = () => {
     exportToCSV(weekData, history);
