@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { X, FileText, Users } from 'lucide-react';
 import { WeekData, DayData } from '../types';

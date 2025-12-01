@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { X, StickyNote, Plus, Trash2, Edit2, Save, Check } from 'lucide-react';
 import { Note } from '../types';

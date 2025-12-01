@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { X, RotateCcw, Trash2, Calendar, ArrowRight } from 'lucide-react';
 import { HistoryItem, DAYS_OF_WEEK } from '../types';
@@ -43,4 +44,63 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, his
         {/* Header */}
         <div className="flex justify-between items-center p-4 border-b border-slate-800 bg-slate-900/50">
           <div className="flex items-center gap-2">
-            <Trash2 className="text-
+            <Trash2 className="text-red-400" size={20} />
+            <h2 className="text-xl font-bold text-slate-100">Historial (Papelera)</h2>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-slate-800 rounded-full text-slate-400 hover:text-white transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-0 custom-scrollbar">
+           {sortedHistory.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-64 text-slate-500 italic">
+                <Trash2 size={48} className="mb-2 opacity-20" />
+                No hay elementos eliminados recientemente.
+              </div>
+           ) : (
+             <div className="divide-y divide-slate-800">
+               {sortedHistory.map((item) => {
+                 const typeInfo = getTypeLabel(item.originalType);
+                 return (
+                   <div key={item.id} className="p-4 hover:bg-slate-900/50 transition-colors flex items-center justify-between group">
+                      
+                      <div className="flex items-center gap-4 overflow-hidden">
+                          <div className={`w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center flex-shrink-0 border border-slate-700`}>
+                             <span className="text-xs font-bold text-slate-400">{getDayName(item.originalDayId).substring(0, 2)}</span>
+                          </div>
+                          <div className="min-w-0">
+                              <h4 className="text-slate-200 font-medium truncate">{item.title || <span className="italic text-slate-600">Sin título</span>}</h4>
+                              <div className="flex items-center gap-2 text-xs">
+                                  <span className={`font-bold ${typeInfo.color}`}>{typeInfo.label}</span>
+                                  <span className="text-slate-600">•</span>
+                                  <span className="text-slate-500 flex items-center gap-1">
+                                    <Calendar size={10} />
+                                    {formatDate(item.deletedAt)}
+                                  </span>
+                              </div>
+                          </div>
+                      </div>
+
+                      <div className="flex items-center gap-4 pl-4">
+                          <span className="font-mono font-bold text-slate-300">{formatCurrency(item.amount)}</span>
+                          <button 
+                            onClick={() => onRestore(item)}
+                            className="p-2 bg-slate-800 hover:bg-indigo-600 text-slate-400 hover:text-white rounded-lg transition-all border border-slate-700 hover:border-indigo-500 group-hover:shadow-lg"
+                            title="Restaurar"
+                          >
+                             <RotateCcw size={16} />
+                          </button>
+                      </div>
+
+                   </div>
+                 );
+               })}
+             </div>
+           )}
+        </div>
+      </div>
+    </div>
+  );
+};
