@@ -1,3 +1,4 @@
+
 import { WeekData, DAYS_OF_WEEK, DayData, Transaction, TransactionType, HistoryItem } from './types';
 
 export const formatCurrency = (value: number): string => {
@@ -63,14 +64,16 @@ export const exportToCSV = (data: WeekData, history: HistoryItem[] = [], filenam
   // 1. Export Week Data
   Object.values(data).forEach((day) => {
     if (day.manualInitialAmount !== undefined) {
-       const metadata = day.manualInitialModified ? 'MODIFIED' : '';
-       rows.push(`${day.id},${day.name},initial,"Monto Inicial Manual",${day.manualInitialAmount},${metadata}`);
+       let metadata = day.manualInitialModified ? 'MODIFIED' : '';
+       if (day.systemInitialOffice !== undefined) metadata += `|SYS:${day.systemInitialOffice}`;
+       rows.push(`${day.id},${day.name},initial,"Monto Inicial Manual",${day.manualInitialAmount},"${metadata}"`);
     }
 
     // Export Monday's Initial Box if exists
     if (day.id === 'monday' && day.initialBoxAmount !== undefined) {
-       const metadata = day.initialBoxModified ? 'MODIFIED' : '';
-       rows.push(`${day.id},${day.name},initialBox,"Caja Inicial",${day.initialBoxAmount},${metadata}`);
+       let metadata = day.initialBoxModified ? 'MODIFIED' : '';
+       if (day.systemInitialBox !== undefined) metadata += `|SYS:${day.systemInitialBox}`;
+       rows.push(`${day.id},${day.name},initialBox,"Caja Inicial",${day.initialBoxAmount},"${metadata}"`);
     }
 
     const addRows = (list: Transaction[], type: string) => {
@@ -109,16 +112,18 @@ export const exportMonthToCSV = (monthLabel: string, weeksData: Record<string, W
         Object.values(weekData).forEach((day) => {
             // Helpers
             const addRow = (type: string, title: string, amount: number, metadata: string = '') => {
-                rows.push(`${weekKey},${day.id},${day.name},${type},"${title.replace(/"/g, '""')}",${amount},${metadata}`);
+                rows.push(`${weekKey},${day.id},${day.name},${type},"${title.replace(/"/g, '""')}",${amount},"${metadata}"`);
             };
 
             // Initials
             if (day.manualInitialAmount !== undefined) {
-                const meta = day.manualInitialModified ? 'MODIFIED' : '';
+                let meta = day.manualInitialModified ? 'MODIFIED' : '';
+                if (day.systemInitialOffice !== undefined) meta += `|SYS:${day.systemInitialOffice}`;
                 addRow('initial', 'Monto Inicial Manual', day.manualInitialAmount, meta);
             }
             if (day.id === 'monday' && day.initialBoxAmount !== undefined) {
-                const meta = day.initialBoxModified ? 'MODIFIED' : '';
+                let meta = day.initialBoxModified ? 'MODIFIED' : '';
+                if (day.systemInitialBox !== undefined) meta += `|SYS:${day.systemInitialBox}`;
                 addRow('initialBox', 'Caja Inicial', day.initialBoxAmount, meta);
             }
 
@@ -154,16 +159,24 @@ export const parseMonthCSV = (csvText: string): Record<string, WeekData> | null 
             }
 
             const dayData = monthlyData[weekKey][dayId];
-            if (!dayData) continue; // Should not happen if createEmptyWeek is correct
+            if (!dayData) continue; 
 
              if (type === 'initial') {
                 dayData.manualInitialAmount = amount;
-                if (metadata && metadata.includes('MODIFIED')) dayData.manualInitialModified = true;
+                if (metadata) {
+                    if (metadata.includes('MODIFIED')) dayData.manualInitialModified = true;
+                    const sysMatch = metadata.match(/SYS:(\d+(\.\d+)?)/);
+                    if (sysMatch) dayData.systemInitialOffice = parseFloat(sysMatch[1]);
+                }
                 continue;
              }
              if (type === 'initialBox') {
                 dayData.initialBoxAmount = amount;
-                if (metadata && metadata.includes('MODIFIED')) dayData.initialBoxModified = true;
+                if (metadata) {
+                    if (metadata.includes('MODIFIED')) dayData.initialBoxModified = true;
+                    const sysMatch = metadata.match(/SYS:(\d+(\.\d+)?)/);
+                    if (sysMatch) dayData.systemInitialBox = parseFloat(sysMatch[1]);
+                }
                 continue;
              }
 
@@ -271,17 +284,12 @@ export const parseCSV = (csvText: string): { weekData: WeekData, history: Histor
     const newHistory: HistoryItem[] = [];
     let isHistorySection = false;
 
-    // Detect if this is a monthly export file being loaded as a week
-    // Monthly headers start with WeekKey
     if (rows[0][0] === 'WeekKey') {
-        // Fallback or warning? For now let's just allow it but only take the first week found? 
-        // Or fail. Let's fail and tell user to use Monthly import.
         return null;
     }
 
     for (let i = 1; i < rows.length; i++) {
       const cols = rows[i];
-      // Skip empty lines
       if (cols.length === 0 || (cols.length === 1 && cols[0].trim() === '')) continue;
 
       if (cols[0] === '' && cols[1] === '---HISTORY---') {
@@ -297,7 +305,7 @@ export const parseCSV = (csvText: string): { weekData: WeekData, history: Histor
           const [deletedAt, originalType, originalDayId] = (metadata || '').split('|');
           
           newHistory.push({
-              id: generateId(), // Regenerate ID on import to avoid collisions
+              id: generateId(),
               title: title,
               amount: parseFloat(amountStr) || 0,
               deletedAt: deletedAt || new Date().toISOString(),
@@ -315,12 +323,20 @@ export const parseCSV = (csvText: string): { weekData: WeekData, history: Histor
 
           if (type === 'initial') {
             dayData.manualInitialAmount = amount;
-            if (metadata && metadata.includes('MODIFIED')) dayData.manualInitialModified = true;
+            if (metadata) {
+                if (metadata.includes('MODIFIED')) dayData.manualInitialModified = true;
+                const sysMatch = metadata.match(/SYS:(\d+(\.\d+)?)/);
+                if (sysMatch) dayData.systemInitialOffice = parseFloat(sysMatch[1]);
+            }
             continue;
           }
           if (type === 'initialBox') {
             dayData.initialBoxAmount = amount;
-            if (metadata && metadata.includes('MODIFIED')) dayData.initialBoxModified = true;
+            if (metadata) {
+                if (metadata.includes('MODIFIED')) dayData.initialBoxModified = true;
+                const sysMatch = metadata.match(/SYS:(\d+(\.\d+)?)/);
+                if (sysMatch) dayData.systemInitialBox = parseFloat(sysMatch[1]);
+            }
             continue;
           }
 

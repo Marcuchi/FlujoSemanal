@@ -1,5 +1,6 @@
 
 
+
 import React from 'react';
 import { Download, Upload, PieChart as PieChartIcon, History, ChevronLeft, ChevronRight, Calendar, Menu, LayoutGrid, Scale, BookUser, Banknote, Database, StickyNote } from 'lucide-react';
 import { ref, onValue, set, get, child } from 'firebase/database';
@@ -102,8 +103,10 @@ const App: React.FC = () => {
               toBox: dayData.toBox || [],
               manualInitialAmount: dayData.manualInitialAmount,
               manualInitialModified: dayData.manualInitialModified,
+              systemInitialOffice: dayData.systemInitialOffice,
               initialBoxAmount: dayData.initialBoxAmount,
-              initialBoxModified: dayData.initialBoxModified
+              initialBoxModified: dayData.initialBoxModified,
+              systemInitialBox: dayData.systemInitialBox
             };
           });
           setWeekData(sanitizedData);
@@ -407,15 +410,17 @@ const App: React.FC = () => {
                 nextWeekData = createInitialState();
             }
 
-            // Force update Monday's initials ONLY IF they haven't been manually modified by user
             if (!nextWeekData['monday']) nextWeekData['monday'] = createInitialState()['monday'];
             
-            // CHECK FLAGS: If manualInitialModified is TRUE, we do NOT overwrite
+            // ALWAYS update the system backup values
+            nextWeekData['monday'].systemInitialOffice = carryOverOffice;
+            nextWeekData['monday'].systemInitialBox = carryOverTreasury;
+
+            // CHECK FLAGS: Only overwrite visible value if user HAS NOT manually modified it
             if (!nextWeekData['monday'].manualInitialModified) {
                 nextWeekData['monday'].manualInitialAmount = carryOverOffice;
             }
 
-            // CHECK FLAGS: If initialBoxModified is TRUE, we do NOT overwrite
             if (!nextWeekData['monday'].initialBoxModified) {
                 nextWeekData['monday'].initialBoxAmount = carryOverTreasury;
             }
@@ -435,7 +440,10 @@ const App: React.FC = () => {
 
         if (!nextWeekData['monday']) nextWeekData['monday'] = createInitialState()['monday'];
         
-        // CHECK FLAGS (LocalStorage version)
+        // ALWAYS update the system backup values (LocalStorage)
+        nextWeekData['monday'].systemInitialOffice = carryOverOffice;
+        nextWeekData['monday'].systemInitialBox = carryOverTreasury;
+
         if (!nextWeekData['monday'].manualInitialModified) {
              nextWeekData['monday'].manualInitialAmount = carryOverOffice;
         }

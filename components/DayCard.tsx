@@ -1,5 +1,6 @@
 
 
+
 import React from 'react';
 import { Plus, Archive, TrendingUp, TrendingDown, Briefcase, History, Wallet, RotateCcw, Edit2, Check, X, Truck, Users } from 'lucide-react';
 import { DayData, Transaction, TransactionType, HistoryItem } from '../types';
@@ -105,7 +106,9 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
   };
 
   const resetInitialAmount = () => {
-    onUpdate({ ...dayData, manualInitialAmount: undefined, manualInitialModified: false });
+    // Restore to system calculated value if exists, else 0
+    const restoreVal = dayData.systemInitialOffice !== undefined ? dayData.systemInitialOffice : 0;
+    onUpdate({ ...dayData, manualInitialAmount: restoreVal, manualInitialModified: false });
   };
 
   const startEditingInitial = () => {
@@ -145,6 +148,12 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
         onUpdate({ ...dayData, initialBoxAmount: 0, initialBoxModified: true });
       }
       setIsEditingBoxInitial(false);
+  };
+
+  const resetBoxInitial = () => {
+      // Restore to system calculated value if exists, else 0
+      const restoreVal = dayData.systemInitialBox !== undefined ? dayData.systemInitialBox : 0;
+      onUpdate({ ...dayData, initialBoxAmount: restoreVal, initialBoxModified: false });
   };
 
   const startEditingBoxInitial = () => {
@@ -279,6 +288,11 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
                     <Archive size={14} className="text-indigo-400"/> 
                     Tesoro Inicial
                   </h3>
+                  {dayData.initialBoxModified && !isEditingBoxInitial && (
+                    <button onClick={resetBoxInitial} title="Restaurar a Automático" className="p-1 rounded hover:bg-slate-700 text-slate-400 hover:text-blue-400 transition-colors">
+                      <RotateCcw size={12} />
+                    </button>
+                  )}
                 </div>
                 <div className="p-2">
                   {isEditingBoxInitial ? (
@@ -299,12 +313,12 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
                         <button onClick={() => setIsEditingBoxInitial(false)} className="p-1 bg-slate-700 rounded text-slate-300"><X size={14}/></button>
                       </div>
                   ) : (
-                      <div onClick={startEditingBoxInitial} className="cursor-pointer p-2 rounded border border-transparent hover:border-slate-600 hover:bg-slate-800 transition-all flex justify-between items-center group bg-slate-800/50">
-                        <span className="text-xs text-indigo-300 font-medium">
-                          Valor Inicial
+                      <div onClick={startEditingBoxInitial} className={`cursor-pointer p-2 rounded border border-transparent hover:border-slate-600 hover:bg-slate-800 transition-all flex justify-between items-center group ${dayData.initialBoxModified ? 'bg-slate-800/50' : ''}`}>
+                        <span className={`text-xs ${dayData.initialBoxModified ? 'text-indigo-300 font-medium' : 'text-slate-500 italic'}`}>
+                          {dayData.initialBoxModified ? 'Manual' : 'Automático'}
                         </span>
                         <div className="flex items-center gap-2">
-                          <span className="font-mono font-semibold text-sm text-indigo-200">
+                          <span className={`font-mono font-semibold text-sm ${dayData.initialBoxModified ? 'text-indigo-200' : 'text-indigo-200'}`}>
                             {formatCurrency(effectiveBoxInitial)}
                           </span>
                           <Edit2 size={12} className="opacity-0 group-hover:opacity-100 text-slate-500" />
@@ -321,10 +335,10 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
             <h3 className="font-bold text-xs text-emerald-200 uppercase flex items-center gap-1.5 tracking-wider">
               <TrendingUp size={14} className="text-emerald-400"/> 
               Ingresos
+              <span className="ml-2 text-[10px] font-mono font-bold text-emerald-300 bg-emerald-900/60 px-1.5 py-0.5 rounded border border-emerald-800/50">
+                {formatCurrency(totalIncome + totalDeliveries)}
+              </span>
             </h3>
-            <span className="text-[10px] font-mono font-bold text-emerald-300 bg-emerald-900/60 px-1.5 py-0.5 rounded border border-emerald-800/50">
-              {formatCurrency(totalIncome + totalDeliveries)}
-            </span>
           </div>
           
           <div className="p-2 space-y-2">
@@ -394,10 +408,10 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
             <h3 className="font-bold text-xs text-rose-200 uppercase flex items-center gap-1.5 tracking-wider">
               <TrendingDown size={14} className="text-rose-400"/> 
               Egresos
-            </h3>
-            <span className="text-[10px] font-mono font-bold text-rose-300 bg-rose-900/60 px-1.5 py-0.5 rounded border border-rose-800/50">
+              <span className="ml-2 text-[10px] font-mono font-bold text-rose-300 bg-rose-900/60 px-1.5 py-0.5 rounded border border-rose-800/50">
                 {formatCurrency(totalExpense + totalSalaries)}
-            </span>
+              </span>
+            </h3>
           </div>
 
           <div className="p-2 space-y-2">

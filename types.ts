@@ -14,10 +14,16 @@ export interface DayData {
   expenses: Transaction[];
   salaries: Transaction[]; // New subgroup for Adelantos/Sueldos
   toBox: Transaction[];
+  
+  // Oficina Inicial
   manualInitialAmount?: number;
   manualInitialModified?: boolean; // Flag to track if user manually set this
+  systemInitialOffice?: number; // Backup of the auto-calculated value
+  
+  // Tesoro Inicial (Monday)
   initialBoxAmount?: number; // New field for Monday's Initial Box
   initialBoxModified?: boolean; // Flag to track if user manually set this
+  systemInitialBox?: number; // Backup of the auto-calculated value
 }
 
 export type TransactionType = 'incomes' | 'deliveries' | 'expenses' | 'salaries' | 'toBox';
