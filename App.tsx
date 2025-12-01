@@ -50,6 +50,7 @@ const App: React.FC = () => {
   const [showExportModal, setShowExportModal] = React.useState(false);
   const [showImportModal, setShowImportModal] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
+  const [loadedWeekKey, setLoadedWeekKey] = React.useState<string | null>(null);
 
   // Derived week key (e.g., "2024-04-15")
   const currentWeekKey = React.useMemo(() => getWeekKey(currentDate), [currentDate]);
@@ -58,30 +59,11 @@ const App: React.FC = () => {
   React.useEffect(() => {
     if (db) {
       setLoading(true);
+      setLoadedWeekKey(null);
 
       const rootRef = ref(db!, `weeks`);
       const weekDataRef = ref(db!, `weeks/${currentWeekKey}/data`);
       const historyRef = ref(db!, `weeks/${currentWeekKey}/history`);
-
-      // 1. Migration Logic
-      const globalRootRef = ref(db!);
-      get(child(globalRootRef, 'weekData')).then((snapshot) => {
-        if (snapshot.exists()) {
-           get(weekDataRef).then((weekSnap) => {
-             if (!weekSnap.exists()) {
-                const oldData = snapshot.val();
-                set(weekDataRef, oldData);
-                get(child(globalRootRef, 'history')).then((histSnap) => {
-                  if (histSnap.exists()) {
-                    set(historyRef, histSnap.val());
-                    set(ref(db!, 'history'), null);
-                  }
-                });
-                set(ref(db!, 'weekData'), null);
-             }
-           });
-        }
-      });
 
       // 2. Week Data Listener
       const unsubscribeWeek = onValue(weekDataRef, (snapshot) => {
@@ -110,6 +92,7 @@ const App: React.FC = () => {
         } else {
           setWeekData(createInitialState());
         }
+        setLoadedWeekKey(currentWeekKey);
         setLoading(false);
       });
 
@@ -141,6 +124,7 @@ const App: React.FC = () => {
         setHistory([]);
       }
 
+      setLoadedWeekKey(currentWeekKey);
       setLoading(false);
     }
   }, [currentDate, currentWeekKey, currentApp]);
@@ -198,8 +182,8 @@ const App: React.FC = () => {
   // --- Retrospective Sync Effect ---
   // THIS IS THE ONLY SOURCE OF TRUTH FOR CARRYING OVER BALANCES
   React.useEffect(() => {
-    // Skip if loading or not in Flow app
-    if (loading || currentApp !== 'FLOW') return;
+    // Skip if loading, not in Flow app, or if we haven't confirmed data loaded for current key
+    if (loading || currentApp !== 'FLOW' || loadedWeekKey !== currentWeekKey) return;
 
     const syncFromPrevious = async () => {
         // 1. Identify Previous Week strictly by calendar
@@ -283,7 +267,7 @@ const App: React.FC = () => {
 
     syncFromPrevious();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentWeekKey, loading, currentApp]); 
+  }, [currentWeekKey, loading, currentApp, loadedWeekKey]); 
 
   const handleExportWeek = () => {
     exportToCSV(weekData, history);
