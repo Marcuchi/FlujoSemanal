@@ -63,16 +63,12 @@ export const exportToCSV = (data: WeekData, history: HistoryItem[] = [], filenam
   // 1. Export Week Data
   Object.values(data).forEach((day) => {
     if (day.manualInitialAmount !== undefined) {
-       let metadata = day.manualInitialModified ? 'MODIFIED' : '';
-       if (day.systemInitialOffice !== undefined) metadata += `|SYS:${day.systemInitialOffice}`;
-       rows.push(`${day.id},${day.name},initial,"Oficina Inicial",${day.manualInitialAmount},"${metadata}"`);
+       rows.push(`${day.id},${day.name},initial,"Monto Inicial Manual",${day.manualInitialAmount},`);
     }
 
     // Export Monday's Initial Box if exists
     if (day.id === 'monday' && day.initialBoxAmount !== undefined) {
-       let metadata = day.initialBoxModified ? 'MODIFIED' : '';
-       if (day.systemInitialBox !== undefined) metadata += `|SYS:${day.systemInitialBox}`;
-       rows.push(`${day.id},${day.name},initialBox,"Tesoro Inicial",${day.initialBoxAmount},"${metadata}"`);
+       rows.push(`${day.id},${day.name},initialBox,"Caja Inicial",${day.initialBoxAmount},`);
     }
 
     const addRows = (list: Transaction[], type: string) => {
@@ -104,27 +100,19 @@ export const exportToCSV = (data: WeekData, history: HistoryItem[] = [], filenam
 
 export const exportMonthToCSV = (monthLabel: string, weeksData: Record<string, WeekData>) => {
     // We add 'WeekKey' as first column to distinguish weeks
-    const headers = ['WeekKey', 'DayID', 'DayName', 'Type', 'Title', 'Amount', 'Metadata'];
+    const headers = ['WeekKey', 'DayID', 'DayName', 'Type', 'Title', 'Amount'];
     const rows: string[] = [headers.join(',')];
 
     Object.entries(weeksData).forEach(([weekKey, weekData]) => {
         Object.values(weekData).forEach((day) => {
             // Helpers
-            const addRow = (type: string, title: string, amount: number, metadata: string = '') => {
-                rows.push(`${weekKey},${day.id},${day.name},${type},"${title.replace(/"/g, '""')}",${amount},"${metadata}"`);
+            const addRow = (type: string, title: string, amount: number) => {
+                rows.push(`${weekKey},${day.id},${day.name},${type},"${title.replace(/"/g, '""')}",${amount}`);
             };
 
             // Initials
-            if (day.manualInitialAmount !== undefined) {
-                let meta = day.manualInitialModified ? 'MODIFIED' : '';
-                if (day.systemInitialOffice !== undefined) meta += `|SYS:${day.systemInitialOffice}`;
-                addRow('initial', 'Oficina Inicial', day.manualInitialAmount, meta);
-            }
-            if (day.id === 'monday' && day.initialBoxAmount !== undefined) {
-                let meta = day.initialBoxModified ? 'MODIFIED' : '';
-                if (day.systemInitialBox !== undefined) meta += `|SYS:${day.systemInitialBox}`;
-                addRow('initialBox', 'Tesoro Inicial', day.initialBoxAmount, meta);
-            }
+            if (day.manualInitialAmount !== undefined) addRow('initial', 'Monto Inicial Manual', day.manualInitialAmount);
+            if (day.id === 'monday' && day.initialBoxAmount !== undefined) addRow('initialBox', 'Caja Inicial', day.initialBoxAmount);
 
             // Transactions
             (day.incomes || []).forEach(t => addRow('incomes', t.title, t.amount));
@@ -149,7 +137,7 @@ export const parseMonthCSV = (csvText: string): Record<string, WeekData> | null 
             const cols = rows[i];
             if (cols.length < 6) continue;
 
-            const [weekKey, dayId, , type, title, amountStr, metadata] = cols;
+            const [weekKey, dayId, , type, title, amountStr] = cols;
             const amount = parseFloat(amountStr) || 0;
 
             // Initialize week if not exists
@@ -158,24 +146,14 @@ export const parseMonthCSV = (csvText: string): Record<string, WeekData> | null 
             }
 
             const dayData = monthlyData[weekKey][dayId];
-            if (!dayData) continue; 
+            if (!dayData) continue; // Should not happen if createEmptyWeek is correct
 
              if (type === 'initial') {
                 dayData.manualInitialAmount = amount;
-                if (metadata) {
-                    if (metadata.includes('MODIFIED')) dayData.manualInitialModified = true;
-                    const sysMatch = metadata.match(/SYS:(\d+(\.\d+)?)/);
-                    if (sysMatch) dayData.systemInitialOffice = parseFloat(sysMatch[1]);
-                }
                 continue;
              }
              if (type === 'initialBox') {
                 dayData.initialBoxAmount = amount;
-                if (metadata) {
-                    if (metadata.includes('MODIFIED')) dayData.initialBoxModified = true;
-                    const sysMatch = metadata.match(/SYS:(\d+(\.\d+)?)/);
-                    if (sysMatch) dayData.systemInitialBox = parseFloat(sysMatch[1]);
-                }
                 continue;
              }
 
@@ -283,79 +261,74 @@ export const parseCSV = (csvText: string): { weekData: WeekData, history: Histor
     const newHistory: HistoryItem[] = [];
     let isHistorySection = false;
 
-    if (rows[0][0] === 'WeekKey') {
+    // Detect if this is a monthly export file being loaded as a week
+    // Monthly headers: WeekKey,DayID,DayName,Type,Title,Amount
+    // Weekly headers: DayID,DayName,Type,Title,Amount,Metadata
+    const header = rows[0];
+    if (header[0] === 'WeekKey') {
+        alert("Este parece ser un archivo Mensual. Por favor usa 'Importar Mes Completo'.");
         return null;
     }
 
     for (let i = 1; i < rows.length; i++) {
       const cols = rows[i];
-      if (cols.length === 0 || (cols.length === 1 && cols[0].trim() === '')) continue;
-
-      if (cols[0] === '' && cols[1] === '---HISTORY---') {
+      if (cols.length === 0 || (cols.length === 1 && cols[0] === '')) continue;
+      
+      if (cols[0] && cols[0].includes('---HISTORY---')) {
           isHistorySection = true;
           continue;
       }
 
-      if (isHistorySection) {
-          if (cols.length < 6) continue;
-          const [dayId, , type, title, amountStr, metadata] = cols;
-          if (type !== 'history') continue;
-          
-          const [deletedAt, originalType, originalDayId] = (metadata || '').split('|');
-          
-          newHistory.push({
-              id: generateId(),
-              title: title,
-              amount: parseFloat(amountStr) || 0,
-              deletedAt: deletedAt || new Date().toISOString(),
-              originalDayId: originalDayId || dayId,
-              originalType: (originalType as TransactionType) || 'incomes'
-          });
+      if (cols.length < 5) continue;
 
+      const [dayId, , type, title, amountStr, metadata] = cols;
+      const cleanDayId = dayId.trim();
+      const cleanType = type.trim();
+      const amount = parseFloat(amountStr) || 0;
+
+      if (isHistorySection || cleanType === 'history') {
+          if (metadata) {
+              const [deletedAt, originalType, originalDayId] = metadata.split('|');
+              if (deletedAt && originalType) {
+                  newHistory.push({
+                      id: generateId() + Math.random().toString(36).substring(2),
+                      title: title,
+                      amount: amount,
+                      deletedAt: deletedAt,
+                      originalType: originalType as TransactionType,
+                      originalDayId: originalDayId || cleanDayId
+                  });
+              }
+          }
       } else {
-          if (cols.length < 5) continue;
-          const [dayId, , type, title, amountStr, metadata] = cols;
-          const amount = parseFloat(amountStr) || 0;
+          if (!newState[cleanDayId]) continue;
 
-          const dayData = newState[dayId];
-          if (!dayData) continue;
-
-          if (type === 'initial') {
-            dayData.manualInitialAmount = amount;
-            if (metadata) {
-                if (metadata.includes('MODIFIED')) dayData.manualInitialModified = true;
-                const sysMatch = metadata.match(/SYS:(\d+(\.\d+)?)/);
-                if (sysMatch) dayData.systemInitialOffice = parseFloat(sysMatch[1]);
-            }
+          if (cleanType === 'initial') {
+            newState[cleanDayId].manualInitialAmount = amount;
             continue;
           }
-          if (type === 'initialBox') {
-            dayData.initialBoxAmount = amount;
-            if (metadata) {
-                if (metadata.includes('MODIFIED')) dayData.initialBoxModified = true;
-                const sysMatch = metadata.match(/SYS:(\d+(\.\d+)?)/);
-                if (sysMatch) dayData.systemInitialBox = parseFloat(sysMatch[1]);
-            }
+
+          if (cleanType === 'initialBox') {
+            newState[cleanDayId].initialBoxAmount = amount;
             continue;
           }
 
           const transaction: Transaction = {
             id: generateId() + Math.random().toString(36).substring(2),
             title: title,
-            amount: amount,
+            amount: amount
           };
 
-          if (type === 'incomes') dayData.incomes.push(transaction);
-          else if (type === 'deliveries') dayData.deliveries.push(transaction);
-          else if (type === 'expenses') dayData.expenses.push(transaction);
-          else if (type === 'salaries') dayData.salaries.push(transaction);
-          else if (type === 'toBox') dayData.toBox.push(transaction);
+          if (cleanType === 'incomes') newState[cleanDayId].incomes.push(transaction);
+          else if (cleanType === 'deliveries') newState[cleanDayId].deliveries.push(transaction);
+          else if (cleanType === 'expenses') newState[cleanDayId].expenses.push(transaction);
+          else if (cleanType === 'salaries') newState[cleanDayId].salaries.push(transaction); 
+          else if (cleanType === 'toBox') newState[cleanDayId].toBox.push(transaction);
       }
     }
-
     return { weekData: newState, history: newHistory };
-  } catch (e) {
-    console.error("Error parsing CSV", e);
+  } catch (error) {
+    console.error("Error parsing CSV", error);
     return null;
   }
 };

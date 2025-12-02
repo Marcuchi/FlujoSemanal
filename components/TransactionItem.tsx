@@ -29,6 +29,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
   onMove
 }) => {
   const isBox = type === 'toBox';
+  // Check for 'Tesoro' as default title instead of 'Caja'
   const isNew = transaction.amount === 0 && (transaction.title === '' || (isBox && (transaction.title === 'Caja' || transaction.title === 'Tesoro')));
   const [isEditing, setIsEditing] = React.useState(isNew);
   
@@ -113,44 +114,44 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
     switch (type) {
       case 'incomes': return { 
         indicator: 'bg-emerald-500', 
-        hoverBg: 'hover:bg-emerald-100 dark:hover:bg-emerald-900/60', 
-        textAmount: 'text-emerald-700 dark:text-emerald-300',
-        textTitle: 'text-emerald-900 dark:text-emerald-100',
+        hoverBg: 'hover:bg-emerald-900/60', 
+        textAmount: 'text-emerald-300',
+        textTitle: 'text-emerald-100',
         subtle: 'text-emerald-500'
       };
       case 'deliveries': return { 
         indicator: 'bg-teal-400', 
-        hoverBg: 'hover:bg-teal-100 dark:hover:bg-teal-900/60', 
-        textAmount: 'text-teal-700 dark:text-teal-300', 
-        textTitle: 'text-teal-900 dark:text-teal-100', 
+        hoverBg: 'hover:bg-teal-900/60', 
+        textAmount: 'text-teal-300', 
+        textTitle: 'text-teal-100', 
         subtle: 'text-teal-500' 
       };
       case 'expenses': return { 
         indicator: 'bg-rose-500', 
-        hoverBg: 'hover:bg-rose-100 dark:hover:bg-rose-900/60', 
-        textAmount: 'text-rose-700 dark:text-rose-300',
-        textTitle: 'text-rose-900 dark:text-rose-100',
+        hoverBg: 'hover:bg-rose-900/60', 
+        textAmount: 'text-rose-300',
+        textTitle: 'text-rose-100',
         subtle: 'text-rose-500'
       };
       case 'salaries': return { 
         indicator: 'bg-amber-500', 
-        hoverBg: 'hover:bg-amber-100 dark:hover:bg-amber-900/60', 
-        textAmount: 'text-amber-700 dark:text-amber-300',
-        textTitle: 'text-amber-900 dark:text-amber-100',
+        hoverBg: 'hover:bg-amber-900/60', 
+        textAmount: 'text-amber-300',
+        textTitle: 'text-amber-100',
         subtle: 'text-amber-500'
       };
       case 'toBox': return { 
         indicator: 'bg-indigo-500', 
-        hoverBg: 'hover:bg-indigo-100 dark:hover:bg-indigo-900/60', 
-        textAmount: 'text-indigo-700 dark:text-indigo-300',
-        textTitle: 'text-indigo-900 dark:text-indigo-100',
+        hoverBg: 'hover:bg-indigo-900/60', 
+        textAmount: 'text-indigo-300',
+        textTitle: 'text-indigo-100',
         subtle: 'text-indigo-500'
       };
       default: return { 
         indicator: 'bg-slate-400', 
-        hoverBg: 'hover:bg-slate-200 dark:hover:bg-slate-800', 
-        textAmount: 'text-slate-700 dark:text-slate-300',
-        textTitle: 'text-slate-900 dark:text-slate-100',
+        hoverBg: 'hover:bg-slate-800', 
+        textAmount: 'text-slate-300',
+        textTitle: 'text-slate-100',
         subtle: 'text-slate-500'
       };
     }
@@ -159,7 +160,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
 
   if (isEditing) {
     return (
-      <form onSubmit={handleSave} className="p-2 rounded-lg border border-indigo-500/30 bg-white dark:bg-slate-800 shadow-xl animate-in fade-in duration-200 z-10 relative space-y-2">
+      <form onSubmit={handleSave} className="p-2 rounded-lg border border-indigo-500/30 bg-slate-800 shadow-xl animate-in fade-in duration-200 z-10 relative space-y-2">
         <input
           ref={titleInputRef}
           type="text"
@@ -167,7 +168,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
           onChange={(e) => setTempTitle(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Descripción..."
-          className="w-full text-sm font-medium border-b border-slate-300 dark:border-slate-600 focus:border-indigo-400 focus:outline-none py-1 bg-transparent text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500"
+          className="w-full text-sm font-medium border-b border-slate-600 focus:border-indigo-400 focus:outline-none py-1 bg-transparent text-slate-100 placeholder-slate-500"
         />
         <div className="flex items-center justify-between gap-2">
           <div className="relative flex-1">
@@ -181,11 +182,11 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
               onKeyDown={handleKeyDown}
               onFocus={(e) => e.target.select()}
               placeholder="0"
-              className="w-full text-right text-sm font-mono border-b border-slate-300 dark:border-slate-600 focus:border-indigo-400 focus:outline-none py-1 pl-5 bg-transparent text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500"
+              className="w-full text-right text-sm font-mono border-b border-slate-600 focus:border-indigo-400 focus:outline-none py-1 pl-5 bg-transparent text-slate-100 placeholder-slate-500"
             />
           </div>
           <div className="flex items-center gap-1">
-             <button type="button" onClick={handleCancel} className="p-1.5 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"><X size={16} /></button>
+             <button type="button" onClick={handleCancel} className="p-1.5 rounded-md hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors"><X size={16} /></button>
              <button type="submit" className="p-1.5 rounded-md bg-indigo-600 text-white hover:bg-indigo-500 transition-colors shadow-sm"><Check size={16} /></button>
           </div>
         </div>
@@ -203,7 +204,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
   else if (type === 'salaries') moveButtonTitle = 'Mover a Gastos';
 
   return (
-    <div className={`group relative p-2 rounded-lg ${theme.hoverBg} bg-white dark:bg-black/20 transition-colors flex items-center justify-between border border-transparent hover:border-slate-300 dark:hover:border-white/5`}>
+    <div className={`group relative p-2 rounded-lg ${theme.hoverBg} bg-black/20 transition-colors flex items-center justify-between border border-transparent hover:border-white/5`}>
       <div className="flex items-center gap-2 overflow-hidden">
         <span className={`w-1 h-5 rounded-full ${theme.indicator} flex-shrink-0`}></span>
         <span className={`text-xs ${theme.textTitle} truncate font-medium`}>{transaction.title || <i className={theme.subtle}>Sin descripción</i>}</span>
@@ -213,20 +214,20 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
         {formatCurrency(transaction.amount)}
       </span>
 
-      <div className="absolute inset-0 bg-slate-100/90 dark:bg-slate-900/90 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-end gap-2 px-2 border border-slate-200 dark:border-slate-700">
+      <div className="absolute inset-0 bg-slate-900/90 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-end gap-2 px-2 border border-slate-700">
         
         {showMoveButton && (
            <button 
              onClick={() => onMove?.(transaction.id)} 
-             className="p-1.5 rounded-md bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors shadow-sm border border-slate-300 dark:border-slate-600" 
+             className="p-1.5 rounded-md bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white transition-colors shadow-sm border border-slate-600" 
              title={moveButtonTitle}
            >
              <ArrowLeftRight size={14} />
            </button>
         )}
 
-        <button onClick={() => setIsEditing(true)} className="p-1.5 rounded-md bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-600 dark:text-white transition-colors shadow-sm border border-slate-300 dark:border-slate-600" title="Modificar"><Edit2 size={14} /></button>
-        <button onClick={() => onRemove(transaction.id)} className="p-1.5 rounded-md bg-rose-100 dark:bg-rose-900 hover:bg-rose-200 dark:hover:bg-rose-800 text-rose-600 dark:text-white transition-colors shadow-sm border border-rose-200 dark:border-rose-950" title="Eliminar"><Trash2 size={14} /></button>
+        <button onClick={() => setIsEditing(true)} className="p-1.5 rounded-md bg-slate-700 hover:bg-slate-600 text-white transition-colors shadow-sm border border-slate-600" title="Modificar"><Edit2 size={14} /></button>
+        <button onClick={() => onRemove(transaction.id)} className="p-1.5 rounded-md bg-rose-900 hover:bg-rose-800 text-white transition-colors shadow-sm border border-rose-950" title="Eliminar"><Trash2 size={14} /></button>
       </div>
     </div>
   );

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Database, ref, onValue, set } from 'firebase/database';
 import { Plus, Trash2, Calendar, DollarSign, User, CreditCard, ArrowDown, Building2, ArrowUp, ArrowUpDown } from 'lucide-react';
@@ -60,6 +61,7 @@ export const ChequesApp: React.FC<ChequesAppProps> = ({ db }) => {
       const unsubscribe = onValue(chequesRef, (snapshot) => {
         const val = snapshot.val();
         if (val) {
+           // Convert object to array if needed (Firebase might return object with IDs as keys)
            const list = Array.isArray(val) ? val : Object.values(val);
            setCheques(list as Cheque[]);
         } else {
@@ -150,9 +152,9 @@ export const ChequesApp: React.FC<ChequesAppProps> = ({ db }) => {
       let sortableItems = [...cheques];
       if (sortConfig.key !== null) {
           sortableItems.sort((a, b) => {
-              // @ts-ignore
+              // @ts-ignore - Dynamic access
               const aValue = a[sortConfig.key];
-              // @ts-ignore
+              // @ts-ignore - Dynamic access
               const bValue = b[sortConfig.key];
 
               if (aValue < bValue) {
@@ -167,37 +169,37 @@ export const ChequesApp: React.FC<ChequesAppProps> = ({ db }) => {
       return sortableItems;
   }, [cheques, sortConfig]);
 
-  if (loading) return <div className="text-violet-500 p-8 animate-pulse text-center">Cargando Cheques...</div>;
+  if (loading) return <div className="text-violet-400 p-8 animate-pulse text-center">Cargando Cheques...</div>;
 
   const SortIcon = ({ column }: { column: SortKey }) => {
-      if (sortConfig.key !== column) return <ArrowUpDown size={14} className="text-slate-400 opacity-50 group-hover:opacity-100" />;
-      if (sortConfig.direction === 'asc') return <ArrowUp size={14} className="text-violet-500" />;
-      return <ArrowDown size={14} className="text-violet-500" />;
+      if (sortConfig.key !== column) return <ArrowUpDown size={14} className="text-slate-700 opacity-50 group-hover:opacity-100" />;
+      if (sortConfig.direction === 'asc') return <ArrowUp size={14} className="text-violet-400" />;
+      return <ArrowDown size={14} className="text-violet-400" />;
   };
 
   const ThSortable = ({ label, column, alignRight = false }: { label: string, column: SortKey, alignRight?: boolean }) => (
       <th 
-          className={`p-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors select-none group ${alignRight ? 'text-right' : 'text-left'}`}
+          className={`p-4 cursor-pointer hover:bg-slate-800 transition-colors select-none group ${alignRight ? 'text-right' : 'text-left'}`}
           onClick={() => handleSort(column)}
       >
           <div className={`flex items-center gap-2 ${alignRight ? 'justify-end' : 'justify-start'}`}>
-              <span className={sortConfig.key === column ? 'text-violet-600 dark:text-violet-300' : 'text-slate-500 group-hover:text-slate-700 dark:group-hover:text-slate-300'}>{label}</span>
+              <span className={sortConfig.key === column ? 'text-violet-300' : 'text-slate-500 group-hover:text-slate-300'}>{label}</span>
               <SortIcon column={column} />
           </div>
       </th>
   );
 
   return (
-    <div className="h-full flex flex-col bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
+    <div className="h-full flex flex-col bg-slate-950">
         
         {/* Top Header / Stats */}
-        <div className="p-4 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm z-20 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <h2 className="text-xl font-bold text-violet-600 dark:text-violet-400 uppercase tracking-wider flex items-center gap-2">
+        <div className="p-4 bg-slate-900 border-b border-slate-800 shadow-md z-20 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <h2 className="text-xl font-bold text-violet-400 uppercase tracking-wider flex items-center gap-2">
                 <CreditCard size={24} /> Cheques en Cartera
             </h2>
-            <div className="bg-slate-50 dark:bg-slate-950 px-6 py-3 rounded-xl border border-violet-200 dark:border-violet-900/50 flex flex-col items-end shadow-sm dark:shadow-violet-900/10">
-                <span className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Total Cartera</span>
-                <span className="text-2xl font-mono font-bold text-violet-700 dark:text-violet-300">
+            <div className="bg-slate-950 px-6 py-3 rounded-xl border border-violet-900/50 flex flex-col items-end shadow-lg shadow-violet-900/10">
+                <span className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Total Cartera</span>
+                <span className="text-2xl font-mono font-bold text-violet-300">
                     {formatCurrency(totalAmount)}
                 </span>
             </div>
@@ -207,8 +209,8 @@ export const ChequesApp: React.FC<ChequesAppProps> = ({ db }) => {
             <div className="max-w-7xl mx-auto space-y-6">
 
                 {/* Formulario */}
-                <form onSubmit={handleAddCheque} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-lg">
-                    <h3 className="text-xs font-bold text-violet-600 dark:text-violet-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                <form onSubmit={handleAddCheque} className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg">
+                    <h3 className="text-xs font-bold text-violet-400 uppercase tracking-wider mb-4 flex items-center gap-2">
                         <Plus size={14} /> Agregar Cheque
                     </h3>
                     
@@ -218,13 +220,13 @@ export const ChequesApp: React.FC<ChequesAppProps> = ({ db }) => {
                         <div className="relative">
                             <span className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">Fecha Registro</span>
                             <div className="relative">
-                                <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                                <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" size={14} />
                                 <input 
                                     type="date" 
                                     required
                                     value={formData.date}
                                     onChange={e => setFormData({...formData, date: e.target.value})}
-                                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg py-2 pl-8 pr-3 text-sm text-slate-700 dark:text-white focus:border-violet-500 focus:outline-none"
+                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg py-2 pl-8 pr-3 text-sm text-white focus:border-violet-500 focus:outline-none"
                                 />
                             </div>
                         </div>
@@ -233,14 +235,14 @@ export const ChequesApp: React.FC<ChequesAppProps> = ({ db }) => {
                          <div className="relative">
                             <span className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">Banco</span>
                             <div className="relative">
-                                <Building2 className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                                <Building2 className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" size={14} />
                                 <input 
                                     type="text" 
                                     placeholder="Nombre del Banco"
                                     required
                                     value={formData.bank}
                                     onChange={e => setFormData({...formData, bank: e.target.value})}
-                                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg py-2 pl-8 pr-3 text-sm text-slate-700 dark:text-white focus:border-violet-500 focus:outline-none"
+                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg py-2 pl-8 pr-3 text-sm text-white focus:border-violet-500 focus:outline-none"
                                 />
                             </div>
                         </div>
@@ -255,7 +257,7 @@ export const ChequesApp: React.FC<ChequesAppProps> = ({ db }) => {
                                     required
                                     value={formData.number}
                                     onChange={e => setFormData({...formData, number: e.target.value})}
-                                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg py-2 px-3 text-sm text-slate-700 dark:text-white focus:border-violet-500 focus:outline-none font-mono"
+                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg py-2 px-3 text-sm text-white focus:border-violet-500 focus:outline-none font-mono"
                                 />
                             </div>
                         </div>
@@ -272,7 +274,7 @@ export const ChequesApp: React.FC<ChequesAppProps> = ({ db }) => {
                                     required
                                     value={amountDisplay}
                                     onChange={handleAmountInput}
-                                    className="w-full bg-slate-50 dark:bg-slate-950 border border-violet-200 dark:border-violet-900/50 rounded-lg py-2 pl-6 pr-2 text-sm text-violet-700 dark:text-violet-300 font-mono focus:border-violet-500 focus:outline-none"
+                                    className="w-full bg-slate-950 border border-violet-900/50 rounded-lg py-2 pl-6 pr-2 text-sm text-violet-300 font-mono focus:border-violet-500 focus:outline-none"
                                 />
                             </div>
                         </div>
@@ -281,13 +283,13 @@ export const ChequesApp: React.FC<ChequesAppProps> = ({ db }) => {
                         <div className="relative">
                             <span className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">Fecha Cobro</span>
                             <div className="relative">
-                                <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                                <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" size={14} />
                                 <input 
                                     type="date" 
                                     required
                                     value={formData.paymentDate}
                                     onChange={e => setFormData({...formData, paymentDate: e.target.value})}
-                                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg py-2 pl-8 pr-3 text-sm text-slate-700 dark:text-white focus:border-violet-500 focus:outline-none"
+                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg py-2 pl-8 pr-3 text-sm text-white focus:border-violet-500 focus:outline-none"
                                 />
                             </div>
                         </div>
@@ -296,13 +298,13 @@ export const ChequesApp: React.FC<ChequesAppProps> = ({ db }) => {
                         <div className="relative">
                             <span className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">Titular</span>
                             <div className="relative">
-                                <User className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                                <User className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" size={14} />
                                 <input 
                                     type="text" 
                                     placeholder="Nombre Titular"
                                     value={formData.holder}
                                     onChange={e => setFormData({...formData, holder: e.target.value})}
-                                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg py-2 pl-8 pr-3 text-sm text-slate-700 dark:text-white focus:border-violet-500 focus:outline-none"
+                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg py-2 pl-8 pr-3 text-sm text-white focus:border-violet-500 focus:outline-none"
                                 />
                             </div>
                         </div>
@@ -311,13 +313,13 @@ export const ChequesApp: React.FC<ChequesAppProps> = ({ db }) => {
                          <div className="relative">
                             <span className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">Entregado Por</span>
                             <div className="relative">
-                                <ArrowDown className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                                <ArrowDown className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" size={14} />
                                 <input 
                                     type="text" 
                                     placeholder="¿Quién lo entregó?"
                                     value={formData.deliveredBy}
                                     onChange={e => setFormData({...formData, deliveredBy: e.target.value})}
-                                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg py-2 pl-8 pr-3 text-sm text-slate-700 dark:text-white focus:border-violet-500 focus:outline-none"
+                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg py-2 pl-8 pr-3 text-sm text-white focus:border-violet-500 focus:outline-none"
                                 />
                             </div>
                         </div>
@@ -326,7 +328,7 @@ export const ChequesApp: React.FC<ChequesAppProps> = ({ db }) => {
                         <div className="flex items-end">
                             <button 
                                 type="submit"
-                                className="w-full bg-violet-600 hover:bg-violet-500 text-white font-bold py-2 rounded-lg transition-colors flex items-center justify-center shadow-lg shadow-violet-200 dark:shadow-violet-900/20"
+                                className="w-full bg-violet-600 hover:bg-violet-500 text-white font-bold py-2 rounded-lg transition-colors flex items-center justify-center shadow-lg shadow-violet-900/20"
                             >
                                 <Plus size={20} />
                             </button>
@@ -336,11 +338,11 @@ export const ChequesApp: React.FC<ChequesAppProps> = ({ db }) => {
                 </form>
 
                 {/* Tabla */}
-                <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden">
+                <div className="bg-slate-900 rounded-xl border border-slate-800 shadow-xl overflow-hidden">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
-                                <tr className="bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 text-xs font-bold uppercase tracking-wider">
+                                <tr className="bg-slate-950 border-b border-slate-800 text-xs font-bold uppercase tracking-wider">
                                     <ThSortable label="F. Registro" column="date" />
                                     <ThSortable label="F. Cobro" column="paymentDate" />
                                     <ThSortable label="Banco" column="bank" />
@@ -351,22 +353,22 @@ export const ChequesApp: React.FC<ChequesAppProps> = ({ db }) => {
                                     <th className="p-4 w-10"></th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                            <tbody className="divide-y divide-slate-800">
                                 {sortedCheques.map((c) => (
-                                    <tr key={c.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group">
-                                        <td className="p-3 text-sm text-slate-500 dark:text-slate-400 whitespace-nowrap">{formatDate(c.date)}</td>
-                                        <td className="p-3 text-sm text-slate-800 dark:text-white font-bold whitespace-nowrap">{formatDate(c.paymentDate)}</td>
-                                        <td className="p-3 text-sm text-slate-700 dark:text-slate-300 font-medium">{c.bank}</td>
-                                        <td className="p-3 text-sm text-slate-600 dark:text-slate-300 font-mono">{c.number}</td>
-                                        <td className="p-3 text-sm text-slate-600 dark:text-slate-300">{c.holder}</td>
-                                        <td className="p-3 text-sm text-slate-600 dark:text-slate-300">{c.deliveredBy}</td>
-                                        <td className="p-3 text-right font-mono font-bold text-violet-600 dark:text-violet-300 bg-slate-50/50 dark:bg-slate-900/30">
+                                    <tr key={c.id} className="hover:bg-slate-800/30 transition-colors group">
+                                        <td className="p-3 text-sm text-slate-400 whitespace-nowrap">{formatDate(c.date)}</td>
+                                        <td className="p-3 text-sm text-white font-bold whitespace-nowrap">{formatDate(c.paymentDate)}</td>
+                                        <td className="p-3 text-sm text-slate-300 font-medium">{c.bank}</td>
+                                        <td className="p-3 text-sm text-slate-300 font-mono">{c.number}</td>
+                                        <td className="p-3 text-sm text-slate-300">{c.holder}</td>
+                                        <td className="p-3 text-sm text-slate-300">{c.deliveredBy}</td>
+                                        <td className="p-3 text-right font-mono font-bold text-violet-300 bg-slate-900/30">
                                             {formatCurrency(c.amount)}
                                         </td>
                                         <td className="p-3 text-center">
                                             <button 
                                                 onClick={() => handleDeleteCheque(c.id)}
-                                                className="opacity-0 group-hover:opacity-100 p-1.5 text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-950/30 rounded transition-all"
+                                                className="opacity-0 group-hover:opacity-100 p-1.5 text-rose-500 hover:bg-rose-950/30 rounded transition-all"
                                                 title="Eliminar Cheque"
                                             >
                                                 <Trash2 size={14} />

@@ -14,16 +14,8 @@ export interface DayData {
   expenses: Transaction[];
   salaries: Transaction[]; // New subgroup for Adelantos/Sueldos
   toBox: Transaction[];
-  
-  // Oficina Inicial
   manualInitialAmount?: number;
-  manualInitialModified?: boolean; // Flag to track if user manually set this
-  systemInitialOffice?: number; // Backup of the auto-calculated value
-  
-  // Tesoro Inicial (Monday)
   initialBoxAmount?: number; // New field for Monday's Initial Box
-  initialBoxModified?: boolean; // Flag to track if user manually set this
-  systemInitialBox?: number; // Backup of the auto-calculated value
 }
 
 export type TransactionType = 'incomes' | 'deliveries' | 'expenses' | 'salaries' | 'toBox';
@@ -66,7 +58,8 @@ export interface KilosDayData {
   // Particulares (Array to allow multiple entries)
   public: number[]; 
   // Choferes (Keyed by driver name)
-  drivers: Record<string, number>;
+  drivers: Record<string, number>; // Out
+  drivers_in: Record<string, number>; // In (Returns)
   // Reparto Zonas (Keyed by route name)
   routes_out: Record<string, number>;
   // Devolución Zonas (Keyed by route name)
@@ -76,7 +69,9 @@ export interface KilosDayData {
   camera_minus: number;
 }
 
-export type KilosWeekData = Record<string, KilosDayData>;
+export interface KilosWeekData {
+  [key: string]: KilosDayData;
+}
 
 // --- CURRENT ACCOUNTS (CC) TYPES ---
 
@@ -84,15 +79,14 @@ export interface CCTransaction {
   id: string;
   date: string; // YYYY-MM-DD
   description: string;
-  quantity?: number; // Cantidad de cajones
-  price?: number;    // Precio por cajón
-  delivery: number; // Entrega (Paga - Haber)
-  debit: number;    // Debe (Saca/Deuda aumenta - Calculado: Cantidad * Precio)
+  delivery: number; // Entrega (Paga)
+  debit: number;    // Debe (Saca/Deuda aumenta)
+  type?: 'REGULAR' | 'TEMPORARY'; // Ignored in UI now, but kept for data compatibility
 }
 
 export interface CCAccountData {
+  initialBalance: number;
   transactions: CCTransaction[];
-  createdAt?: string;
 }
 
 export type CCData = Record<string, CCAccountData>;
@@ -115,9 +109,6 @@ export interface Cheque {
 export interface GeneralItem {
   id: string;
   name: string;
-  cuil: string;
-  phone: string;
-  location: string;
 }
 
 export interface Client {

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { formatCurrency } from '../utils';
 import { ArrowLeft } from 'lucide-react';
@@ -34,6 +35,7 @@ export const PieChart: React.FC<PieChartProps> = ({ data, title, emptyMessage, o
     cumulativePercent += percent;
     const endPercent = cumulativePercent;
 
+    // Handle single item case (full circle)
     if (percent === 1) {
       return (
         <circle r="1" cx="0" cy="0" fill={item.color} key={item.name} />
@@ -59,12 +61,12 @@ export const PieChart: React.FC<PieChartProps> = ({ data, title, emptyMessage, o
   // --- DETAILED LIST VIEW FOR 'OTHERS' ---
   if (showDetails && othersList && othersList.length > 0) {
     return (
-      <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 p-5 animate-in fade-in duration-200">
-        <div className="flex flex-row justify-between items-center mb-4 border-b border-slate-200 dark:border-slate-800 pb-3">
-          <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Detalle: Otros</h3>
+      <div className="flex flex-col h-full bg-slate-900/50 rounded-xl border border-slate-800 p-5 animate-in fade-in duration-200">
+        <div className="flex flex-row justify-between items-center mb-4 border-b border-slate-800 pb-3">
+          <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider">Detalle: Otros</h3>
           <button 
             onClick={() => setShowDetails(false)}
-            className="text-xs flex items-center gap-1 text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 transition-colors font-semibold"
+            className="text-xs flex items-center gap-1 text-indigo-400 hover:text-indigo-300 transition-colors font-semibold"
           >
             <ArrowLeft size={14} /> Volver
           </button>
@@ -72,14 +74,14 @@ export const PieChart: React.FC<PieChartProps> = ({ data, title, emptyMessage, o
         
         <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-2">
            {othersList.map((item, idx) => (
-             <div key={idx} className="flex justify-between items-center p-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800/30 border-b border-slate-200 dark:border-slate-800/50 last:border-0">
-                <span className="text-sm text-slate-600 dark:text-slate-300 capitalize">{item.name}</span>
-                <span className="text-sm font-mono font-bold text-slate-800 dark:text-slate-200">{formatCurrency(item.value)}</span>
+             <div key={idx} className="flex justify-between items-center p-2 rounded hover:bg-slate-800/30 border-b border-slate-800/50 last:border-0">
+                <span className="text-sm text-slate-300 capitalize">{item.name}</span>
+                <span className="text-sm font-mono font-bold text-slate-200">{formatCurrency(item.value)}</span>
              </div>
            ))}
         </div>
         
-        <div className="mt-3 pt-2 border-t border-slate-200 dark:border-slate-800 flex justify-between items-center text-xs text-slate-500">
+        <div className="mt-3 pt-2 border-t border-slate-800 flex justify-between items-center text-xs text-slate-500">
             <span>Total Otros</span>
             <span className="font-mono">{formatCurrency(othersList.reduce((a,b) => a + b.value, 0))}</span>
         </div>
@@ -90,20 +92,20 @@ export const PieChart: React.FC<PieChartProps> = ({ data, title, emptyMessage, o
   // --- STANDARD CHART VIEW ---
   if (total === 0) {
     return (
-      <div className="flex flex-col items-center justify-center p-6 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 h-full">
-        <h3 className="text-sm font-bold text-slate-400 dark:text-slate-400 mb-2 uppercase tracking-wider">{title}</h3>
-        <p className="text-xs text-slate-500 dark:text-slate-600 italic">{emptyMessage}</p>
+      <div className="flex flex-col items-center justify-center p-6 bg-slate-900/50 rounded-xl border border-slate-800 h-full">
+        <h3 className="text-sm font-bold text-slate-400 mb-2 uppercase tracking-wider">{title}</h3>
+        <p className="text-xs text-slate-600 italic">{emptyMessage}</p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 p-5">
+    <div className="flex flex-col h-full bg-slate-900/50 rounded-xl border border-slate-800 p-5">
       
       {/* Header with Title and Total */}
-      <div className="flex flex-row justify-between items-center mb-6 border-b border-slate-200 dark:border-slate-800 pb-3">
-        <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider">{title}</h3>
-        <span className="text-lg font-mono font-bold text-slate-800 dark:text-white bg-white dark:bg-slate-800 px-3 py-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+      <div className="flex flex-row justify-between items-center mb-6 border-b border-slate-800 pb-3">
+        <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider">{title}</h3>
+        <span className="text-lg font-mono font-bold text-white bg-slate-800 px-3 py-1 rounded-lg border border-slate-700 shadow-sm">
           {formatCurrency(total)}
         </span>
       </div>
@@ -111,7 +113,7 @@ export const PieChart: React.FC<PieChartProps> = ({ data, title, emptyMessage, o
       <div className="flex flex-col xl:flex-row items-center gap-8 flex-1">
         {/* SVG Chart - Increased size */}
         <div className="w-56 h-56 flex-shrink-0">
-          <svg viewBox="-1 -1 2 2" className="transform -rotate-90 w-full h-full drop-shadow-xl">
+          <svg viewBox="-1 -1 2 2" className="transform -rotate-90 w-full h-full drop-shadow-2xl">
             {slices}
           </svg>
         </div>
@@ -124,12 +126,12 @@ export const PieChart: React.FC<PieChartProps> = ({ data, title, emptyMessage, o
               <div 
                 key={item.name} 
                 onClick={() => isOthers ? setShowDetails(true) : undefined}
-                className={`flex items-center justify-between text-sm group p-1 rounded transition-colors ${isOthers ? 'cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/20 border border-transparent hover:border-indigo-200 dark:hover:border-indigo-500/30' : 'hover:bg-slate-100 dark:hover:bg-slate-800/30'}`}
+                className={`flex items-center justify-between text-sm group p-1 rounded transition-colors ${isOthers ? 'cursor-pointer hover:bg-indigo-900/20 border border-transparent hover:border-indigo-500/30' : 'hover:bg-slate-800/30'}`}
                 title={isOthers ? "Ver detalles" : ""}
               >
                 <div className="flex items-center gap-3 overflow-hidden">
                   <span className="w-3 h-3 rounded-full flex-shrink-0 shadow-sm ring-2 ring-opacity-20 ring-white" style={{ backgroundColor: item.color }}></span>
-                  <span className={`truncate font-medium capitalize transition-colors ${isOthers ? 'text-indigo-600 dark:text-indigo-300 group-hover:text-indigo-700 dark:group-hover:text-indigo-200 underline decoration-dotted decoration-indigo-400' : 'text-slate-600 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-white'}`}>
+                  <span className={`truncate font-medium capitalize transition-colors ${isOthers ? 'text-indigo-300 group-hover:text-indigo-200 underline decoration-dotted decoration-indigo-500/50' : 'text-slate-300 group-hover:text-white'}`}>
                     {item.name}
                   </span>
                 </div>
@@ -137,7 +139,7 @@ export const PieChart: React.FC<PieChartProps> = ({ data, title, emptyMessage, o
                    <span className="text-slate-500 font-mono text-xs pt-0.5">
                     {((item.value / total) * 100).toFixed(1)}%
                   </span>
-                  <span className={`font-mono font-bold ${isOthers ? 'text-indigo-700 dark:text-indigo-200' : 'text-slate-700 dark:text-slate-200'}`}>
+                  <span className={`font-mono font-bold ${isOthers ? 'text-indigo-200' : 'text-slate-200'}`}>
                     {formatCurrency(item.value)}
                   </span>
                 </div>

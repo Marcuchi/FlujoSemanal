@@ -13,8 +13,8 @@ const SummaryItem = ({ label, value, icon: Icon, colorClass }: { label: string; 
   <div className="flex items-center gap-3">
     <Icon className={colorClass} size={24} strokeWidth={1.5} />
     <div>
-      <div className="text-xs text-slate-500 dark:text-slate-400 uppercase font-semibold tracking-wider">{label}</div>
-      <div className="text-base font-bold text-slate-700 dark:text-slate-100 font-mono tracking-tighter">{formatCurrency(value)}</div>
+      <div className="text-xs text-slate-400 uppercase font-semibold tracking-wider">{label}</div>
+      <div className="text-base font-bold text-slate-100 font-mono tracking-tighter">{formatCurrency(value)}</div>
     </div>
   </div>
 );
@@ -22,13 +22,13 @@ const SummaryItem = ({ label, value, icon: Icon, colorClass }: { label: string; 
 export const Summary: React.FC<SummaryProps> = ({ totalIncome, totalExpense, totalToBox, netTotal }) => {
   return (
     <div className="flex flex-row gap-6 md:gap-10 overflow-x-auto no-scrollbar items-center justify-center md:justify-start">
-      <SummaryItem label="Ingresos Totales" value={totalIncome} icon={ArrowUpCircle} colorClass="text-emerald-600 dark:text-emerald-400" />
-      <div className="h-8 w-px bg-slate-300 dark:bg-slate-700 hidden sm:block"></div>
-      <SummaryItem label="Egresos Totales" value={totalExpense} icon={ArrowDownCircle} colorClass="text-rose-600 dark:text-rose-400" />
-      <div className="h-8 w-px bg-slate-300 dark:bg-slate-700 hidden sm:block"></div>
-      <SummaryItem label="Ingresos Totales Netos" value={netTotal} icon={Scale} colorClass="text-cyan-600 dark:text-cyan-400" />
-      <div className="h-8 w-px bg-slate-300 dark:bg-slate-700 hidden sm:block"></div>
-      <SummaryItem label="Total en Tesoro" value={totalToBox} icon={Wallet} colorClass="text-indigo-600 dark:text-indigo-400" />
+      <SummaryItem label="Ingresos Totales" value={totalIncome} icon={ArrowUpCircle} colorClass="text-emerald-400" />
+      <div className="h-8 w-px bg-slate-700 hidden sm:block"></div>
+      <SummaryItem label="Egresos Totales" value={totalExpense} icon={ArrowDownCircle} colorClass="text-rose-400" />
+      <div className="h-8 w-px bg-slate-700 hidden sm:block"></div>
+      <SummaryItem label="Ingresos Totales Netos" value={netTotal} icon={Scale} colorClass="text-cyan-400" />
+      <div className="h-8 w-px bg-slate-700 hidden sm:block"></div>
+      <SummaryItem label="Total en Tesoro" value={totalToBox} icon={Wallet} colorClass="text-indigo-400" />
     </div>
   );
 };

@@ -50,7 +50,6 @@ const App: React.FC = () => {
   const [showExportModal, setShowExportModal] = React.useState(false);
   const [showImportModal, setShowImportModal] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
-  const [loadedWeekKey, setLoadedWeekKey] = React.useState<string | null>(null);
 
   // Derived week key (e.g., "2024-04-15")
   const currentWeekKey = React.useMemo(() => getWeekKey(currentDate), [currentDate]);
@@ -59,11 +58,30 @@ const App: React.FC = () => {
   React.useEffect(() => {
     if (db) {
       setLoading(true);
-      setLoadedWeekKey(null);
 
       const rootRef = ref(db!, `weeks`);
       const weekDataRef = ref(db!, `weeks/${currentWeekKey}/data`);
       const historyRef = ref(db!, `weeks/${currentWeekKey}/history`);
+
+      // 1. Migration Logic
+      const globalRootRef = ref(db!);
+      get(child(globalRootRef, 'weekData')).then((snapshot) => {
+        if (snapshot.exists()) {
+           get(weekDataRef).then((weekSnap) => {
+             if (!weekSnap.exists()) {
+                const oldData = snapshot.val();
+                set(weekDataRef, oldData);
+                get(child(globalRootRef, 'history')).then((histSnap) => {
+                  if (histSnap.exists()) {
+                    set(historyRef, histSnap.val());
+                    set(ref(db!, 'history'), null);
+                  }
+                });
+                set(ref(db!, 'weekData'), null);
+             }
+           });
+        }
+      });
 
       // 2. Week Data Listener
       const unsubscribeWeek = onValue(weekDataRef, (snapshot) => {
@@ -81,18 +99,13 @@ const App: React.FC = () => {
               salaries: dayData.salaries || [],
               toBox: dayData.toBox || [],
               manualInitialAmount: dayData.manualInitialAmount,
-              manualInitialModified: dayData.manualInitialModified,
-              systemInitialOffice: dayData.systemInitialOffice,
-              initialBoxAmount: dayData.initialBoxAmount,
-              initialBoxModified: dayData.initialBoxModified,
-              systemInitialBox: dayData.systemInitialBox
+              initialBoxAmount: dayData.initialBoxAmount
             };
           });
           setWeekData(sanitizedData);
         } else {
           setWeekData(createInitialState());
         }
-        setLoadedWeekKey(currentWeekKey);
         setLoading(false);
       });
 
@@ -124,7 +137,6 @@ const App: React.FC = () => {
         setHistory([]);
       }
 
-      setLoadedWeekKey(currentWeekKey);
       setLoading(false);
     }
   }, [currentDate, currentWeekKey, currentApp]);
@@ -135,7 +147,7 @@ const App: React.FC = () => {
     const cleanData = JSON.parse(JSON.stringify(newData));
     if (db) {
       set(ref(db!, `weeks/${currentWeekKey}/data`), cleanData).catch(console.error);
-      setWeekData(newData); // Optimistic update
+      setWeekData(newData);
     } else {
       setWeekData(newData);
       localStorage.setItem(`weekData_${currentWeekKey}`, JSON.stringify(newData));
@@ -178,83 +190,6 @@ const App: React.FC = () => {
           handleUpdateDay(newDay);
       }
   };
-
-  // --- Retrospective Sync Effect ---
-  React.useEffect(() => {
-    if (loading || currentApp !== 'FLOW' || loadedWeekKey !== currentWeekKey) return;
-
-    const syncFromPrevious = async () => {
-        const prevDate = addWeeks(currentDate, -1);
-        const prevWeekKey = getWeekKey(prevDate);
-        let prevData: WeekData | null = null;
-
-        if (db) {
-            const snap = await get(ref(db, `weeks/${prevWeekKey}/data`));
-            if (snap.exists()) prevData = snap.val();
-        } else {
-            const saved = localStorage.getItem(`weekData_${prevWeekKey}`);
-            if (saved) prevData = JSON.parse(saved);
-        }
-
-        let prevOfficeClose = 0;
-        let prevTreasury = 0;
-
-        if (prevData) {
-            let currentBalance = 0;
-            for (const day of DAYS_OF_WEEK) {
-                const d = prevData[day.id];
-                const effInitial = d?.manualInitialAmount ?? currentBalance;
-                
-                if (d) {
-                    const inc = d.incomes?.reduce((s:number, t:any)=>s+(t.amount||0),0)||0;
-                    const del = d.deliveries?.reduce((s:number, t:any)=>s+(t.amount||0),0)||0;
-                    const exp = d.expenses?.reduce((s:number, t:any)=>s+(t.amount||0),0)||0;
-                    const sal = d.salaries?.reduce((s:number, t:any)=>s+(t.amount||0),0)||0;
-                    const tob = d.toBox?.reduce((s:number, t:any)=>s+(t.amount||0),0)||0;
-                    currentBalance = effInitial + inc + del - exp - sal - tob;
-                }
-            }
-            prevOfficeClose = currentBalance;
-
-            Object.values(prevData).forEach((d: any) => {
-                const tob = d.toBox?.reduce((s:number, t:any)=>s+(t.amount||0),0)||0;
-                prevTreasury += tob;
-                if (d.id === 'monday') prevTreasury += (d.initialBoxAmount || 0);
-            });
-        }
-
-        const currentMonday = weekData['monday'];
-        if (!currentMonday) return; 
-
-        let needsUpdate = false;
-        const updatedMonday = { ...currentMonday };
-
-        if (updatedMonday.systemInitialOffice !== prevOfficeClose) {
-            updatedMonday.systemInitialOffice = prevOfficeClose;
-            needsUpdate = true;
-        }
-        if (updatedMonday.systemInitialBox !== prevTreasury) {
-            updatedMonday.systemInitialBox = prevTreasury;
-            needsUpdate = true;
-        }
-
-        if (!updatedMonday.manualInitialModified && updatedMonday.manualInitialAmount !== prevOfficeClose) {
-            updatedMonday.manualInitialAmount = prevOfficeClose;
-            needsUpdate = true;
-        }
-        if (!updatedMonday.initialBoxModified && updatedMonday.initialBoxAmount !== prevTreasury) {
-            updatedMonday.initialBoxAmount = prevTreasury;
-            needsUpdate = true;
-        }
-
-        if (needsUpdate) {
-            handleUpdateDay(updatedMonday);
-        }
-    };
-
-    syncFromPrevious();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentWeekKey, loading, currentApp, loadedWeekKey]); 
 
   const handleExportWeek = () => {
     exportToCSV(weekData, history);
@@ -445,13 +380,39 @@ const App: React.FC = () => {
     return balances;
   }, [weekData]);
 
-  // --- Navigation ---
+  // --- Navigation & Logic ---
 
   const handlePrevWeek = () => setCurrentDate(addWeeks(currentDate, -1));
 
   const handleNextWeek = () => {
     const nextDate = addWeeks(currentDate, 1);
-    setCurrentDate(nextDate);
+    const nextWeekKey = getWeekKey(nextDate);
+    
+    // Logic to carry over balances from current week to next if next doesn't exist
+    const carryOverOffice = runningBalances['saturday_close'] || 0;
+    const carryOverTreasury = totals.toBox; // Current week's total treasury
+
+    if (db) {
+        const nextWeekRef = ref(db!, `weeks/${nextWeekKey}/data`);
+        get(nextWeekRef).then((snapshot) => {
+            if (!snapshot.exists()) {
+                const newState = createInitialState();
+                newState['monday'].manualInitialAmount = carryOverOffice;
+                newState['monday'].initialBoxAmount = carryOverTreasury;
+                set(nextWeekRef, JSON.parse(JSON.stringify(newState)));
+            }
+            setCurrentDate(nextDate);
+        });
+    } else {
+        const savedNext = localStorage.getItem(`weekData_${nextWeekKey}`);
+        if (!savedNext) {
+             const newState = createInitialState();
+             newState['monday'].manualInitialAmount = carryOverOffice;
+             newState['monday'].initialBoxAmount = carryOverTreasury;
+             localStorage.setItem(`weekData_${nextWeekKey}`, JSON.stringify(newState));
+        }
+        setCurrentDate(nextDate);
+    }
   };
 
   const handleDateSelect = (date: Date) => {
@@ -459,24 +420,35 @@ const App: React.FC = () => {
     setShowWeekPicker(false);
   };
 
+  const getAppName = () => {
+      switch(currentApp) {
+          case 'FLOW': return 'Flujo Semanal';
+          case 'KILOS': return 'Control de Kilos';
+          case 'CC': return 'Cuentas Corrientes';
+          case 'CHEQUES': return 'Cheques en Cartera';
+          case 'GENERAL_DATA': return 'Datos Generales';
+          default: return 'Flujo Semanal';
+      }
+  };
+
   const getHeaderContent = () => {
       if (currentApp === 'KILOS') {
-          return <>Control<span className="text-orange-400 dark:text-orange-400">Kilos</span></>;
+          return <>Control<span className="text-orange-400">Kilos</span></>;
       }
       if (currentApp === 'CC') {
-          return <>Cuentas<span className="text-emerald-500 dark:text-emerald-400">Corrientes</span></>;
+          return <>Cuentas<span className="text-emerald-400">Corrientes</span></>;
       }
       if (currentApp === 'CHEQUES') {
-          return <>Cheques<span className="text-violet-500 dark:text-violet-400">Cartera</span></>;
+          return <>Cheques<span className="text-violet-400">Cartera</span></>;
       }
       if (currentApp === 'GENERAL_DATA') {
-          return <>Datos<span className="text-cyan-500 dark:text-cyan-400">Generales</span></>;
+          return <>Datos<span className="text-cyan-400">Generales</span></>;
       }
-      return <>Flujo<span className="text-indigo-500 dark:text-indigo-400">Semanal</span></>;
+      return <>Flujo<span className="text-indigo-400">Semanal</span></>;
   };
 
   const Header = () => (
-      <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm flex-none z-20 transition-colors duration-300">
+      <header className="bg-slate-900 border-b border-slate-800 shadow-md flex-none z-20">
         <div className="max-w-full px-4 py-3">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             
@@ -488,11 +460,11 @@ const App: React.FC = () => {
                 onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
               />
               <div>
-                <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 leading-tight flex items-center gap-2">
+                <h1 className="text-xl font-bold text-slate-100 leading-tight flex items-center gap-2">
                   {getHeaderContent()}
-                  {isOfflineMode && <span className="text-[10px] bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 rounded ml-2 border border-slate-300 dark:border-slate-600">MODO LOCAL</span>}
+                  {isOfflineMode && <span className="text-[10px] bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded ml-2 border border-slate-600">MODO LOCAL</span>}
                 </h1>
-                <p className="text-xs text-slate-500 dark:text-slate-400 hidden sm:block">Avícola Alpina</p>
+                <p className="text-xs text-slate-400 hidden sm:block">Avícola Alpina</p>
               </div>
             </div>
 
@@ -511,7 +483,7 @@ const App: React.FC = () => {
                       <button 
                         type="button"
                         onClick={() => setShowReport(true)}
-                        className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg transition-colors shadow-sm shadow-indigo-200 dark:shadow-indigo-900/50"
+                        className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-100 bg-indigo-600 hover:bg-indigo-500 rounded-lg transition-colors shadow-sm shadow-indigo-900/50"
                       >
                         <PieChartIcon size={14} />
                         <span className="hidden lg:inline">Informe Semanal</span>
@@ -520,7 +492,7 @@ const App: React.FC = () => {
                       <button 
                         type="button"
                         onClick={() => setShowHistory(true)}
-                        className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white rounded-lg transition-colors border border-slate-200 dark:border-slate-700 relative"
+                        className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 hover:text-white rounded-lg transition-colors border border-slate-700 relative"
                       >
                         <History size={14} />
                         <span className="hidden lg:inline">Historial</span>
@@ -531,19 +503,19 @@ const App: React.FC = () => {
                         )}
                       </button>
 
-                      <button type="button" onClick={() => setShowImportModal(true)} className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white rounded-lg transition-colors border border-slate-200 dark:border-slate-700">
+                      <button type="button" onClick={() => setShowImportModal(true)} className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 hover:text-white rounded-lg transition-colors border border-slate-700">
                         <Upload size={14} />
                         <span className="hidden lg:inline">Importar</span>
                       </button>
 
-                      <button type="button" onClick={() => setShowExportModal(true)} className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white rounded-lg transition-colors border border-slate-200 dark:border-slate-700">
+                      <button type="button" onClick={() => setShowExportModal(true)} className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 hover:text-white rounded-lg transition-colors border border-slate-700">
                         <Download size={14} />
                         <span className="hidden lg:inline">Exportar</span>
                       </button>
                   </>
               )}
 
-              <button type="button" onClick={() => setShowMenu(true)} className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white rounded-lg transition-colors border border-slate-200 dark:border-slate-700">
+              <button type="button" onClick={() => setShowMenu(true)} className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 hover:text-white rounded-lg transition-colors border border-slate-700">
                 <Menu size={14} />
                 <span className="hidden lg:inline">Menú</span>
               </button>
@@ -554,7 +526,7 @@ const App: React.FC = () => {
   );
 
   return (
-    <div className="h-screen bg-slate-50 dark:bg-slate-950 flex flex-col overflow-hidden text-slate-900 dark:text-slate-100 transition-colors duration-300">
+    <div className="h-screen bg-slate-950 flex flex-col overflow-hidden text-slate-100">
       <input type="file" accept=".csv" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
 
       <WeeklyReportModal isOpen={showReport} onClose={() => setShowReport(false)} weekData={weekData} />
@@ -578,17 +550,16 @@ const App: React.FC = () => {
         onReset={handleReset} 
         currentApp={currentApp}
         onSwitchApp={setCurrentApp}
-        db={db}
       />
 
       <Header />
 
       {currentApp !== 'CC' && currentApp !== 'CHEQUES' && currentApp !== 'GENERAL_DATA' && (
-        <div className="bg-slate-50/80 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-800 flex items-center justify-center py-2 relative z-40 backdrop-blur-sm flex-none transition-colors duration-300">
-          <div className="flex items-center gap-6 bg-white dark:bg-slate-800/50 px-4 py-1.5 rounded-full border border-slate-200 dark:border-slate-700/50 relative shadow-sm">
+        <div className="bg-slate-900/80 border-b border-slate-800 flex items-center justify-center py-2 relative z-40 backdrop-blur-sm flex-none">
+          <div className="flex items-center gap-6 bg-slate-800/50 px-4 py-1.5 rounded-full border border-slate-700/50 relative">
               <button 
                   onClick={handlePrevWeek}
-                  className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors"
+                  className="p-1 hover:bg-slate-700 rounded-full text-slate-400 hover:text-white transition-colors"
                   title="Semana Anterior"
               >
                   <ChevronLeft size={20} />
@@ -596,7 +567,7 @@ const App: React.FC = () => {
               
               <button 
                   onClick={() => setShowWeekPicker(!showWeekPicker)}
-                  className="text-sm font-bold text-slate-700 dark:text-slate-200 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors flex items-center gap-2 px-2 py-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer min-w-[140px] justify-center"
+                  className="text-sm font-bold text-slate-200 hover:text-indigo-400 transition-colors flex items-center gap-2 px-2 py-1 rounded hover:bg-slate-800 cursor-pointer min-w-[140px] justify-center"
               >
                   <Calendar size={14} className="text-indigo-500" />
                   {getWeekRangeLabel(currentDate)}
@@ -604,7 +575,7 @@ const App: React.FC = () => {
 
               <button 
                   onClick={handleNextWeek}
-                  className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors"
+                  className="p-1 hover:bg-slate-700 rounded-full text-slate-400 hover:text-white transition-colors"
                   title="Semana Siguiente"
               >
                   <ChevronRight size={20} />
@@ -620,7 +591,7 @@ const App: React.FC = () => {
         </div>
       )}
 
-      <main className="flex-1 overflow-x-auto overflow-y-hidden bg-slate-100 dark:bg-slate-950 relative z-0 transition-colors duration-300">
+      <main className="flex-1 overflow-x-auto overflow-y-hidden bg-slate-950 relative z-0">
         {currentApp === 'FLOW' && (
             <div className="h-full flex flex-row p-4 gap-4 w-full">
                 {DAYS_OF_WEEK.map((day) => (
