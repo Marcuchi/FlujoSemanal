@@ -30,7 +30,6 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
   onMove
 }) => {
   const isBox = type === 'toBox';
-  // Check for 'Tesoro' as default title instead of 'Caja'
   const isNew = transaction.amount === 0 && (transaction.title === '' || (isBox && (transaction.title === 'Caja' || transaction.title === 'Tesoro')));
   const [isEditing, setIsEditing] = React.useState(isNew);
   
@@ -161,7 +160,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
 
   if (isEditing) {
     return (
-      <form onSubmit={handleSave} className="p-2 rounded-lg border border-indigo-500/30 bg-slate-800 shadow-xl animate-in fade-in duration-200 z-10 relative space-y-2">
+      <form onSubmit={handleSave} className="p-2 rounded-lg border border-indigo-500/30 bg-slate-800 shadow-xl z-10 relative space-y-2">
         <input
           ref={titleInputRef}
           type="text"
@@ -208,7 +207,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
     <div className={`group relative p-2.5 rounded-lg ${theme.hoverBg} bg-black/20 transition-colors flex items-center justify-between border border-transparent hover:border-white/5`}>
       <div className="flex items-center gap-3 overflow-hidden">
         <span className={`w-1.5 h-6 rounded-full ${theme.indicator} flex-shrink-0`}></span>
-        <span className={`text-lg ${theme.textTitle} truncate font-medium`}>{transaction.title || <i className={theme.subtle}>Sin descripción</i>}</span>
+        <span className={`text-base ${theme.textTitle} truncate font-medium`}>{transaction.title || <i className={theme.subtle}>Sin descripción</i>}</span>
       </div>
       
       <span className={`text-xl font-mono font-bold ${theme.textAmount} whitespace-nowrap`}>

@@ -56,7 +56,8 @@ export const ROUTES_LIST = [
 export interface KilosDayData {
   id: string;
   // Particulares (Array to allow multiple entries)
-  public: number[]; 
+  public: number[];
+  public_in?: number[]; // Added for cross-column editing 
   // Choferes (Keyed by driver name)
   drivers: Record<string, number>; // Out
   drivers_in: Record<string, number>; // In (Returns)
@@ -66,7 +67,9 @@ export interface KilosDayData {
   routes_in: Record<string, number>;
   // Camara
   camera_plus: number;
+  camera_plus_in?: number; // Added for cross-column editing
   camera_minus: number;
+  camera_minus_out?: number; // Added for cross-column editing
 }
 
 export interface KilosWeekData {

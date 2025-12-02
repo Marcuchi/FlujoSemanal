@@ -56,7 +56,6 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
 
   const handleRemoveTransaction = (type: TransactionType, id: string) => {
     const itemToRemove = dayData[type].find(t => t.id === id);
-    // Updated check for 'Tesoro'
     const isGhost = itemToRemove && itemToRemove.amount === 0 && (itemToRemove.title === '' || (type === 'toBox' && (itemToRemove.title === 'Caja' || itemToRemove.title === 'Tesoro')));
 
     if (itemToRemove && !isGhost) {
@@ -134,8 +133,6 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
     if (e.key === 'Escape') setIsEditingInitial(false);
   };
 
-  // ----- Box Initial Handlers (Monday Only) -----
-
   const saveBoxInitial = () => {
       const val = parseFloat(tempBoxInitial.replace(/\./g, '').replace(/,/g, '.'));
       if (!isNaN(val)) {
@@ -186,10 +183,10 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
   const MetricDisplay = ({ label, value, icon: Icon, colorClass, borderClass }: { label: string; value: number; icon: any; colorClass: string; borderClass?: string }) => (
     <div className={`flex items-center justify-between p-3 rounded-lg bg-slate-800 border ${borderClass || 'border-slate-700'}`}>
       <div className="flex items-center gap-2">
-        <Icon size={20} className={colorClass} />
-        <span className="text-base font-bold text-slate-400">{label}</span>
+        <Icon size={22} className={colorClass} />
+        <span className="text-lg font-bold text-slate-400">{label}</span>
       </div>
-      <span className={`text-xl font-bold font-mono ${colorClass}`}>{formatCurrency(value)}</span>
+      <span className={`text-2xl font-bold font-mono ${colorClass}`}>{formatCurrency(value)}</span>
     </div>
   );
 
@@ -205,13 +202,13 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
       <div className="p-4 bg-slate-900 border-b border-slate-800 flex-none relative">
         <div className="flex justify-between items-center mb-4">
           <div className="flex items-center gap-3">
-              <h2 className="text-2xl font-bold text-slate-100 uppercase tracking-wide pl-1">{dayData.name}</h2>
+              <h2 className="text-3xl font-bold text-slate-100 uppercase tracking-wide pl-1">{dayData.name}</h2>
               <button 
                 onClick={() => setShowReport(true)}
                 className="p-1.5 text-slate-500 hover:text-indigo-400 hover:bg-slate-800 rounded transition-colors"
                 title="Informe Diario"
               >
-                 <PieChartIcon size={20} />
+                 <PieChartIcon size={24} />
               </button>
           </div>
         </div>
@@ -223,16 +220,16 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-950 custom-scrollbar">
         
-        {/* Oficina Inicial - MOVED TO TOP */}
+        {/* Oficina Inicial */}
         <div className="rounded-lg bg-slate-800/40 border border-slate-700/50 overflow-hidden shadow-sm">
-           <div className="flex justify-between items-center px-4 py-2.5 bg-slate-800 border-b border-slate-700">
-             <h3 className="font-bold text-lg text-slate-300 uppercase flex items-center gap-2 tracking-wider">
-               <History size={18} className="text-slate-400"/> 
+           <div className="flex justify-between items-center px-4 py-3 bg-slate-800 border-b border-slate-700">
+             <h3 className="font-bold text-xl text-slate-300 uppercase flex items-center gap-2 tracking-wider">
+               <History size={20} className="text-slate-400"/> 
                Oficina Inicial
              </h3>
              {isManualInitial && !isEditingInitial && (
                 <button onClick={resetInitialAmount} title="Restaurar a Automático" className="p-1 rounded hover:bg-slate-700 text-slate-400 hover:text-blue-400 transition-colors">
-                  <RotateCcw size={16} />
+                  <RotateCcw size={18} />
                 </button>
              )}
            </div>
@@ -240,7 +237,7 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
              {isEditingInitial ? (
                 <div className="flex items-center gap-2">
                    <div className="relative flex-1">
-                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-500 text-base">$</span>
+                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-500 text-lg">$</span>
                       <input 
                         type="text" 
                         inputMode="numeric"
@@ -248,34 +245,34 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
                         value={tempInitial} 
                         onChange={handleInitialChange}
                         onKeyDown={handleInitialKeyDown}
-                        className="w-full bg-slate-900 border border-indigo-500 rounded px-2 pl-5 py-1.5 text-xl font-mono text-white focus:outline-none"
+                        className="w-full bg-slate-900 border border-indigo-500 rounded px-2 pl-6 py-2 text-2xl font-mono text-white focus:outline-none"
                       />
                    </div>
-                   <button onClick={saveInitialAmount} className="p-1.5 bg-indigo-600 rounded text-white"><Check size={18}/></button>
-                   <button onClick={() => setIsEditingInitial(false)} className="p-1.5 bg-slate-700 rounded text-slate-300"><X size={18}/></button>
+                   <button onClick={saveInitialAmount} className="p-2 bg-indigo-600 rounded text-white"><Check size={20}/></button>
+                   <button onClick={() => setIsEditingInitial(false)} className="p-2 bg-slate-700 rounded text-slate-300"><X size={20}/></button>
                 </div>
              ) : (
-                <div onClick={startEditingInitial} className={`cursor-pointer p-2.5 rounded border border-transparent hover:border-slate-600 hover:bg-slate-800 transition-all flex justify-between items-center group ${isManualInitial ? 'bg-slate-800/50' : ''}`}>
-                  <span className={`text-base ${isManualInitial ? 'text-indigo-300 font-medium' : 'text-slate-500 italic'}`}>
+                <div onClick={startEditingInitial} className={`cursor-pointer p-3 rounded border border-transparent hover:border-slate-600 hover:bg-slate-800 transition-all flex justify-between items-center group ${isManualInitial ? 'bg-slate-800/50' : ''}`}>
+                  <span className={`text-lg ${isManualInitial ? 'text-indigo-300 font-medium' : 'text-slate-500 italic'}`}>
                     {isManualInitial ? 'Manual' : 'Automático'}
                   </span>
                   <div className="flex items-center gap-2">
-                    <span className={`font-mono font-bold text-xl ${isManualInitial ? 'text-indigo-200' : 'text-slate-400'}`}>
+                    <span className={`font-mono font-bold text-2xl ${isManualInitial ? 'text-indigo-200' : 'text-slate-400'}`}>
                       {formatCurrency(effectiveInitialAmount)}
                     </span>
-                    <Edit2 size={16} className="opacity-0 group-hover:opacity-100 text-slate-500" />
+                    <Edit2 size={18} className="opacity-0 group-hover:opacity-100 text-slate-500" />
                   </div>
                 </div>
              )}
            </div>
         </div>
 
-        {/* Monday Specific: Tesoro Inicial - MOVED BELOW OFICINA INICIAL */}
+        {/* Monday Specific: Tesoro Inicial */}
         {isMonday && (
             <div className="rounded-lg bg-slate-800/40 border border-slate-700/50 overflow-hidden shadow-sm">
-                <div className="flex justify-between items-center px-4 py-2.5 bg-slate-800 border-b border-slate-700">
-                  <h3 className="font-bold text-lg text-indigo-300 uppercase flex items-center gap-2 tracking-wider">
-                    <Archive size={18} className="text-indigo-400"/> 
+                <div className="flex justify-between items-center px-4 py-3 bg-slate-800 border-b border-slate-700">
+                  <h3 className="font-bold text-xl text-indigo-300 uppercase flex items-center gap-2 tracking-wider">
+                    <Archive size={20} className="text-indigo-400"/> 
                     Tesoro Inicial
                   </h3>
                 </div>
@@ -283,7 +280,7 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
                   {isEditingBoxInitial ? (
                       <div className="flex items-center gap-2">
                         <div className="relative flex-1">
-                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-500 text-base">$</span>
+                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-500 text-lg">$</span>
                             <input 
                               type="text" 
                               inputMode="numeric"
@@ -291,22 +288,22 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
                               value={tempBoxInitial} 
                               onChange={handleBoxInitialChange}
                               onKeyDown={handleBoxInitialKeyDown}
-                              className="w-full bg-slate-900 border border-indigo-500 rounded px-2 pl-5 py-1.5 text-xl font-mono text-white focus:outline-none"
+                              className="w-full bg-slate-900 border border-indigo-500 rounded px-2 pl-6 py-2 text-2xl font-mono text-white focus:outline-none"
                             />
                         </div>
-                        <button onClick={saveBoxInitial} className="p-1.5 bg-indigo-600 rounded text-white"><Check size={18}/></button>
-                        <button onClick={() => setIsEditingBoxInitial(false)} className="p-1.5 bg-slate-700 rounded text-slate-300"><X size={18}/></button>
+                        <button onClick={saveBoxInitial} className="p-2 bg-indigo-600 rounded text-white"><Check size={20}/></button>
+                        <button onClick={() => setIsEditingBoxInitial(false)} className="p-2 bg-slate-700 rounded text-slate-300"><X size={20}/></button>
                       </div>
                   ) : (
-                      <div onClick={startEditingBoxInitial} className="cursor-pointer p-2.5 rounded border border-transparent hover:border-slate-600 hover:bg-slate-800 transition-all flex justify-between items-center group bg-slate-800/50">
-                        <span className="text-base text-indigo-300 font-medium">
+                      <div onClick={startEditingBoxInitial} className="cursor-pointer p-3 rounded border border-transparent hover:border-slate-600 hover:bg-slate-800 transition-all flex justify-between items-center group bg-slate-800/50">
+                        <span className="text-lg text-indigo-300 font-medium">
                           Valor Inicial
                         </span>
                         <div className="flex items-center gap-2">
-                          <span className="font-mono font-bold text-xl text-indigo-200">
+                          <span className="font-mono font-bold text-2xl text-indigo-200">
                             {formatCurrency(effectiveBoxInitial)}
                           </span>
-                          <Edit2 size={16} className="opacity-0 group-hover:opacity-100 text-slate-500" />
+                          <Edit2 size={18} className="opacity-0 group-hover:opacity-100 text-slate-500" />
                         </div>
                       </div>
                   )}
@@ -316,30 +313,30 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
 
         {/* Ingresos & Repartos Container */}
         <div className="rounded-lg bg-emerald-950/40 border border-emerald-900/50 overflow-hidden shadow-sm">
-          <div className="flex justify-between items-center px-4 py-2.5 bg-emerald-950 border-b border-emerald-900">
-            <h3 className="font-bold text-lg text-emerald-200 uppercase flex items-center gap-2 tracking-wider">
-              <TrendingUp size={18} className="text-emerald-400"/> 
+          <div className="flex justify-between items-center px-4 py-3 bg-emerald-950 border-b border-emerald-900">
+            <h3 className="font-bold text-xl text-emerald-200 uppercase flex items-center gap-2 tracking-wider">
+              <TrendingUp size={20} className="text-emerald-400"/> 
               Ingresos
             </h3>
-            <span className="text-base font-mono font-bold text-emerald-300 bg-emerald-900/60 px-2 py-0.5 rounded border border-emerald-800/50">
+            <span className="text-lg font-mono font-bold text-emerald-300 bg-emerald-900/60 px-3 py-1 rounded border border-emerald-800/50">
               {formatCurrency(totalIncome + totalDeliveries)}
             </span>
           </div>
           
-          <div className="p-3 space-y-3">
+          <div className="p-3 space-y-4">
             
             {/* General */}
             <div>
-              <div className="flex justify-between items-center mb-2 px-1">
+              <div className="flex justify-between items-center mb-3 px-1">
                 <div className="flex items-center gap-2">
                   <span className="text-base uppercase font-extrabold text-emerald-500/80 tracking-wide">General</span>
                   <span className="text-base font-mono font-bold text-emerald-400/90">{formatCurrency(totalIncome)}</span>
                 </div>
-                <button onClick={() => handleAddTransaction('incomes')} className="p-1 rounded bg-emerald-900/50 hover:bg-emerald-800 text-emerald-200 border border-emerald-800/50 transition-colors">
-                  <Plus size={16} />
+                <button onClick={() => handleAddTransaction('incomes')} className="p-1.5 rounded bg-emerald-900/50 hover:bg-emerald-800 text-emerald-200 border border-emerald-800/50 transition-colors">
+                  <Plus size={18} />
                 </button>
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 {dayData.incomes.map(t => (
                     <TransactionItem 
                         key={t.id} 
@@ -350,7 +347,7 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
                         onMove={(id) => handleMoveTransaction('incomes', id)} 
                     />
                 ))}
-                {dayData.incomes.length === 0 && <p className="text-sm text-emerald-600/30 text-center italic py-1">Sin ventas</p>}
+                {dayData.incomes.length === 0 && <p className="text-base text-emerald-600/30 text-center italic py-2">Sin ventas</p>}
               </div>
             </div>
             
@@ -358,18 +355,18 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
 
             {/* Repartos */}
             <div>
-              <div className="flex justify-between items-center mb-2 px-1">
+              <div className="flex justify-between items-center mb-3 px-1">
                 <div className="flex items-center gap-2">
                   <span className="text-base uppercase font-extrabold text-teal-500/80 tracking-wide flex items-center gap-1">
                      <Truck size={16} /> Repartos
                   </span>
                   <span className="text-base font-mono font-bold text-teal-400/90">{formatCurrency(totalDeliveries)}</span>
                 </div>
-                <button onClick={() => handleAddTransaction('deliveries')} className="p-1 rounded bg-teal-900/50 hover:bg-teal-800 text-teal-200 border border-teal-800/50 transition-colors">
-                  <Plus size={16} />
+                <button onClick={() => handleAddTransaction('deliveries')} className="p-1.5 rounded bg-teal-900/50 hover:bg-teal-800 text-teal-200 border border-teal-800/50 transition-colors">
+                  <Plus size={18} />
                 </button>
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 {dayData.deliveries.map(t => (
                     <TransactionItem 
                         key={t.id} 
@@ -380,7 +377,7 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
                         onMove={(id) => handleMoveTransaction('deliveries', id)} 
                     />
                 ))}
-                {dayData.deliveries.length === 0 && <p className="text-sm text-teal-600/30 text-center italic py-1">Sin repartos</p>}
+                {dayData.deliveries.length === 0 && <p className="text-base text-teal-600/30 text-center italic py-2">Sin repartos</p>}
               </div>
             </div>
 
@@ -389,30 +386,30 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
 
         {/* Egresos & Salaries Container */}
         <div className="rounded-lg bg-rose-950/40 border border-rose-900/50 overflow-hidden shadow-sm">
-          <div className="flex justify-between items-center px-4 py-2.5 bg-rose-950 border-b border-rose-900">
-            <h3 className="font-bold text-lg text-rose-200 uppercase flex items-center gap-2 tracking-wider">
-              <TrendingDown size={18} className="text-rose-400"/> 
+          <div className="flex justify-between items-center px-4 py-3 bg-rose-950 border-b border-rose-900">
+            <h3 className="font-bold text-xl text-rose-200 uppercase flex items-center gap-2 tracking-wider">
+              <TrendingDown size={20} className="text-rose-400"/> 
               Egresos
             </h3>
-            <span className="text-base font-mono font-bold text-rose-300 bg-rose-900/60 px-2 py-0.5 rounded border border-rose-800/50">
+            <span className="text-lg font-mono font-bold text-rose-300 bg-rose-900/60 px-3 py-1 rounded border border-rose-800/50">
                 {formatCurrency(totalExpense + totalSalaries)}
             </span>
           </div>
 
-          <div className="p-3 space-y-3">
+          <div className="p-3 space-y-4">
             
             {/* Gastos */}
             <div>
-              <div className="flex justify-between items-center mb-2 px-1">
+              <div className="flex justify-between items-center mb-3 px-1">
                 <div className="flex items-center gap-2">
                   <span className="text-base uppercase font-extrabold text-rose-500/80 tracking-wide">Gastos</span>
                   <span className="text-base font-mono font-bold text-rose-400/90">{formatCurrency(totalExpense)}</span>
                 </div>
-                <button onClick={() => handleAddTransaction('expenses')} className="p-1 rounded bg-rose-900/50 hover:bg-rose-800 text-rose-200 border border-rose-800/50 transition-colors">
-                  <Plus size={16} />
+                <button onClick={() => handleAddTransaction('expenses')} className="p-1.5 rounded bg-rose-900/50 hover:bg-rose-800 text-rose-200 border border-rose-800/50 transition-colors">
+                  <Plus size={18} />
                 </button>
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 {dayData.expenses.map(t => (
                     <TransactionItem 
                         key={t.id} 
@@ -423,7 +420,7 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
                         onMove={(id) => handleMoveTransaction('expenses', id)}
                     />
                 ))}
-                {dayData.expenses.length === 0 && <p className="text-sm text-rose-600/40 text-center italic py-1">Sin gastos</p>}
+                {dayData.expenses.length === 0 && <p className="text-base text-rose-600/40 text-center italic py-2">Sin gastos</p>}
               </div>
             </div>
 
@@ -431,18 +428,18 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
 
              {/* Adelantos/Sueldos */}
              <div>
-              <div className="flex justify-between items-center mb-2 px-1">
+              <div className="flex justify-between items-center mb-3 px-1">
                 <div className="flex items-center gap-2">
                   <span className="text-base uppercase font-extrabold text-amber-500/80 tracking-wide flex items-center gap-1">
                      <Users size={16} /> Adelantos/Sueldos
                   </span>
                   <span className="text-base font-mono font-bold text-amber-400/90">{formatCurrency(totalSalaries)}</span>
                 </div>
-                <button onClick={() => handleAddTransaction('salaries')} className="p-1 rounded bg-amber-900/50 hover:bg-amber-800 text-amber-200 border border-amber-800/50 transition-colors">
-                  <Plus size={16} />
+                <button onClick={() => handleAddTransaction('salaries')} className="p-1.5 rounded bg-amber-900/50 hover:bg-amber-800 text-amber-200 border border-amber-800/50 transition-colors">
+                  <Plus size={18} />
                 </button>
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 {dayData.salaries.map(t => (
                     <TransactionItem 
                         key={t.id} 
@@ -453,7 +450,7 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
                         onMove={(id) => handleMoveTransaction('salaries', id)}
                     />
                 ))}
-                {dayData.salaries.length === 0 && <p className="text-sm text-amber-600/40 text-center italic py-1">Sin adelantos</p>}
+                {dayData.salaries.length === 0 && <p className="text-base text-amber-600/40 text-center italic py-2">Sin adelantos</p>}
               </div>
             </div>
 
@@ -462,23 +459,23 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
 
         {/* A Tesoro */}
         <div className="rounded-lg bg-indigo-950/40 border border-indigo-900/50 overflow-hidden shadow-sm">
-          <div className="flex justify-between items-center px-4 py-2.5 bg-indigo-950 border-b border-indigo-900">
-            <h3 className="font-bold text-lg text-indigo-200 uppercase flex items-center gap-2 tracking-wider">
+          <div className="flex justify-between items-center px-4 py-3 bg-indigo-950 border-b border-indigo-900">
+            <h3 className="font-bold text-xl text-indigo-200 uppercase flex items-center gap-2 tracking-wider">
               <div className="flex items-center gap-1.5">
-                <Archive size={18} className="text-indigo-400"/> 
+                <Archive size={20} className="text-indigo-400"/> 
                 A Tesoro
               </div>
-              <span className="ml-2 text-base font-mono font-bold text-indigo-300 bg-indigo-900/60 px-2 py-0.5 rounded border border-indigo-800/50">
+              <span className="ml-2 text-lg font-mono font-bold text-indigo-300 bg-indigo-900/60 px-3 py-1 rounded border border-indigo-800/50">
                 {formatCurrency(totalToBoxWithInitial)}
               </span>
             </h3>
-            <button onClick={() => handleAddTransaction('toBox')} className="p-1 rounded bg-indigo-900 hover:bg-indigo-800 text-indigo-100 transition-colors border border-indigo-800">
-              <Plus size={16} />
+            <button onClick={() => handleAddTransaction('toBox')} className="p-1.5 rounded bg-indigo-900 hover:bg-indigo-800 text-indigo-100 transition-colors border border-indigo-800">
+              <Plus size={18} />
             </button>
           </div>
-          <div className="p-3 space-y-1.5 min-h-[3rem]">
+          <div className="p-3 space-y-2 min-h-[3rem]">
             {dayData.toBox.map(t => <TransactionItem key={t.id} transaction={t} type="toBox" onUpdate={(id, u) => handleUpdateTransaction('toBox', id, u)} onRemove={(id) => handleRemoveTransaction('toBox', id)} />)}
-            {dayData.toBox.length === 0 && <p className="text-sm text-indigo-600/40 text-center italic py-2">0.00</p>}
+            {dayData.toBox.length === 0 && <p className="text-base text-indigo-600/40 text-center italic py-2">0.00</p>}
           </div>
         </div>
 
