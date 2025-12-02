@@ -104,7 +104,8 @@ export const CurrentAccountsApp: React.FC<CurrentAccountsAppProps> = ({ db }) =>
       saveData({ 
           ...data, 
           [name]: { 
-              transactions: []
+              transactions: [],
+              createdAt: new Date().toISOString()
           } 
       });
   };

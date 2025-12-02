@@ -92,6 +92,7 @@ export interface CCTransaction {
 
 export interface CCAccountData {
   transactions: CCTransaction[];
+  createdAt?: string;
 }
 
 export type CCData = Record<string, CCAccountData>;

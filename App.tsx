@@ -578,6 +578,7 @@ const App: React.FC = () => {
         onReset={handleReset} 
         currentApp={currentApp}
         onSwitchApp={setCurrentApp}
+        db={db}
       />
 
       <Header />

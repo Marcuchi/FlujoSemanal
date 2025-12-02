@@ -1,7 +1,8 @@
 import React from 'react';
-import { X, LayoutGrid, Scale, BookUser, Banknote, Database, Sun, Moon } from 'lucide-react';
+import { X, LayoutGrid, Scale, BookUser, Banknote, Database, Sun, Moon, Download, Loader2 } from 'lucide-react';
 import { AppMode } from '../types';
 import { useTheme } from '../context/ThemeContext';
+import { Database as DBRef, ref, get } from 'firebase/database';
 
 interface MenuModalProps {
   isOpen: boolean;
@@ -9,10 +10,12 @@ interface MenuModalProps {
   onReset: () => void;
   currentApp: AppMode;
   onSwitchApp: (app: AppMode) => void;
+  db: DBRef | null;
 }
 
-export const MenuModal: React.FC<MenuModalProps> = ({ isOpen, onClose, currentApp, onSwitchApp }) => {
+export const MenuModal: React.FC<MenuModalProps> = ({ isOpen, onClose, currentApp, onSwitchApp, db }) => {
   const { theme, toggleTheme } = useTheme();
+  const [downloading, setDownloading] = React.useState(false);
 
   if (!isOpen) return null;
 
@@ -21,13 +24,72 @@ export const MenuModal: React.FC<MenuModalProps> = ({ isOpen, onClose, currentAp
     onClose();
   };
 
+  const handleDownloadBackup = async () => {
+    setDownloading(true);
+    const backupData: any = { 
+        timestamp: new Date().toISOString(),
+        version: "1.0",
+        source: db ? "firebase" : "local_storage" 
+    };
+
+    try {
+        if (db) {
+            // Firebase Mode - Fetch specific nodes to keep structure clean
+            const promises = [
+                get(ref(db, 'weeks')),
+                get(ref(db, 'current_accounts')),
+                get(ref(db, 'cheques')),
+                get(ref(db, 'general_data'))
+            ];
+
+            const [weeksSnap, ccSnap, chequesSnap, genSnap] = await Promise.all(promises);
+            
+            backupData.weeks = weeksSnap.val();
+            backupData.current_accounts = ccSnap.val();
+            backupData.cheques = chequesSnap.val();
+            backupData.general_data = genSnap.val();
+
+        } else {
+            // LocalStorage Mode - Scrape relevant keys
+            const allKeys = Object.keys(localStorage);
+            backupData.localStorageDump = {};
+            
+            allKeys.forEach(key => {
+               if(key.startsWith('weekData_') || key.startsWith('history_') || key.startsWith('kilos_') || key === 'current_accounts' || key === 'cheques' || key === 'general_data') {
+                   try {
+                       backupData.localStorageDump[key] = JSON.parse(localStorage.getItem(key) || 'null');
+                   } catch {
+                       backupData.localStorageDump[key] = localStorage.getItem(key);
+                   }
+               }
+            });
+        }
+
+        // Trigger Download
+        const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `backup_completo_${new Date().toISOString().slice(0,10)}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+    } catch (error) {
+        console.error("Backup failed", error);
+        alert("Error al generar el backup.");
+    } finally {
+        setDownloading(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden relative transition-colors duration-300">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden relative transition-colors duration-300 max-h-[90vh] overflow-y-auto">
         
         <button 
           onClick={onClose} 
-          className="absolute top-4 right-4 p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+          className="absolute top-4 right-4 p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors z-10"
         >
           <X size={20} />
         </button>
@@ -42,7 +104,7 @@ export const MenuModal: React.FC<MenuModalProps> = ({ isOpen, onClose, currentAp
              {/* Theme Toggle */}
              <button 
                onClick={toggleTheme}
-               className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+               className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors mr-8"
                title={theme === 'dark' ? 'Cambiar a Modo Claro' : 'Cambiar a Modo Oscuro'}
              >
                {theme === 'dark' ? <Moon size={16} /> : <Sun size={16} />}
@@ -197,6 +259,29 @@ export const MenuModal: React.FC<MenuModalProps> = ({ isOpen, onClose, currentAp
             </button>
 
           </div>
+
+          <div className="my-6 border-t border-slate-200 dark:border-slate-800"></div>
+
+          {/* Administration Section */}
+          <div>
+            <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-4 ml-1">Administración</h3>
+            <button 
+                onClick={handleDownloadBackup}
+                disabled={downloading}
+                className="w-full flex items-center justify-between p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/50 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-200 dark:hover:border-blue-700/50 transition-all group"
+            >
+                <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-lg shadow-sm bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                        {downloading ? <Loader2 size={24} className="animate-spin"/> : <Download size={24} />}
+                    </div>
+                    <div className="text-left">
+                        <h3 className="font-bold text-slate-700 dark:text-slate-300 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors">Descargar BD Completa</h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Backup de todas las aplicaciones</p>
+                    </div>
+                </div>
+            </button>
+          </div>
+
         </div>
 
       </div>
