@@ -1,6 +1,7 @@
+
 import React from 'react';
 import { Database as DBRef, ref, onValue, set } from 'firebase/database';
-import { ChevronDown, ChevronUp, Plus, Trash2, User, Users, Truck, ArrowUpDown, Calendar, Phone, MapPin, CreditCard, Tag, Edit2, Save, X, Check, Map } from 'lucide-react';
+import { ChevronDown, ChevronUp, Plus, Trash2, User, Users, Truck, ArrowUpDown, ArrowDown, ArrowUp, Edit2, Check, X, Tag, MapPin } from 'lucide-react';
 import { GeneralData, GeneralItem, Employee, Supplier, Client } from '../types';
 import { generateId, formatCurrency } from '../utils';
 
@@ -8,10 +9,33 @@ interface GeneralDataAppProps {
   db: DBRef | null;
 }
 
+const INITIAL_EMPLOYEES: Employee[] = [
+  { id: 'emp_1', firstName: "Ramón Emanuel", lastName: "BUSTAMANTE", dni: "36.431.396", cuil: "23-36431396-9", address: "Calle 3 N° 78 - B° Remedios de escalada", startDate: "2007-11-21", birthDate: "1991-09-22", phone: "152686790" },
+  { id: 'emp_2', firstName: "Mauro Gabriel", lastName: "POLANCO", dni: "33.893.482", cuil: "20-33893482-4", address: "Ibar Segura Funes 9064", startDate: "2006-09-07", birthDate: "1987-12-24", phone: "152655459" },
+  { id: 'emp_3', firstName: "José Roque", lastName: "BUSTAMANTE", dni: "11.558.586", cuil: "20-11558586-0", address: "Calle 3 N° 78 - B° Remedios de escalada", startDate: "2007-06-01", birthDate: "1955-03-31", phone: "152827732" },
+  { id: 'emp_4', firstName: "Walter Daniel", lastName: "GODOY", dni: "27.172.575", cuil: "20-27172575-3", address: "Mza. 2 Lote 13 - B° 1ro de Agosto", startDate: "1999-01-02", birthDate: "1979-02-04", phone: "157665974" },
+  { id: 'emp_5', firstName: "Ruben Alberto", lastName: "HERRERA", dni: "26.994.733", cuil: "20-26994733-1", address: "De la Cueca 342 Guiñazú", startDate: "1996-01-02", birthDate: "1979-01-21", phone: "156259100" },
+  { id: 'emp_6', firstName: "Guillermo Damian", lastName: "LUNA", dni: "27.246.128", cuil: "20-27246128-8", address: "Mza. 107 lote 16 - Juan Pablo II", startDate: "2007-03-06", birthDate: "1979-03-07", phone: "153528809" },
+  { id: 'emp_7', firstName: "Martín Miguel", lastName: "MEDRANO", dni: "18.593.831", cuil: "20-18593831-0", address: "Del gato s/n Guiñazú", startDate: "1997-01-02", birthDate: "1967-09-19", phone: "153600063" },
+  { id: 'emp_8', firstName: "Jonatan", lastName: "ROMERO", dni: "37.133.412", cuil: "20-37133412-3", address: "Pujada casa 49 R Escalada", startDate: "2010-10-01", birthDate: "1992-11-22", phone: "156572393" },
+  { id: 'emp_9', firstName: "Eduardo Javier", lastName: "BUSTO", dni: "31.742.880", cuil: "20-31742880-5", address: "Del Cielito 53 B° Guiñazú", startDate: "2012-01-03", birthDate: "1985-02-14", phone: "152413998" },
+  { id: 'emp_10', firstName: "Zenobio", lastName: "ARTEGA REINAGA", dni: "94.136.450", cuil: "20-94136450-1", address: "José R. Figueroa N° 604 - B° San Ignacio", startDate: "2009-06-02", birthDate: "1986-02-20", phone: "153168869" },
+  { id: 'emp_11', firstName: "maximiliano", lastName: "leiva", dni: "36.983.515", cuil: "2036983515-8", address: "De la Cueca 329 Guiñazú", startDate: "2013-10-01", birthDate: "1992-10-10", phone: "152641452" },
+  { id: 'emp_12', firstName: "sergio matias", lastName: "leiva", dni: "39.444.292", cuil: "20-39444292-6", address: "Del gato 355 Guiñazú", startDate: "2013-10-01", birthDate: "1996-01-04", phone: "153198710" },
+  { id: 'emp_13', firstName: "Leonardo", lastName: "Villán", dni: "31.056.879", cuil: "20-31056879-2", address: "Miguel Cané 252 B norte", startDate: "2012-10-23", birthDate: "1984-12-05", phone: "157461099" },
+  { id: 'emp_14', firstName: "Maximiliano", lastName: "Gutierrez", dni: "34.069.177", cuil: "20-34069177-7", address: "Del Gato325 Guiñazú", startDate: "2011-12-07", birthDate: "1988-10-17", phone: "152604479" },
+  { id: 'emp_15', firstName: "Gastòn Alan", lastName: "Villán", dni: "37.314.730", cuil: "2037314730-4", address: "Miguel Cané 252 B norte", startDate: "2010-09-10", birthDate: "1991-10-02", phone: "155101405" },
+  { id: 'emp_16', firstName: "Sergio Eduardo", lastName: "Righes", dni: "32.458.486", cuil: "20-32458486-3", address: "Av. Japòn 500", startDate: "2012-10-01", birthDate: "1986-09-29", phone: "156452071" },
+  { id: 'emp_17', firstName: "Rodolfo Eduardo", lastName: "González", dni: "16.907.860", cuil: "20-16907860-3", address: "El Pehual 685 Guiñazú", startDate: "2014-07-01", birthDate: "1964-05-03", phone: "153977709" },
+  { id: 'emp_18', firstName: "Jorge Ignacio", lastName: "Gómez", dni: "24.394.772", cuil: "2024394772-4", address: "Jose Superí 2984 Los Paraísos", startDate: "2013-10-17", birthDate: "1975-03-24", phone: "157382255" },
+  { id: 'emp_19', firstName: "Franco Maximiliano", lastName: "Gómez", dni: "39.495.132", cuil: "20-39495132-4", address: "Jose Superí 2984 Los Paraísos", startDate: "2013-10-31", birthDate: "1996-01-15", phone: "156349036" },
+  { id: 'emp_20', firstName: "Lorena Jaquelina", lastName: "Yudicello", dni: "27.921.684", cuil: "27-27921684-4", address: "Arquímedes 2837 Los Paraísos", startDate: "2014-08-01", birthDate: "1980-02-09", phone: "153907513" }
+];
+
 const createInitialState = (): GeneralData => ({
   clients: [],
   suppliers: [],
-  employees: []
+  employees: INITIAL_EMPLOYEES
 });
 
 export const GeneralDataApp: React.FC<GeneralDataAppProps> = ({ db }) => {
@@ -32,7 +56,8 @@ export const GeneralDataApp: React.FC<GeneralDataAppProps> = ({ db }) => {
           setData({
             clients: val.clients || [],
             suppliers: val.suppliers || [],
-            employees: val.employees || []
+            // Use INITIAL_EMPLOYEES if the fetched list is empty
+            employees: (val.employees && val.employees.length > 0) ? val.employees : INITIAL_EMPLOYEES
           });
         } else {
           setData(createInitialState());
@@ -43,7 +68,16 @@ export const GeneralDataApp: React.FC<GeneralDataAppProps> = ({ db }) => {
     } else {
       const saved = localStorage.getItem('general_data');
       if (saved) {
-        try { setData(JSON.parse(saved)); } catch (e) { setData(createInitialState()); }
+        try { 
+          const parsed = JSON.parse(saved);
+          setData({
+             clients: parsed.clients || [],
+             suppliers: parsed.suppliers || [],
+             employees: (parsed.employees && parsed.employees.length > 0) ? parsed.employees : INITIAL_EMPLOYEES
+          });
+        } catch (e) { setData(createInitialState()); }
+      } else {
+         setData(createInitialState());
       }
       setLoading(false);
     }
@@ -64,7 +98,7 @@ export const GeneralDataApp: React.FC<GeneralDataAppProps> = ({ db }) => {
 
   return (
     <div className="h-full flex flex-col bg-slate-50 dark:bg-slate-950 p-4 sm:p-8 overflow-y-auto custom-scrollbar transition-colors duration-300">
-      <div className="max-w-7xl mx-auto w-full space-y-6">
+      <div className="max-w-full mx-auto w-full space-y-6">
         <h2 className="text-2xl font-bold text-cyan-600 dark:text-cyan-400 uppercase tracking-widest text-center sm:text-left mb-6">Datos Generales</h2>
 
         {loading ? (
@@ -243,16 +277,17 @@ const EmployeeSection: React.FC<EmployeeSectionProps> = ({ items, isOpen, onTogg
 
                     {/* TABLE */}
                     <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800">
-                        <table className="w-full text-left border-collapse">
+                        <table className="w-full text-left border-collapse min-w-[1000px]">
                             <thead>
-                                <tr className="bg-slate-50 dark:bg-slate-950 text-xs font-bold text-slate-500 uppercase">
-                                    <th className="p-3 min-w-[150px] cursor-pointer hover:text-amber-500" onClick={() => handleSort('lastName')}>Apellido y Nombre <ArrowUpDown size={12} className="inline"/></th>
-                                    <th className="p-3 min-w-[100px]">DNI / CUIL</th>
-                                    <th className="p-3 min-w-[150px]">Domicilio</th>
-                                    <th className="p-3 min-w-[120px]">Teléfono</th>
-                                    <th className="p-3 min-w-[120px] cursor-pointer hover:text-amber-500" onClick={() => handleSort('startDate')}>Ingreso <ArrowUpDown size={12} className="inline"/></th>
-                                    <th className="p-3 min-w-[120px]">Nacimiento</th>
-                                    <th className="p-3 w-20 text-center">Acciones</th>
+                                <tr className="bg-slate-50 dark:bg-slate-950 text-sm font-bold text-slate-500 uppercase">
+                                    <th className="p-4 min-w-[200px] cursor-pointer hover:text-amber-500" onClick={() => handleSort('lastName')}>Apellido y Nombre <ArrowUpDown size={14} className="inline"/></th>
+                                    <th className="p-4 min-w-[120px]">DNI</th>
+                                    <th className="p-4 min-w-[140px]">CUIL</th>
+                                    <th className="p-4 min-w-[200px]">Domicilio</th>
+                                    <th className="p-4 min-w-[120px]">Teléfono</th>
+                                    <th className="p-4 min-w-[120px] cursor-pointer hover:text-amber-500" onClick={() => handleSort('startDate')}>Ingreso <ArrowUpDown size={14} className="inline"/></th>
+                                    <th className="p-4 min-w-[120px]">Nacimiento</th>
+                                    <th className="p-4 w-24 text-center">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -266,10 +301,8 @@ const EmployeeSection: React.FC<EmployeeSectionProps> = ({ items, isOpen, onTogg
                                                         <InputCell val={editForm.lastName} onChange={v => setEditForm({...editForm, lastName: v})} />
                                                         <InputCell val={editForm.firstName} onChange={v => setEditForm({...editForm, firstName: v})} />
                                                     </td>
-                                                    <td className="p-2 space-y-1">
-                                                        <InputCell val={editForm.dni} onChange={v => setEditForm({...editForm, dni: v})} />
-                                                        <InputCell val={editForm.cuil} onChange={v => setEditForm({...editForm, cuil: v})} />
-                                                    </td>
+                                                    <td className="p-2"><InputCell val={editForm.dni} onChange={v => setEditForm({...editForm, dni: v})} /></td>
+                                                    <td className="p-2"><InputCell val={editForm.cuil} onChange={v => setEditForm({...editForm, cuil: v})} /></td>
                                                     <td className="p-2"><InputCell val={editForm.address} onChange={v => setEditForm({...editForm, address: v})} /></td>
                                                     <td className="p-2"><InputCell val={editForm.phone} onChange={v => setEditForm({...editForm, phone: v})} /></td>
                                                     <td className="p-2"><InputCell type="date" val={editForm.startDate} onChange={v => setEditForm({...editForm, startDate: v})} /></td>
@@ -283,19 +316,17 @@ const EmployeeSection: React.FC<EmployeeSectionProps> = ({ items, isOpen, onTogg
                                                 </>
                                             ) : (
                                                 <>
-                                                    <td className="p-3 font-medium text-slate-800 dark:text-slate-200">{emp.lastName}, {emp.firstName}</td>
-                                                    <td className="p-3 text-sm text-slate-600 dark:text-slate-400">
-                                                        <div>{emp.dni}</div>
-                                                        <div className="text-xs text-slate-500 dark:text-slate-600">{emp.cuil}</div>
-                                                    </td>
-                                                    <td className="p-3 text-sm text-slate-600 dark:text-slate-400 truncate max-w-[150px]" title={emp.address}>{emp.address || '-'}</td>
-                                                    <td className="p-3 text-sm text-slate-600 dark:text-slate-400">{emp.phone || '-'}</td>
-                                                    <td className="p-3 text-sm text-slate-700 dark:text-slate-300 font-mono">{formatDate(emp.startDate)}</td>
-                                                    <td className="p-3 text-sm text-slate-600 dark:text-slate-400 font-mono">{formatDate(emp.birthDate)}</td>
-                                                    <td className="p-3 text-center">
+                                                    <td className="p-4 text-base font-medium text-slate-800 dark:text-slate-200">{emp.lastName}, {emp.firstName}</td>
+                                                    <td className="p-4 text-base text-slate-600 dark:text-slate-400 font-mono">{emp.dni}</td>
+                                                    <td className="p-4 text-base text-slate-600 dark:text-slate-400 font-mono">{emp.cuil}</td>
+                                                    <td className="p-4 text-base text-slate-600 dark:text-slate-400 truncate max-w-[200px]" title={emp.address}>{emp.address || '-'}</td>
+                                                    <td className="p-4 text-base text-slate-600 dark:text-slate-400 font-mono">{emp.phone || '-'}</td>
+                                                    <td className="p-4 text-base text-slate-700 dark:text-slate-300 font-mono">{formatDate(emp.startDate)}</td>
+                                                    <td className="p-4 text-base text-slate-600 dark:text-slate-400 font-mono">{formatDate(emp.birthDate)}</td>
+                                                    <td className="p-4 text-center">
                                                         <div className="flex gap-2 justify-center">
-                                                            <button onClick={() => startEditing(emp)} className="p-1.5 text-slate-400 hover:text-amber-500 dark:hover:text-amber-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"><Edit2 size={16}/></button>
-                                                            <button onClick={() => handleDelete(emp.id)} className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"><Trash2 size={16}/></button>
+                                                            <button onClick={() => startEditing(emp)} className="p-2 text-slate-400 hover:text-amber-500 dark:hover:text-amber-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"><Edit2 size={18}/></button>
+                                                            <button onClick={() => handleDelete(emp.id)} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"><Trash2 size={18}/></button>
                                                         </div>
                                                     </td>
                                                 </>
@@ -453,14 +484,14 @@ const SupplierSection: React.FC<SupplierSectionProps> = ({ items, isOpen, onTogg
 
                     {/* TABLE */}
                     <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800">
-                        <table className="w-full text-left border-collapse">
+                        <table className="w-full text-left border-collapse min-w-[800px]">
                             <thead>
-                                <tr className="bg-slate-50 dark:bg-slate-950 text-xs font-bold text-slate-500 uppercase">
-                                    <th className="p-3 min-w-[150px] cursor-pointer hover:text-emerald-500" onClick={() => handleSort('name')}>Nombre <ArrowUpDown size={12} className="inline"/></th>
-                                    <th className="p-3 min-w-[150px]">Producto</th>
-                                    <th className="p-3 min-w-[100px] text-right cursor-pointer hover:text-emerald-500" onClick={() => handleSort('price')}>Precio <ArrowUpDown size={12} className="inline"/></th>
-                                    <th className="p-3 min-w-[120px]">Teléfono</th>
-                                    <th className="p-3 w-20 text-center">Acciones</th>
+                                <tr className="bg-slate-50 dark:bg-slate-950 text-sm font-bold text-slate-500 uppercase">
+                                    <th className="p-4 min-w-[200px] cursor-pointer hover:text-emerald-500" onClick={() => handleSort('name')}>Nombre <ArrowUpDown size={14} className="inline"/></th>
+                                    <th className="p-4 min-w-[200px]">Producto</th>
+                                    <th className="p-4 min-w-[120px] text-right cursor-pointer hover:text-emerald-500" onClick={() => handleSort('price')}>Precio <ArrowUpDown size={14} className="inline"/></th>
+                                    <th className="p-4 min-w-[150px]">Teléfono</th>
+                                    <th className="p-4 w-24 text-center">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -489,14 +520,14 @@ const SupplierSection: React.FC<SupplierSectionProps> = ({ items, isOpen, onTogg
                                                 </>
                                             ) : (
                                                 <>
-                                                    <td className="p-3 font-bold text-slate-800 dark:text-slate-200">{sup.name}</td>
-                                                    <td className="p-3 text-sm text-slate-600 dark:text-slate-300"><Tag size={12} className="inline mr-1 text-slate-400 dark:text-slate-500"/>{sup.product || '-'}</td>
-                                                    <td className="p-3 text-sm font-mono text-emerald-600 dark:text-emerald-400 text-right">{formatCurrency(sup.price || 0)}</td>
-                                                    <td className="p-3 text-sm text-slate-500 dark:text-slate-400">{sup.phone || '-'}</td>
-                                                    <td className="p-3 text-center">
+                                                    <td className="p-4 text-base font-bold text-slate-800 dark:text-slate-200">{sup.name}</td>
+                                                    <td className="p-4 text-base text-slate-600 dark:text-slate-300"><Tag size={14} className="inline mr-1 text-slate-400 dark:text-slate-500"/>{sup.product || '-'}</td>
+                                                    <td className="p-4 text-base font-mono text-emerald-600 dark:text-emerald-400 text-right">{formatCurrency(sup.price || 0)}</td>
+                                                    <td className="p-4 text-base text-slate-500 dark:text-slate-400 font-mono">{sup.phone || '-'}</td>
+                                                    <td className="p-4 text-center">
                                                         <div className="flex gap-2 justify-center">
-                                                            <button onClick={() => startEditing(sup)} className="p-1.5 text-slate-400 hover:text-emerald-500 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"><Edit2 size={16}/></button>
-                                                            <button onClick={() => handleDelete(sup.id)} className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"><Trash2 size={16}/></button>
+                                                            <button onClick={() => startEditing(sup)} className="p-2 text-slate-400 hover:text-emerald-500 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"><Edit2 size={18}/></button>
+                                                            <button onClick={() => handleDelete(sup.id)} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"><Trash2 size={18}/></button>
                                                         </div>
                                                     </td>
                                                 </>
@@ -629,14 +660,14 @@ const ClientSection: React.FC<ClientSectionProps> = ({ items, isOpen, onToggle, 
                     </form>
 
                     <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800">
-                         <table className="w-full text-left border-collapse">
+                         <table className="w-full text-left border-collapse min-w-[800px]">
                             <thead>
-                                <tr className="bg-slate-50 dark:bg-slate-950 text-xs font-bold text-slate-500 uppercase">
-                                    <th className="p-3 min-w-[150px] cursor-pointer hover:text-cyan-500" onClick={() => handleSort('name')}>Nombre <ArrowUpDown size={12} className="inline"/></th>
-                                    <th className="p-3 min-w-[120px]">CUIL</th>
-                                    <th className="p-3 min-w-[120px]">Teléfono</th>
-                                    <th className="p-3 min-w-[150px] cursor-pointer hover:text-cyan-500" onClick={() => handleSort('location')}>Lugar <ArrowUpDown size={12} className="inline"/></th>
-                                    <th className="p-3 w-20 text-center">Acciones</th>
+                                <tr className="bg-slate-50 dark:bg-slate-950 text-sm font-bold text-slate-500 uppercase">
+                                    <th className="p-4 min-w-[200px] cursor-pointer hover:text-cyan-500" onClick={() => handleSort('name')}>Nombre <ArrowUpDown size={14} className="inline"/></th>
+                                    <th className="p-4 min-w-[150px]">CUIL</th>
+                                    <th className="p-4 min-w-[150px]">Teléfono</th>
+                                    <th className="p-4 min-w-[200px] cursor-pointer hover:text-cyan-500" onClick={() => handleSort('location')}>Lugar <ArrowUpDown size={14} className="inline"/></th>
+                                    <th className="p-4 w-24 text-center">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -662,14 +693,14 @@ const ClientSection: React.FC<ClientSectionProps> = ({ items, isOpen, onToggle, 
                                                     </>
                                                 ) : (
                                                     <>
-                                                        <td className="p-3 font-medium text-slate-800 dark:text-slate-200">{item.name}</td>
-                                                        <td className="p-3 text-sm text-slate-600 dark:text-slate-400">{item.cuil || '-'}</td>
-                                                        <td className="p-3 text-sm text-slate-600 dark:text-slate-400">{item.phone || '-'}</td>
-                                                        <td className="p-3 text-sm text-slate-600 dark:text-slate-400"><MapPin size={12} className="inline mr-1 text-slate-500"/>{item.location || '-'}</td>
-                                                        <td className="p-3 text-center">
+                                                        <td className="p-4 text-base font-medium text-slate-800 dark:text-slate-200">{item.name}</td>
+                                                        <td className="p-4 text-base text-slate-600 dark:text-slate-400 font-mono">{item.cuil || '-'}</td>
+                                                        <td className="p-4 text-base text-slate-600 dark:text-slate-400 font-mono">{item.phone || '-'}</td>
+                                                        <td className="p-4 text-base text-slate-600 dark:text-slate-400"><MapPin size={14} className="inline mr-1 text-slate-500"/>{item.location || '-'}</td>
+                                                        <td className="p-4 text-center">
                                                             <div className="flex gap-2 justify-center">
-                                                                <button onClick={() => startEditing(item)} className="p-1.5 text-slate-400 hover:text-cyan-500 dark:hover:text-cyan-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"><Edit2 size={16}/></button>
-                                                                <button onClick={() => handleDelete(item.id)} className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"><Trash2 size={16}/></button>
+                                                                <button onClick={() => startEditing(item)} className="p-2 text-slate-400 hover:text-cyan-500 dark:hover:text-cyan-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"><Edit2 size={18}/></button>
+                                                                <button onClick={() => handleDelete(item.id)} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"><Trash2 size={18}/></button>
                                                             </div>
                                                         </td>
                                                     </>

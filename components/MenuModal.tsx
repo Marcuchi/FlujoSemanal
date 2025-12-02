@@ -1,8 +1,8 @@
 import React from 'react';
-import { X, LayoutGrid, Scale, BookUser, Banknote, Database, Sun, Moon, Download, Loader2 } from 'lucide-react';
+import { X, LayoutGrid, Scale, BookUser, Banknote, Database, Sun, Moon, Download, Loader2, Upload } from 'lucide-react';
 import { AppMode } from '../types';
 import { useTheme } from '../context/ThemeContext';
-import { Database as DBRef, ref, get } from 'firebase/database';
+import { Database as DBRef, ref, get, set } from 'firebase/database';
 
 interface MenuModalProps {
   isOpen: boolean;
@@ -16,12 +16,23 @@ interface MenuModalProps {
 export const MenuModal: React.FC<MenuModalProps> = ({ isOpen, onClose, currentApp, onSwitchApp, db }) => {
   const { theme, toggleTheme } = useTheme();
   const [downloading, setDownloading] = React.useState(false);
+  const [importing, setImporting] = React.useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
 
   const handleAppClick = (app: AppMode) => {
     onSwitchApp(app);
     onClose();
+  };
+
+  const verifyPasswordAndExecute = (action: () => void) => {
+    const password = prompt("Ingrese contraseña de administrador:");
+    if (password === "secreto") {
+      action();
+    } else {
+      alert("Contraseña incorrecta.");
+    }
   };
 
   const handleDownloadBackup = async () => {
@@ -81,6 +92,91 @@ export const MenuModal: React.FC<MenuModalProps> = ({ isOpen, onClose, currentAp
     } finally {
         setDownloading(false);
     }
+  };
+
+  const handleImportBackup = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!window.confirm("ADVERTENCIA CRÍTICA:\n\nEsta acción SOBRESCRIBIRÁ COMPLETAMENTE la base de datos actual con los datos del archivo seleccionado.\n\nEsta acción no se puede deshacer.\n\n¿Estás seguro de continuar?")) {
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        return;
+    }
+
+    setImporting(true);
+    const reader = new FileReader();
+
+    reader.onload = async (event) => {
+        try {
+            const json = JSON.parse(event.target?.result as string);
+            
+            if (db) {
+                // Restore to Firebase
+                const updates: any = {};
+                // We use set on specific root nodes to avoid destroying auth/other metadata if it existed
+                if (json.weeks) await set(ref(db, 'weeks'), json.weeks);
+                if (json.current_accounts) await set(ref(db, 'current_accounts'), json.current_accounts);
+                if (json.cheques) await set(ref(db, 'cheques'), json.cheques);
+                if (json.general_data) await set(ref(db, 'general_data'), json.general_data);
+                
+            } else {
+                // Restore to LocalStorage
+                // First, clean up existing app data to prevent zombies
+                const keysToRemove: string[] = [];
+                for(let i=0; i<localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if(key && (key.startsWith('weekData_') || key.startsWith('history_') || key.startsWith('kilos_') || key === 'current_accounts' || key === 'cheques' || key === 'general_data')) {
+                        keysToRemove.push(key);
+                    }
+                }
+                keysToRemove.forEach(k => localStorage.removeItem(k));
+
+                // If backup has localStorageDump (from offline backup)
+                if (json.localStorageDump) {
+                    Object.entries(json.localStorageDump).forEach(([key, val]: [string, any]) => {
+                         localStorage.setItem(key, typeof val === 'string' ? val : JSON.stringify(val));
+                    });
+                } else {
+                    // Try to map Firebase structure to LocalStorage keys
+                    if (json.current_accounts) localStorage.setItem('current_accounts', JSON.stringify(json.current_accounts));
+                    if (json.cheques) localStorage.setItem('cheques', JSON.stringify(json.cheques));
+                    if (json.general_data) localStorage.setItem('general_data', JSON.stringify(json.general_data));
+                    
+                    if (json.weeks) {
+                        Object.entries(json.weeks).forEach(([weekKey, weekContent]: [string, any]) => {
+                            if (weekContent.data) localStorage.setItem(`weekData_${weekKey}`, JSON.stringify(weekContent.data));
+                            if (weekContent.history) localStorage.setItem(`history_${weekKey}`, JSON.stringify(weekContent.history));
+                            if (weekContent.kilos) localStorage.setItem(`kilos_${weekKey}`, JSON.stringify(weekContent.kilos));
+                        });
+                    }
+                }
+            }
+
+            alert("Restauración completada con éxito. La aplicación se reiniciará.");
+            window.location.reload();
+
+        } catch (error) {
+            console.error("Import failed", error);
+            alert("Error al importar el archivo. Asegúrese de que sea un backup válido.");
+        } finally {
+            setImporting(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
+
+    reader.readAsText(file);
+  };
+
+  const triggerImport = () => {
+      verifyPasswordAndExecute(() => {
+          fileInputRef.current?.click();
+      });
+  };
+
+  const triggerDownload = () => {
+      verifyPasswordAndExecute(() => {
+          handleDownloadBackup();
+      });
   };
 
   return (
@@ -263,10 +359,11 @@ export const MenuModal: React.FC<MenuModalProps> = ({ isOpen, onClose, currentAp
           <div className="my-6 border-t border-slate-200 dark:border-slate-800"></div>
 
           {/* Administration Section */}
-          <div>
-            <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-4 ml-1">Administración</h3>
+          <div className="space-y-3">
+            <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2 ml-1">Administración</h3>
+            
             <button 
-                onClick={handleDownloadBackup}
+                onClick={triggerDownload}
                 disabled={downloading}
                 className="w-full flex items-center justify-between p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/50 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-200 dark:hover:border-blue-700/50 transition-all group"
             >
@@ -280,6 +377,31 @@ export const MenuModal: React.FC<MenuModalProps> = ({ isOpen, onClose, currentAp
                     </div>
                 </div>
             </button>
+
+            <div className="relative">
+                <input 
+                    type="file" 
+                    accept=".json" 
+                    ref={fileInputRef} 
+                    className="hidden" 
+                    onChange={handleImportBackup} 
+                />
+                <button 
+                    onClick={triggerImport}
+                    disabled={importing}
+                    className="w-full flex items-center justify-between p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/50 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:border-emerald-200 dark:hover:border-emerald-700/50 transition-all group"
+                >
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 rounded-lg shadow-sm bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                            {importing ? <Loader2 size={24} className="animate-spin"/> : <Upload size={24} />}
+                        </div>
+                        <div className="text-left">
+                            <h3 className="font-bold text-slate-700 dark:text-slate-300 group-hover:text-emerald-700 dark:group-hover:text-emerald-300 transition-colors">Importar BD Completa</h3>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">Restaurar desde archivo de backup</p>
+                        </div>
+                    </div>
+                </button>
+            </div>
           </div>
 
         </div>
