@@ -91,7 +91,6 @@ export interface CCTransaction {
 }
 
 export interface CCAccountData {
-  initialBalance: number;
   transactions: CCTransaction[];
 }
 

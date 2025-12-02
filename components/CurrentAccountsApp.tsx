@@ -1,7 +1,8 @@
 
+
 import React from 'react';
 import { Database, ref, onValue, set } from 'firebase/database';
-import { ArrowLeft, Plus, Trash2, Edit2, Save, X, DollarSign, Calendar, Package, ArrowUpDown, Calculator } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, ArrowUpDown, Calculator, DollarSign, Calendar, Package } from 'lucide-react';
 import { CCData, CCAccountData, CCTransaction } from '../types';
 import { generateId } from '../utils';
 
@@ -40,10 +41,6 @@ export const CurrentAccountsApp: React.FC<CurrentAccountsAppProps> = ({ db }) =>
   const [deliveryDisplay, setDeliveryDisplay] = React.useState(''); // Haber visual
   const [rawDelivery, setRawDelivery] = React.useState(0); // Haber numérico
   
-  // Edit Initial Balance State
-  const [isEditingInitial, setIsEditingInitial] = React.useState(false);
-  const [tempInitial, setTempInitial] = React.useState('');
-
   // Load Data (Global Listener)
   React.useEffect(() => {
     if (db) {
@@ -81,11 +78,11 @@ export const CurrentAccountsApp: React.FC<CurrentAccountsAppProps> = ({ db }) =>
   };
 
   const getAccountData = (name: string): CCAccountData => {
-      return data[name] || { initialBalance: 0, transactions: [] };
+      return data[name] || { transactions: [] };
   };
 
   const calculateBalance = (account: CCAccountData) => {
-      let balance = account.initialBalance || 0;
+      let balance = 0;
       if (account.transactions) {
           account.transactions.forEach(t => {
               balance = balance + (t.debit || 0) - (t.delivery || 0);
@@ -107,7 +104,6 @@ export const CurrentAccountsApp: React.FC<CurrentAccountsAppProps> = ({ db }) =>
       saveData({ 
           ...data, 
           [name]: { 
-              initialBalance: 0, 
               transactions: []
           } 
       });
@@ -119,30 +115,6 @@ export const CurrentAccountsApp: React.FC<CurrentAccountsAppProps> = ({ db }) =>
           delete newData[name];
           saveData(newData);
       }
-  };
-
-  const handleUpdateInitial = () => {
-      if (!selectedAccount) return;
-      const digits = tempInitial.replace(/\D/g, '');
-      const num = parseInt(digits, 10) || 0;
-      
-      const currentAccount = getAccountData(selectedAccount);
-      const updatedAccount = { ...currentAccount, initialBalance: num };
-      
-      saveData({ ...data, [selectedAccount]: updatedAccount });
-      setIsEditingInitial(false);
-  };
-
-  const handleInitialChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const val = e.target.value;
-      const digits = val.replace(/\D/g, '');
-      if (digits === '') {
-          setTempInitial('');
-          return;
-      }
-      const num = parseInt(digits, 10);
-      const formatted = new Intl.NumberFormat('es-AR').format(num);
-      setTempInitial(formatted);
   };
 
   const handleMoneyInput = (e: React.ChangeEvent<HTMLInputElement>, setDisplay: Function, setRaw: Function) => {
@@ -342,7 +314,7 @@ export const CurrentAccountsApp: React.FC<CurrentAccountsAppProps> = ({ db }) =>
   const accountData = getAccountData(selectedAccount);
   
   // Calculate running balance chronologically FIRST
-  let runningBalance = accountData.initialBalance || 0;
+  let runningBalance = 0;
   const transactionsWithBalance = (accountData.transactions || []).map(t => {
       runningBalance = runningBalance + (t.debit || 0) - (t.delivery || 0);
       return { ...t, balanceAfter: runningBalance };
@@ -378,46 +350,6 @@ export const CurrentAccountsApp: React.FC<CurrentAccountsAppProps> = ({ db }) =>
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto p-2 sm:p-6 custom-scrollbar">
             <div className="max-w-5xl mx-auto space-y-6">
-
-                {/* Initial Balance Card */}
-                <div className="bg-white dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 p-4 flex items-center justify-between shadow-sm">
-                    <div>
-                        <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase">Deuda Inicial / Histórica</h4>
-                        <p className="text-xs text-slate-500">Saldo inicial antes de los movimientos registrados.</p>
-                    </div>
-                    
-                    {isEditingInitial ? (
-                        <div className="flex items-center gap-2">
-                             <div className="relative">
-                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-emerald-600/50">$</span>
-                                <input 
-                                    type="text" 
-                                    inputMode="numeric"
-                                    value={tempInitial} 
-                                    onChange={handleInitialChange}
-                                    className="bg-white dark:bg-slate-950 border rounded px-2 pl-5 py-1 text-right w-32 focus:outline-none font-mono border-emerald-500/50 text-emerald-600 dark:text-emerald-400"
-                                    autoFocus
-                                />
-                             </div>
-                             <button onClick={handleUpdateInitial} className="p-1.5 rounded text-white bg-emerald-600"><Save size={16}/></button>
-                             <button onClick={() => setIsEditingInitial(false)} className="p-1.5 bg-slate-200 dark:bg-slate-700 rounded text-slate-600 dark:text-slate-300"><X size={16}/></button>
-                        </div>
-                    ) : (
-                        <div className="flex items-center gap-4">
-                             <span className="text-xl font-mono font-bold text-slate-800 dark:text-white">{formatCurrency(accountData.initialBalance || 0)}</span>
-                             <button 
-                                onClick={() => { 
-                                    const val = accountData.initialBalance || 0;
-                                    setTempInitial(new Intl.NumberFormat('es-AR').format(val)); 
-                                    setIsEditingInitial(true); 
-                                }}
-                                className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
-                             >
-                                <Edit2 size={16} />
-                             </button>
-                        </div>
-                    )}
-                </div>
 
                 {/* Add Transaction Form - Redesigned */}
                 <form onSubmit={handleAddTransaction} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-lg">
