@@ -180,19 +180,14 @@ const App: React.FC = () => {
   };
 
   // --- Retrospective Sync Effect ---
-  // THIS IS THE ONLY SOURCE OF TRUTH FOR CARRYING OVER BALANCES
   React.useEffect(() => {
-    // Skip if loading, not in Flow app, or if we haven't confirmed data loaded for current key
     if (loading || currentApp !== 'FLOW' || loadedWeekKey !== currentWeekKey) return;
 
     const syncFromPrevious = async () => {
-        // 1. Identify Previous Week strictly by calendar
         const prevDate = addWeeks(currentDate, -1);
         const prevWeekKey = getWeekKey(prevDate);
-        
         let prevData: WeekData | null = null;
 
-        // 2. Fetch Previous Data
         if (db) {
             const snap = await get(ref(db, `weeks/${prevWeekKey}/data`));
             if (snap.exists()) prevData = snap.val();
@@ -201,12 +196,10 @@ const App: React.FC = () => {
             if (saved) prevData = JSON.parse(saved);
         }
 
-        // 3. Calculate Previous Closing Balances
         let prevOfficeClose = 0;
         let prevTreasury = 0;
 
         if (prevData) {
-            // Calculate Office Balance (Cascading)
             let currentBalance = 0;
             for (const day of DAYS_OF_WEEK) {
                 const d = prevData[day.id];
@@ -223,7 +216,6 @@ const App: React.FC = () => {
             }
             prevOfficeClose = currentBalance;
 
-            // Calculate Treasury Total (Sum of all toBox + Monday Initial)
             Object.values(prevData).forEach((d: any) => {
                 const tob = d.toBox?.reduce((s:number, t:any)=>s+(t.amount||0),0)||0;
                 prevTreasury += tob;
@@ -231,15 +223,12 @@ const App: React.FC = () => {
             });
         }
 
-        // 4. Update Current Monday
-        // Get current Monday from state
         const currentMonday = weekData['monday'];
         if (!currentMonday) return; 
 
         let needsUpdate = false;
         const updatedMonday = { ...currentMonday };
 
-        // ALWAYS Update System Values (Backup for Restore Button)
         if (updatedMonday.systemInitialOffice !== prevOfficeClose) {
             updatedMonday.systemInitialOffice = prevOfficeClose;
             needsUpdate = true;
@@ -249,7 +238,6 @@ const App: React.FC = () => {
             needsUpdate = true;
         }
 
-        // Update Visible Values (Only if NOT manually modified)
         if (!updatedMonday.manualInitialModified && updatedMonday.manualInitialAmount !== prevOfficeClose) {
             updatedMonday.manualInitialAmount = prevOfficeClose;
             needsUpdate = true;
@@ -259,7 +247,6 @@ const App: React.FC = () => {
             needsUpdate = true;
         }
 
-        // Prevent infinite loops by only updating if there's a real change
         if (needsUpdate) {
             handleUpdateDay(updatedMonday);
         }
@@ -323,8 +310,6 @@ const App: React.FC = () => {
   };
 
   const handleReset = () => {
-    // Password protection
-    
     if (currentApp === 'KILOS') {
         const msg = "Reiniciar borrará los datos de KILOS de esta semana. ¿Seguro?";
         if (window.confirm(msg)) {
@@ -476,22 +461,22 @@ const App: React.FC = () => {
 
   const getHeaderContent = () => {
       if (currentApp === 'KILOS') {
-          return <>Control<span className="text-orange-400">Kilos</span></>;
+          return <>Control<span className="text-orange-400 dark:text-orange-400">Kilos</span></>;
       }
       if (currentApp === 'CC') {
-          return <>Cuentas<span className="text-emerald-400">Corrientes</span></>;
+          return <>Cuentas<span className="text-emerald-500 dark:text-emerald-400">Corrientes</span></>;
       }
       if (currentApp === 'CHEQUES') {
-          return <>Cheques<span className="text-violet-400">Cartera</span></>;
+          return <>Cheques<span className="text-violet-500 dark:text-violet-400">Cartera</span></>;
       }
       if (currentApp === 'GENERAL_DATA') {
-          return <>Datos<span className="text-cyan-400">Generales</span></>;
+          return <>Datos<span className="text-cyan-500 dark:text-cyan-400">Generales</span></>;
       }
-      return <>Flujo<span className="text-indigo-400">Semanal</span></>;
+      return <>Flujo<span className="text-indigo-500 dark:text-indigo-400">Semanal</span></>;
   };
 
   const Header = () => (
-      <header className="bg-slate-900 border-b border-slate-800 shadow-md flex-none z-20">
+      <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm flex-none z-20 transition-colors duration-300">
         <div className="max-w-full px-4 py-3">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             
@@ -503,11 +488,11 @@ const App: React.FC = () => {
                 onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
               />
               <div>
-                <h1 className="text-xl font-bold text-slate-100 leading-tight flex items-center gap-2">
+                <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 leading-tight flex items-center gap-2">
                   {getHeaderContent()}
-                  {isOfflineMode && <span className="text-[10px] bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded ml-2 border border-slate-600">MODO LOCAL</span>}
+                  {isOfflineMode && <span className="text-[10px] bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 rounded ml-2 border border-slate-300 dark:border-slate-600">MODO LOCAL</span>}
                 </h1>
-                <p className="text-xs text-slate-400 hidden sm:block">Avícola Alpina</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 hidden sm:block">Avícola Alpina</p>
               </div>
             </div>
 
@@ -526,7 +511,7 @@ const App: React.FC = () => {
                       <button 
                         type="button"
                         onClick={() => setShowReport(true)}
-                        className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-100 bg-indigo-600 hover:bg-indigo-500 rounded-lg transition-colors shadow-sm shadow-indigo-900/50"
+                        className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg transition-colors shadow-sm shadow-indigo-200 dark:shadow-indigo-900/50"
                       >
                         <PieChartIcon size={14} />
                         <span className="hidden lg:inline">Informe Semanal</span>
@@ -535,7 +520,7 @@ const App: React.FC = () => {
                       <button 
                         type="button"
                         onClick={() => setShowHistory(true)}
-                        className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 hover:text-white rounded-lg transition-colors border border-slate-700 relative"
+                        className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white rounded-lg transition-colors border border-slate-200 dark:border-slate-700 relative"
                       >
                         <History size={14} />
                         <span className="hidden lg:inline">Historial</span>
@@ -546,19 +531,19 @@ const App: React.FC = () => {
                         )}
                       </button>
 
-                      <button type="button" onClick={() => setShowImportModal(true)} className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 hover:text-white rounded-lg transition-colors border border-slate-700">
+                      <button type="button" onClick={() => setShowImportModal(true)} className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white rounded-lg transition-colors border border-slate-200 dark:border-slate-700">
                         <Upload size={14} />
                         <span className="hidden lg:inline">Importar</span>
                       </button>
 
-                      <button type="button" onClick={() => setShowExportModal(true)} className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 hover:text-white rounded-lg transition-colors border border-slate-700">
+                      <button type="button" onClick={() => setShowExportModal(true)} className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white rounded-lg transition-colors border border-slate-200 dark:border-slate-700">
                         <Download size={14} />
                         <span className="hidden lg:inline">Exportar</span>
                       </button>
                   </>
               )}
 
-              <button type="button" onClick={() => setShowMenu(true)} className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 hover:text-white rounded-lg transition-colors border border-slate-700">
+              <button type="button" onClick={() => setShowMenu(true)} className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white rounded-lg transition-colors border border-slate-200 dark:border-slate-700">
                 <Menu size={14} />
                 <span className="hidden lg:inline">Menú</span>
               </button>
@@ -569,7 +554,7 @@ const App: React.FC = () => {
   );
 
   return (
-    <div className="h-screen bg-slate-950 flex flex-col overflow-hidden text-slate-100">
+    <div className="h-screen bg-slate-50 dark:bg-slate-950 flex flex-col overflow-hidden text-slate-900 dark:text-slate-100 transition-colors duration-300">
       <input type="file" accept=".csv" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
 
       <WeeklyReportModal isOpen={showReport} onClose={() => setShowReport(false)} weekData={weekData} />
@@ -598,11 +583,11 @@ const App: React.FC = () => {
       <Header />
 
       {currentApp !== 'CC' && currentApp !== 'CHEQUES' && currentApp !== 'GENERAL_DATA' && (
-        <div className="bg-slate-900/80 border-b border-slate-800 flex items-center justify-center py-2 relative z-40 backdrop-blur-sm flex-none">
-          <div className="flex items-center gap-6 bg-slate-800/50 px-4 py-1.5 rounded-full border border-slate-700/50 relative">
+        <div className="bg-slate-50/80 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-800 flex items-center justify-center py-2 relative z-40 backdrop-blur-sm flex-none transition-colors duration-300">
+          <div className="flex items-center gap-6 bg-white dark:bg-slate-800/50 px-4 py-1.5 rounded-full border border-slate-200 dark:border-slate-700/50 relative shadow-sm">
               <button 
                   onClick={handlePrevWeek}
-                  className="p-1 hover:bg-slate-700 rounded-full text-slate-400 hover:text-white transition-colors"
+                  className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors"
                   title="Semana Anterior"
               >
                   <ChevronLeft size={20} />
@@ -610,7 +595,7 @@ const App: React.FC = () => {
               
               <button 
                   onClick={() => setShowWeekPicker(!showWeekPicker)}
-                  className="text-sm font-bold text-slate-200 hover:text-indigo-400 transition-colors flex items-center gap-2 px-2 py-1 rounded hover:bg-slate-800 cursor-pointer min-w-[140px] justify-center"
+                  className="text-sm font-bold text-slate-700 dark:text-slate-200 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors flex items-center gap-2 px-2 py-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer min-w-[140px] justify-center"
               >
                   <Calendar size={14} className="text-indigo-500" />
                   {getWeekRangeLabel(currentDate)}
@@ -618,7 +603,7 @@ const App: React.FC = () => {
 
               <button 
                   onClick={handleNextWeek}
-                  className="p-1 hover:bg-slate-700 rounded-full text-slate-400 hover:text-white transition-colors"
+                  className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors"
                   title="Semana Siguiente"
               >
                   <ChevronRight size={20} />
@@ -634,7 +619,7 @@ const App: React.FC = () => {
         </div>
       )}
 
-      <main className="flex-1 overflow-x-auto overflow-y-hidden bg-slate-950 relative z-0">
+      <main className="flex-1 overflow-x-auto overflow-y-hidden bg-slate-100 dark:bg-slate-950 relative z-0 transition-colors duration-300">
         {currentApp === 'FLOW' && (
             <div className="h-full flex flex-row p-4 gap-4 w-full">
                 {DAYS_OF_WEEK.map((day) => (

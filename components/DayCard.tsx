@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Plus, Archive, TrendingUp, TrendingDown, Briefcase, History, Wallet, RotateCcw, Edit2, Check, X, Truck, Users } from 'lucide-react';
 import { DayData, Transaction, TransactionType, HistoryItem } from '../types';
@@ -56,7 +55,6 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
 
   const handleRemoveTransaction = (type: TransactionType, id: string) => {
     const itemToRemove = dayData[type].find(t => t.id === id);
-    // Updated check for 'Tesoro'
     const isGhost = itemToRemove && itemToRemove.amount === 0 && (itemToRemove.title === '' || (type === 'toBox' && (itemToRemove.title === 'Caja' || itemToRemove.title === 'Tesoro')));
 
     if (itemToRemove && !isGhost) {
@@ -104,7 +102,6 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
   };
 
   const resetInitialAmount = () => {
-    // Restore to system calculated value if exists, else 0
     const restoreVal = dayData.systemInitialOffice !== undefined ? dayData.systemInitialOffice : 0;
     onUpdate({ ...dayData, manualInitialAmount: restoreVal, manualInitialModified: false });
   };
@@ -149,7 +146,6 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
   };
 
   const resetBoxInitial = () => {
-      // Restore to system calculated value if exists, else 0
       const restoreVal = dayData.systemInitialBox !== undefined ? dayData.systemInitialBox : 0;
       onUpdate({ ...dayData, initialBoxAmount: restoreVal, initialBoxModified: false });
   };
@@ -191,18 +187,18 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
   const totalOficina = effectiveInitialAmount + totalIncome + totalDeliveries - totalExpense - totalSalaries - totalToBox;
   const totalToBoxWithInitial = totalToBox + effectiveBoxInitial;
 
-  const MetricDisplay = ({ label, value, icon: Icon, colorClass, borderClass }: { label: string; value: number; icon: any; colorClass: string; borderClass?: string }) => (
-    <div className={`flex items-center justify-between p-2 rounded-lg bg-slate-800 border ${borderClass || 'border-slate-700'}`}>
+  const MetricDisplay = ({ label, value, icon: Icon, colorClass, borderClass, bgClass }: { label: string; value: number; icon: any; colorClass: string; borderClass: string; bgClass: string }) => (
+    <div className={`flex items-center justify-between p-2 rounded-lg border transition-colors ${bgClass} ${borderClass}`}>
       <div className="flex items-center gap-2">
         <Icon size={14} className={colorClass} />
-        <span className="text-xs font-semibold text-slate-400">{label}</span>
+        <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{label}</span>
       </div>
       <span className={`text-sm font-bold font-mono ${colorClass}`}>{formatCurrency(value)}</span>
     </div>
   );
 
   return (
-    <section className="bg-slate-900 rounded-xl shadow-lg border border-slate-800 flex flex-col w-[340px] h-full overflow-hidden flex-shrink-0">
+    <section className="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-slate-200 dark:border-slate-800 flex flex-col w-[340px] h-full overflow-hidden flex-shrink-0 transition-colors duration-300">
       
       <DailyReportModal 
         isOpen={showReport} 
@@ -210,13 +206,13 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
         dayData={dayData} 
       />
 
-      <div className="p-3 bg-slate-900 border-b border-slate-800 flex-none relative">
+      <div className="p-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex-none relative transition-colors duration-300">
         <div className="flex justify-between items-center mb-3">
           <div className="flex items-center gap-2">
-              <h2 className="text-lg font-bold text-slate-100 uppercase tracking-wide pl-1">{dayData.name}</h2>
+              <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 uppercase tracking-wide pl-1">{dayData.name}</h2>
               <button 
                 onClick={() => setShowReport(true)}
-                className="p-1 text-slate-500 hover:text-indigo-400 hover:bg-slate-800 rounded transition-colors"
+                className="p-1 text-slate-400 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors"
                 title="Informe Diario"
               >
                  <PieChartIcon size={16} />
@@ -224,22 +220,36 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
           </div>
         </div>
         <div className="space-y-1.5">
-          <MetricDisplay label="Oficina" value={totalOficina} icon={Briefcase} colorClass="text-blue-400" borderClass="border-blue-900/30 bg-blue-950/20" />
-          <MetricDisplay label="Tesoro" value={totalToBoxWithInitial} icon={Wallet} colorClass="text-indigo-400" borderClass="border-indigo-900/30 bg-indigo-950/20" />
+          <MetricDisplay 
+             label="Oficina" 
+             value={totalOficina} 
+             icon={Briefcase} 
+             colorClass="text-blue-600 dark:text-blue-400" 
+             borderClass="border-blue-200 dark:border-blue-900/30"
+             bgClass="bg-blue-50 dark:bg-blue-950/20"
+          />
+          <MetricDisplay 
+             label="Tesoro" 
+             value={totalToBoxWithInitial} 
+             icon={Wallet} 
+             colorClass="text-indigo-600 dark:text-indigo-400" 
+             borderClass="border-indigo-200 dark:border-indigo-900/30"
+             bgClass="bg-indigo-50 dark:bg-indigo-950/20"
+          />
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-3 space-y-3 bg-slate-950 custom-scrollbar">
+      <div className="flex-1 overflow-y-auto p-3 space-y-3 bg-slate-50 dark:bg-slate-950 custom-scrollbar transition-colors duration-300">
         
-        {/* Oficina Inicial - ALWAYS AT TOP */}
-        <div className="rounded-lg bg-slate-800/40 border border-slate-700/50 overflow-hidden shadow-sm">
-           <div className="flex justify-between items-center px-3 py-2 bg-slate-800 border-b border-slate-700">
-             <h3 className="font-bold text-xs text-slate-300 uppercase flex items-center gap-1.5 tracking-wider">
-               <History size={14} className="text-slate-400"/> 
+        {/* Oficina Inicial */}
+        <div className="rounded-lg bg-white dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/50 overflow-hidden shadow-sm">
+           <div className="flex justify-between items-center px-3 py-2 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+             <h3 className="font-bold text-xs text-slate-500 dark:text-slate-300 uppercase flex items-center gap-1.5 tracking-wider">
+               <History size={14} className="text-slate-500 dark:text-slate-400"/> 
                Oficina Inicial
              </h3>
              {isManualInitial && !isEditingInitial && (
-                <button onClick={resetInitialAmount} title="Restaurar a Automático" className="p-1 rounded hover:bg-slate-700 text-slate-400 hover:text-blue-400 transition-colors">
+                <button onClick={resetInitialAmount} title="Restaurar a Automático" className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors">
                   <RotateCcw size={12} />
                 </button>
              )}
@@ -256,38 +266,38 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
                         value={tempInitial} 
                         onChange={handleInitialChange}
                         onKeyDown={handleInitialKeyDown}
-                        className="w-full bg-slate-900 border border-indigo-500 rounded px-2 pl-4 py-1 text-sm font-mono text-white focus:outline-none"
+                        className="w-full bg-slate-50 dark:bg-slate-900 border border-indigo-500 rounded px-2 pl-4 py-1 text-sm font-mono text-slate-900 dark:text-white focus:outline-none"
                       />
                    </div>
                    <button onClick={saveInitialAmount} className="p-1 bg-indigo-600 rounded text-white"><Check size={14}/></button>
-                   <button onClick={() => setIsEditingInitial(false)} className="p-1 bg-slate-700 rounded text-slate-300"><X size={14}/></button>
+                   <button onClick={() => setIsEditingInitial(false)} className="p-1 bg-slate-300 dark:bg-slate-700 rounded text-slate-600 dark:text-slate-300"><X size={14}/></button>
                 </div>
              ) : (
-                <div onClick={startEditingInitial} className={`cursor-pointer p-2 rounded border border-transparent hover:border-slate-600 hover:bg-slate-800 transition-all flex justify-between items-center group ${isManualInitial ? 'bg-slate-800/50' : ''}`}>
-                  <span className={`text-xs ${isManualInitial ? 'text-indigo-300 font-medium' : 'text-slate-500 italic'}`}>
+                <div onClick={startEditingInitial} className={`cursor-pointer p-2 rounded border border-transparent hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all flex justify-between items-center group ${isManualInitial ? 'bg-indigo-50/50 dark:bg-slate-800/50' : ''}`}>
+                  <span className={`text-xs ${isManualInitial ? 'text-indigo-600 dark:text-indigo-300 font-medium' : 'text-slate-500 italic'}`}>
                     {isManualInitial ? 'Manual' : 'Automático'}
                   </span>
                   <div className="flex items-center gap-2">
-                    <span className={`font-mono font-semibold text-sm ${isManualInitial ? 'text-indigo-200' : 'text-slate-400'}`}>
+                    <span className={`font-mono font-semibold text-sm ${isManualInitial ? 'text-indigo-700 dark:text-indigo-200' : 'text-slate-600 dark:text-slate-400'}`}>
                       {formatCurrency(effectiveInitialAmount)}
                     </span>
-                    <Edit2 size={12} className="opacity-0 group-hover:opacity-100 text-slate-500" />
+                    <Edit2 size={12} className="opacity-0 group-hover:opacity-100 text-slate-400" />
                   </div>
                 </div>
              )}
            </div>
         </div>
 
-        {/* Monday Specific: Tesoro Inicial - BELOW OFICINA INICIAL */}
+        {/* Tesoro Inicial (Monday) */}
         {isMonday && (
-            <div className="rounded-lg bg-slate-800/40 border border-slate-700/50 overflow-hidden shadow-sm">
-                <div className="flex justify-between items-center px-3 py-2 bg-slate-800 border-b border-slate-700">
-                  <h3 className="font-bold text-xs text-indigo-300 uppercase flex items-center gap-1.5 tracking-wider">
-                    <Archive size={14} className="text-indigo-400"/> 
+            <div className="rounded-lg bg-white dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/50 overflow-hidden shadow-sm">
+                <div className="flex justify-between items-center px-3 py-2 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+                  <h3 className="font-bold text-xs text-indigo-600 dark:text-indigo-300 uppercase flex items-center gap-1.5 tracking-wider">
+                    <Archive size={14} className="text-indigo-500 dark:text-indigo-400"/> 
                     Tesoro Inicial
                   </h3>
                   {dayData.initialBoxModified && !isEditingBoxInitial && (
-                    <button onClick={resetBoxInitial} title="Restaurar a Automático" className="p-1 rounded hover:bg-slate-700 text-slate-400 hover:text-blue-400 transition-colors">
+                    <button onClick={resetBoxInitial} title="Restaurar a Automático" className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors">
                       <RotateCcw size={12} />
                     </button>
                   )}
@@ -304,22 +314,22 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
                               value={tempBoxInitial} 
                               onChange={handleBoxInitialChange}
                               onKeyDown={handleBoxInitialKeyDown}
-                              className="w-full bg-slate-900 border border-indigo-500 rounded px-2 pl-4 py-1 text-sm font-mono text-white focus:outline-none"
+                              className="w-full bg-slate-50 dark:bg-slate-900 border border-indigo-500 rounded px-2 pl-4 py-1 text-sm font-mono text-slate-900 dark:text-white focus:outline-none"
                             />
                         </div>
                         <button onClick={saveBoxInitial} className="p-1 bg-indigo-600 rounded text-white"><Check size={14}/></button>
-                        <button onClick={() => setIsEditingBoxInitial(false)} className="p-1 bg-slate-700 rounded text-slate-300"><X size={14}/></button>
+                        <button onClick={() => setIsEditingBoxInitial(false)} className="p-1 bg-slate-300 dark:bg-slate-700 rounded text-slate-600 dark:text-slate-300"><X size={14}/></button>
                       </div>
                   ) : (
-                      <div onClick={startEditingBoxInitial} className={`cursor-pointer p-2 rounded border border-transparent hover:border-slate-600 hover:bg-slate-800 transition-all flex justify-between items-center group ${dayData.initialBoxModified ? 'bg-slate-800/50' : ''}`}>
-                        <span className={`text-xs ${dayData.initialBoxModified ? 'text-indigo-300 font-medium' : 'text-slate-500 italic'}`}>
+                      <div onClick={startEditingBoxInitial} className={`cursor-pointer p-2 rounded border border-transparent hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all flex justify-between items-center group ${dayData.initialBoxModified ? 'bg-indigo-50/50 dark:bg-slate-800/50' : ''}`}>
+                        <span className={`text-xs ${dayData.initialBoxModified ? 'text-indigo-600 dark:text-indigo-300 font-medium' : 'text-slate-500 italic'}`}>
                           {dayData.initialBoxModified ? 'Manual' : 'Automático'}
                         </span>
                         <div className="flex items-center gap-2">
-                          <span className={`font-mono font-semibold text-sm ${dayData.initialBoxModified ? 'text-indigo-200' : 'text-indigo-200'}`}>
+                          <span className={`font-mono font-semibold text-sm ${dayData.initialBoxModified ? 'text-indigo-700 dark:text-indigo-200' : 'text-indigo-600 dark:text-indigo-200'}`}>
                             {formatCurrency(effectiveBoxInitial)}
                           </span>
-                          <Edit2 size={12} className="opacity-0 group-hover:opacity-100 text-slate-500" />
+                          <Edit2 size={12} className="opacity-0 group-hover:opacity-100 text-slate-400" />
                         </div>
                       </div>
                   )}
@@ -328,12 +338,12 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
         )}
 
         {/* Ingresos & Repartos Container */}
-        <div className="rounded-lg bg-emerald-950/40 border border-emerald-900/50 overflow-hidden shadow-sm">
-          <div className="flex justify-between items-center px-3 py-2 bg-emerald-950 border-b border-emerald-900">
-            <h3 className="font-bold text-xs text-emerald-200 uppercase flex items-center gap-1.5 tracking-wider">
-              <TrendingUp size={14} className="text-emerald-400"/> 
+        <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/50 overflow-hidden shadow-sm">
+          <div className="flex justify-between items-center px-3 py-2 bg-emerald-100 dark:bg-emerald-950 border-b border-emerald-200 dark:border-emerald-900">
+            <h3 className="font-bold text-xs text-emerald-700 dark:text-emerald-200 uppercase flex items-center gap-1.5 tracking-wider">
+              <TrendingUp size={14} className="text-emerald-600 dark:text-emerald-400"/> 
               Ingresos
-              <span className="ml-2 text-[10px] font-mono font-bold text-emerald-300 bg-emerald-900/60 px-1.5 py-0.5 rounded border border-emerald-800/50">
+              <span className="ml-2 text-[10px] font-mono font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-200/50 dark:bg-emerald-900/60 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800/50">
                 {formatCurrency(totalIncome + totalDeliveries)}
               </span>
             </h3>
@@ -345,10 +355,10 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
             <div>
               <div className="flex justify-between items-center mb-1 px-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs uppercase font-extrabold text-emerald-500/80 tracking-wide text-xs">General</span>
-                  <span className="text-[10px] font-mono font-bold text-emerald-400/90">{formatCurrency(totalIncome)}</span>
+                  <span className="text-xs uppercase font-extrabold text-emerald-600/80 dark:text-emerald-500/80 tracking-wide">General</span>
+                  <span className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400/90">{formatCurrency(totalIncome)}</span>
                 </div>
-                <button onClick={() => handleAddTransaction('incomes')} className="p-0.5 rounded bg-emerald-900/50 hover:bg-emerald-800 text-emerald-200 border border-emerald-800/50 transition-colors">
+                <button onClick={() => handleAddTransaction('incomes')} className="p-0.5 rounded bg-emerald-200/50 dark:bg-emerald-900/50 hover:bg-emerald-300/50 dark:hover:bg-emerald-800 text-emerald-700 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800/50 transition-colors">
                   <Plus size={12} />
                 </button>
               </div>
@@ -363,22 +373,22 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
                         onMove={(id) => handleMoveTransaction('incomes', id)} 
                     />
                 ))}
-                {dayData.incomes.length === 0 && <p className="text-[10px] text-emerald-600/30 text-center italic py-1">Sin ventas</p>}
+                {dayData.incomes.length === 0 && <p className="text-[10px] text-emerald-400 dark:text-emerald-600/30 text-center italic py-1">Sin ventas</p>}
               </div>
             </div>
             
-            <div className="h-px bg-emerald-900/30 mx-1"></div>
+            <div className="h-px bg-emerald-200/50 dark:bg-emerald-900/30 mx-1"></div>
 
             {/* Repartos */}
             <div>
               <div className="flex justify-between items-center mb-1 px-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs uppercase font-extrabold text-teal-500/80 tracking-wide flex items-center gap-1 text-xs">
+                  <span className="text-xs uppercase font-extrabold text-teal-600/80 dark:text-teal-500/80 tracking-wide flex items-center gap-1">
                      <Truck size={12} /> Repartos
                   </span>
-                  <span className="text-[10px] font-mono font-bold text-teal-400/90">{formatCurrency(totalDeliveries)}</span>
+                  <span className="text-[10px] font-mono font-bold text-teal-600 dark:text-teal-400/90">{formatCurrency(totalDeliveries)}</span>
                 </div>
-                <button onClick={() => handleAddTransaction('deliveries')} className="p-0.5 rounded bg-teal-900/50 hover:bg-teal-800 text-teal-200 border border-teal-800/50 transition-colors">
+                <button onClick={() => handleAddTransaction('deliveries')} className="p-0.5 rounded bg-teal-200/50 dark:bg-teal-900/50 hover:bg-teal-300/50 dark:hover:bg-teal-800 text-teal-700 dark:text-teal-200 border border-teal-200 dark:border-teal-800/50 transition-colors">
                   <Plus size={12} />
                 </button>
               </div>
@@ -393,7 +403,7 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
                         onMove={(id) => handleMoveTransaction('deliveries', id)} 
                     />
                 ))}
-                {dayData.deliveries.length === 0 && <p className="text-[10px] text-teal-600/30 text-center italic py-1">Sin repartos</p>}
+                {dayData.deliveries.length === 0 && <p className="text-[10px] text-teal-400 dark:text-teal-600/30 text-center italic py-1">Sin repartos</p>}
               </div>
             </div>
 
@@ -401,12 +411,12 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
         </div>
 
         {/* Egresos & Salaries Container */}
-        <div className="rounded-lg bg-rose-950/40 border border-rose-900/50 overflow-hidden shadow-sm">
-          <div className="flex justify-between items-center px-3 py-2 bg-rose-950 border-b border-rose-900">
-            <h3 className="font-bold text-xs text-rose-200 uppercase flex items-center gap-1.5 tracking-wider">
-              <TrendingDown size={14} className="text-rose-400"/> 
+        <div className="rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 overflow-hidden shadow-sm">
+          <div className="flex justify-between items-center px-3 py-2 bg-rose-100 dark:bg-rose-950 border-b border-rose-200 dark:border-rose-900">
+            <h3 className="font-bold text-xs text-rose-700 dark:text-rose-200 uppercase flex items-center gap-1.5 tracking-wider">
+              <TrendingDown size={14} className="text-rose-600 dark:text-rose-400"/> 
               Egresos
-              <span className="ml-2 text-[10px] font-mono font-bold text-rose-300 bg-rose-900/60 px-1.5 py-0.5 rounded border border-rose-800/50">
+              <span className="ml-2 text-[10px] font-mono font-bold text-rose-700 dark:text-rose-300 bg-rose-200/50 dark:bg-rose-900/60 px-1.5 py-0.5 rounded border border-rose-200 dark:border-rose-800/50">
                 {formatCurrency(totalExpense + totalSalaries)}
               </span>
             </h3>
@@ -418,10 +428,10 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
             <div>
               <div className="flex justify-between items-center mb-1 px-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs uppercase font-extrabold text-rose-500/80 tracking-wide text-xs">Gastos</span>
-                  <span className="text-[10px] font-mono font-bold text-rose-400/90">{formatCurrency(totalExpense)}</span>
+                  <span className="text-xs uppercase font-extrabold text-rose-600/80 dark:text-rose-500/80 tracking-wide">Gastos</span>
+                  <span className="text-[10px] font-mono font-bold text-rose-600 dark:text-rose-400/90">{formatCurrency(totalExpense)}</span>
                 </div>
-                <button onClick={() => handleAddTransaction('expenses')} className="p-0.5 rounded bg-rose-900/50 hover:bg-rose-800 text-rose-200 border border-rose-800/50 transition-colors">
+                <button onClick={() => handleAddTransaction('expenses')} className="p-0.5 rounded bg-rose-200/50 dark:bg-rose-900/50 hover:bg-rose-300/50 dark:hover:bg-rose-800 text-rose-700 dark:text-rose-200 border border-rose-200 dark:border-rose-800/50 transition-colors">
                   <Plus size={12} />
                 </button>
               </div>
@@ -436,22 +446,22 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
                         onMove={(id) => handleMoveTransaction('expenses', id)}
                     />
                 ))}
-                {dayData.expenses.length === 0 && <p className="text-[10px] text-rose-600/40 text-center italic py-1">Sin gastos</p>}
+                {dayData.expenses.length === 0 && <p className="text-[10px] text-rose-400 dark:text-rose-600/40 text-center italic py-1">Sin gastos</p>}
               </div>
             </div>
 
-            <div className="h-px bg-rose-900/30 mx-1"></div>
+            <div className="h-px bg-rose-200/50 dark:bg-rose-900/30 mx-1"></div>
 
              {/* Adelantos/Sueldos */}
              <div>
               <div className="flex justify-between items-center mb-1 px-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs uppercase font-extrabold text-amber-500/80 tracking-wide flex items-center gap-1 text-xs">
+                  <span className="text-xs uppercase font-extrabold text-amber-600/80 dark:text-amber-500/80 tracking-wide flex items-center gap-1">
                      <Users size={12} /> Adelantos/Sueldos
                   </span>
-                  <span className="text-[10px] font-mono font-bold text-amber-400/90">{formatCurrency(totalSalaries)}</span>
+                  <span className="text-[10px] font-mono font-bold text-amber-600 dark:text-amber-400/90">{formatCurrency(totalSalaries)}</span>
                 </div>
-                <button onClick={() => handleAddTransaction('salaries')} className="p-0.5 rounded bg-amber-900/50 hover:bg-amber-800 text-amber-200 border border-amber-800/50 transition-colors">
+                <button onClick={() => handleAddTransaction('salaries')} className="p-0.5 rounded bg-amber-200/50 dark:bg-amber-900/50 hover:bg-amber-300/50 dark:hover:bg-amber-800 text-amber-700 dark:text-amber-200 border border-amber-200 dark:border-amber-800/50 transition-colors">
                   <Plus size={12} />
                 </button>
               </div>
@@ -466,7 +476,7 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
                         onMove={(id) => handleMoveTransaction('salaries', id)}
                     />
                 ))}
-                {dayData.salaries.length === 0 && <p className="text-[10px] text-amber-600/40 text-center italic py-1">Sin adelantos</p>}
+                {dayData.salaries.length === 0 && <p className="text-[10px] text-amber-400 dark:text-amber-600/40 text-center italic py-1">Sin adelantos</p>}
               </div>
             </div>
 
@@ -474,24 +484,24 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
         </div>
 
         {/* A Tesoro */}
-        <div className="rounded-lg bg-indigo-950/40 border border-indigo-900/50 overflow-hidden shadow-sm">
-          <div className="flex justify-between items-center px-3 py-2 bg-indigo-950 border-b border-indigo-900">
-            <h3 className="font-bold text-xs text-indigo-200 uppercase flex items-center gap-1.5 tracking-wider">
+        <div className="rounded-lg bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900/50 overflow-hidden shadow-sm">
+          <div className="flex justify-between items-center px-3 py-2 bg-indigo-100 dark:bg-indigo-950 border-b border-indigo-200 dark:border-indigo-900">
+            <h3 className="font-bold text-xs text-indigo-700 dark:text-indigo-200 uppercase flex items-center gap-1.5 tracking-wider">
               <div className="flex items-center gap-1.5">
-                <Archive size={14} className="text-indigo-400"/> 
+                <Archive size={14} className="text-indigo-600 dark:text-indigo-400"/> 
                 A Tesoro
               </div>
-              <span className="ml-2 text-[10px] font-mono font-bold text-indigo-300 bg-indigo-900/60 px-1.5 py-0.5 rounded border border-indigo-800/50">
+              <span className="ml-2 text-[10px] font-mono font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-200/50 dark:bg-indigo-900/60 px-1.5 py-0.5 rounded border border-indigo-200 dark:border-indigo-800/50">
                 {formatCurrency(totalToBoxWithInitial)}
               </span>
             </h3>
-            <button onClick={() => handleAddTransaction('toBox')} className="p-1 rounded bg-indigo-900 hover:bg-indigo-800 text-indigo-100 transition-colors border border-indigo-800">
+            <button onClick={() => handleAddTransaction('toBox')} className="p-1 rounded bg-indigo-600 dark:bg-indigo-900 hover:bg-indigo-500 dark:hover:bg-indigo-800 text-white transition-colors border border-indigo-500 dark:border-indigo-800">
               <Plus size={14} />
             </button>
           </div>
           <div className="p-2 space-y-1 min-h-[3rem]">
             {dayData.toBox.map(t => <TransactionItem key={t.id} transaction={t} type="toBox" onUpdate={(id, u) => handleUpdateTransaction('toBox', id, u)} onRemove={(id) => handleRemoveTransaction('toBox', id)} />)}
-            {dayData.toBox.length === 0 && <p className="text-[10px] text-indigo-600/40 text-center italic py-2">0.00</p>}
+            {dayData.toBox.length === 0 && <p className="text-[10px] text-indigo-400 dark:text-indigo-600/40 text-center italic py-2">0.00</p>}
           </div>
         </div>
 
