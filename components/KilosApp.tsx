@@ -65,7 +65,7 @@ const InputCell: React.FC<InputCellProps> = ({
         value={(value ?? 0) === 0 ? '' : value}
         onChange={(e) => onChange(e.target.value)}
         placeholder=""
-        className={`w-full bg-transparent border border-transparent hover:border-slate-700 focus:border-blue-500/50 rounded-sm px-1 py-1 text-center ${colorClass} focus:outline-none focus:ring-1 focus:ring-blue-500/20 transition-all font-mono text-xs h-full ${bgClass}`}
+        className={`w-full bg-transparent border border-transparent hover:border-slate-400 focus:border-blue-500/50 rounded-sm px-1 py-1 text-center ${colorClass} focus:outline-none focus:ring-1 focus:ring-blue-500/20 transition-all font-mono text-sm h-full ${bgClass}`}
     />
 );
 
@@ -184,11 +184,11 @@ export const KilosApp: React.FC<KilosAppProps> = ({ db, weekKey }) => {
   const getDayTotal = (day: KilosDayData) => {
       const totalPublic = day.public.reduce((a: number, b: number) => a + b, 0);
       
-      const totalDriversOut = Object.values(day.drivers).reduce((a: number, b: number) => a + b, 0);
-      const totalDriversIn = Object.values(day.drivers_in || {}).reduce((a: number, b: number) => a + b, 0);
+      const totalDriversOut = (Object.values(day.drivers) as number[]).reduce((a: number, b: number) => a + b, 0);
+      const totalDriversIn = (Object.values(day.drivers_in || {}) as number[]).reduce((a: number, b: number) => a + b, 0);
       
-      const totalRoutesOut = Object.values(day.routes_out).reduce((a: number, b: number) => a + b, 0);
-      const totalRoutesIn = Object.values(day.routes_in).reduce((a: number, b: number) => a + b, 0); 
+      const totalRoutesOut = (Object.values(day.routes_out) as number[]).reduce((a: number, b: number) => a + b, 0);
+      const totalRoutesIn = (Object.values(day.routes_in) as number[]).reduce((a: number, b: number) => a + b, 0); 
       
       // Total = (Public + DriversOut + RoutesOut + CameraPlus) - (DriversIn + RoutesIn + CameraMinus)
       return (totalPublic + totalDriversOut + totalRoutesOut + day.camera_plus) - (totalDriversIn + totalRoutesIn + day.camera_minus);
@@ -205,12 +205,12 @@ export const KilosApp: React.FC<KilosAppProps> = ({ db, weekKey }) => {
       
       if (type === 'OUT') {
           const pub = day.public.reduce((a: number, b: number) => a + b, 0);
-          const drv = Object.values(day.drivers).reduce((a: number, b: number) => a + b, 0);
-          const rts = Object.values(day.routes_out).reduce((a: number, b: number) => a + b, 0);
+          const drv = (Object.values(day.drivers) as number[]).reduce((a: number, b: number) => a + b, 0);
+          const rts = (Object.values(day.routes_out) as number[]).reduce((a: number, b: number) => a + b, 0);
           return pub + drv + rts + day.camera_plus;
       } else {
-          const drv = Object.values(day.drivers_in || {}).reduce((a: number, b: number) => a + b, 0);
-          const rts = Object.values(day.routes_in).reduce((a: number, b: number) => a + b, 0);
+          const drv = (Object.values(day.drivers_in || {}) as number[]).reduce((a: number, b: number) => a + b, 0);
+          const rts = (Object.values(day.routes_in) as number[]).reduce((a: number, b: number) => a + b, 0);
           return drv + rts + day.camera_minus;
       }
   };
@@ -248,19 +248,22 @@ export const KilosApp: React.FC<KilosAppProps> = ({ db, weekKey }) => {
 
   // STYLES
   const COL_HIGHLIGHT = "bg-slate-800";
-  const COL_STANDARD = "bg-slate-900"; 
+  const COL_STANDARD = "bg-slate-900";
+  
+  // Stronger borders
+  const BORDER_CLASS = "border-r border-slate-500";
 
   if (loading) return <div className="text-white p-8 animate-pulse">Cargando Tabla de Kilos...</div>;
 
   return (
     <div className="flex flex-col h-full bg-slate-950 p-2 sm:p-4 overflow-hidden">
-        <div className="bg-slate-900 rounded-xl border border-slate-800 shadow-2xl overflow-hidden flex flex-col h-full max-w-full mx-auto w-full">
+        <div className="bg-slate-900 rounded-xl border border-slate-500 shadow-2xl overflow-hidden flex flex-col h-full max-w-full mx-auto w-full">
             
-            <div className="p-4 border-b border-slate-800 bg-slate-900/50 flex justify-between items-center">
+            <div className="p-4 border-b border-slate-500 bg-slate-900/50 flex justify-between items-center">
                 <h2 className="text-lg sm:text-xl font-bold text-orange-400 uppercase tracking-wide flex items-center gap-2">
                     Control de Kilos
                 </h2>
-                <div className="bg-slate-800 px-4 py-2 rounded-lg border border-slate-700 shadow-lg">
+                <div className="bg-slate-800 px-4 py-2 rounded-lg border border-slate-500 shadow-lg">
                     <span className="text-xs text-slate-400 uppercase font-bold mr-2">Neto Semanal</span>
                     <span className="text-xl font-mono font-bold text-white">{formatNumber(grandTotal)} kg</span>
                 </div>
@@ -269,11 +272,11 @@ export const KilosApp: React.FC<KilosAppProps> = ({ db, weekKey }) => {
             <div className="overflow-auto flex-1 custom-scrollbar">
                 <table className="w-full text-left border-collapse">
                     <thead className="sticky top-0 z-30 shadow-md">
-                        <tr className="bg-slate-950 border-b border-slate-800">
-                            <th className="p-3 text-xs font-bold text-slate-500 uppercase tracking-wider min-w-[150px] border-r border-slate-800 sticky left-0 bg-slate-900 z-40">Categoría</th>
+                        <tr className="bg-slate-950 border-b border-slate-500">
+                            <th className={`p-3 text-xs font-bold text-slate-500 uppercase tracking-wider min-w-[150px] ${BORDER_CLASS} sticky left-0 bg-slate-900 z-40`}>Categoría</th>
                             
                             {/* Lunes (Standard) */}
-                            <th className="p-2 text-xs font-bold text-slate-300 uppercase text-center border-r border-slate-800/50 bg-slate-900 min-w-[80px]">
+                            <th className={`p-2 text-xs font-bold text-slate-300 uppercase text-center ${BORDER_CLASS} bg-slate-900 min-w-[80px]`}>
                                 Lunes
                             </th>
 
@@ -281,139 +284,252 @@ export const KilosApp: React.FC<KilosAppProps> = ({ db, weekKey }) => {
                             {DAYS_OF_WEEK.slice(1).map(day => (
                                 <React.Fragment key={day.id}>
                                     {/* Col 1: Highlighted (Salida) */}
-                                    <th className={`p-2 text-xs font-bold text-slate-300 uppercase text-center border-r border-slate-800/50 min-w-[80px] ${COL_HIGHLIGHT}`}>
+                                    <th className={`p-2 text-xs font-bold text-slate-300 uppercase text-center ${BORDER_CLASS} min-w-[80px] ${COL_HIGHLIGHT}`}>
                                         {day.name}
                                     </th>
                                     {/* Col 2: Standard (Entrada) */}
-                                    <th className={`p-2 text-xs font-bold text-slate-300 uppercase text-center border-r border-slate-800/50 min-w-[80px] ${COL_STANDARD}`}>
+                                    <th className={`p-2 text-xs font-bold text-slate-300 uppercase text-center ${BORDER_CLASS} min-w-[80px] ${COL_STANDARD}`}>
                                         {day.name}
                                     </th>
                                 </React.Fragment>
                             ))}
 
                             {/* Lunes Next (Highlighted) */}
-                            <th className={`p-2 text-xs font-bold text-slate-300 uppercase text-center border-r border-slate-800/50 min-w-[80px] ${COL_HIGHLIGHT}`}>
+                            <th className={`p-2 text-xs font-bold text-slate-300 uppercase text-center ${BORDER_CLASS} min-w-[80px] ${COL_HIGHLIGHT}`}>
                                 Lunes
                             </th>
                             
                             <th className="p-3 text-xs font-bold text-orange-400 uppercase tracking-wider text-right min-w-[80px] bg-slate-900/90 z-40 sticky right-0">Total</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-800/50">
+                    <tbody className={`divide-y divide-slate-500`}>
                         
-                        {/* --- CÁMARA --- */}
+                        {/* --- CÁMARA (Top) --- */}
                         <tr className="bg-slate-800/50"><td colSpan={14} className="px-3 py-1 text-[10px] font-bold text-slate-500 uppercase tracking-widest bg-slate-900/80 sticky left-0">Ajustes Cámara</td></tr>
                         
+                        {/* Cámara ++ (OUT columns only: Lunes, Col 1, Next Mon) */}
                         <tr className="hover:bg-amber-950/10 transition-colors">
-                            <td className="p-2 pl-4 text-sm text-amber-300 font-medium border-r border-slate-800 sticky left-0 bg-slate-900 z-20">Cámara ++</td>
-                            <td className={`border-r border-slate-800/30 ${COL_STANDARD}`}><InputCell value={data['monday'].camera_plus} onChange={(v) => handleSimpleChange('monday', 'camera_plus', v)} colorClass="text-amber-200" /></td>
+                            <td className={`p-2 pl-4 text-sm text-amber-300 font-medium ${BORDER_CLASS} sticky left-0 bg-slate-900 z-20`}>
+                                Cámara ++
+                            </td>
+                            {/* Lunes */}
+                            <td className={`${BORDER_CLASS} ${COL_STANDARD}`}>
+                                <InputCell value={data['monday'].camera_plus} onChange={(v) => handleSimpleChange('monday', 'camera_plus', v)} colorClass="text-amber-200" />
+                            </td>
+                            {/* Tue-Sat */}
                             {DAYS_OF_WEEK.slice(1).map(day => (
                                 <React.Fragment key={day.id}>
-                                    <td className={`border-r border-slate-800/30 ${COL_HIGHLIGHT}`}><InputCell value={data[day.id].camera_plus} onChange={(v) => handleSimpleChange(day.id, 'camera_plus', v)} colorClass="text-amber-200" /></td>
-                                    <td className={`border-r border-slate-800/30 ${COL_STANDARD}`}><div className="w-full h-full bg-slate-900/30"></div></td>
+                                    <td className={`${BORDER_CLASS} ${COL_HIGHLIGHT}`}>
+                                        <InputCell value={data[day.id].camera_plus} onChange={(v) => handleSimpleChange(day.id, 'camera_plus', v)} colorClass="text-amber-200" />
+                                    </td>
+                                    <td className={`${BORDER_CLASS} ${COL_STANDARD}`}>
+                                        <div className="w-full h-full bg-slate-900/30 border-transparent"></div>
+                                    </td>
                                 </React.Fragment>
                             ))}
-                            <td className={`border-r border-slate-800/30 ${COL_HIGHLIGHT}`}><InputCell value={data['next_monday'].camera_plus} onChange={(v) => handleSimpleChange('next_monday', 'camera_plus', v)} colorClass="text-slate-400" /></td>
-                            <td className="p-2 text-right font-mono text-slate-400 bg-slate-900/20 sticky right-0 z-20">{formatNumber(getRowTotal('camera_plus'))}</td>
+                            {/* Next Mon */}
+                            <td className={`${BORDER_CLASS} ${COL_HIGHLIGHT}`}>
+                                <InputCell value={data['next_monday'].camera_plus} onChange={(v) => handleSimpleChange('next_monday', 'camera_plus', v)} colorClass="text-slate-400" />
+                            </td>
+                            
+                            <td className="p-2 text-right font-mono text-slate-400 bg-slate-900/20 sticky right-0 z-20">
+                                {formatNumber(getRowTotal('camera_plus'))}
+                            </td>
                         </tr>
 
+                        {/* Cámara -- (IN columns only: Lunes, Col 2, Next Mon) */}
                         <tr className="hover:bg-purple-950/10 transition-colors">
-                            <td className="p-2 pl-4 text-sm text-purple-300 font-medium border-r border-slate-800 sticky left-0 bg-slate-900 z-20">Cámara --</td>
-                            <td className={`border-r border-slate-800/30 ${COL_STANDARD}`}><InputCell value={data['monday'].camera_minus} onChange={(v) => handleSimpleChange('monday', 'camera_minus', v)} colorClass="text-purple-200" /></td>
+                            <td className={`p-2 pl-4 text-sm text-purple-300 font-medium ${BORDER_CLASS} sticky left-0 bg-slate-900 z-20`}>
+                                Cámara --
+                            </td>
+                            {/* Lunes (ENABLED NOW) */}
+                            <td className={`${BORDER_CLASS} ${COL_STANDARD}`}>
+                                <InputCell value={data['monday'].camera_minus} onChange={(v) => handleSimpleChange('monday', 'camera_minus', v)} colorClass="text-purple-200" />
+                            </td>
+                            {/* Tue-Sat (Col 1 Blocked, Col 2 Enabled) */}
                             {DAYS_OF_WEEK.slice(1).map(day => (
                                 <React.Fragment key={day.id}>
-                                    <td className={`border-r border-slate-800/30 ${COL_HIGHLIGHT}`}><InputCell value={data[day.id].camera_minus} onChange={(v) => handleSimpleChange(day.id, 'camera_minus', v)} colorClass="text-purple-200" /></td>
-                                    <td className={`border-r border-slate-800/30 ${COL_STANDARD}`}><div className="w-full h-full bg-slate-900/30"></div></td>
+                                    <td className={`${BORDER_CLASS} ${COL_HIGHLIGHT}`}>
+                                         <div className="w-full h-full bg-slate-900/30 border-transparent"></div>
+                                    </td>
+                                    <td className={`${BORDER_CLASS} ${COL_STANDARD}`}>
+                                         <InputCell value={data[day.id].camera_minus} onChange={(v) => handleSimpleChange(day.id, 'camera_minus', v)} colorClass="text-purple-200" />
+                                    </td>
                                 </React.Fragment>
                             ))}
-                            <td className={`border-r border-slate-800/30 ${COL_HIGHLIGHT}`}><InputCell value={data['next_monday'].camera_minus} onChange={(v) => handleSimpleChange('next_monday', 'camera_minus', v)} colorClass="text-slate-400" /></td>
-                            <td className="p-2 text-right font-mono text-slate-400 bg-slate-900/20 sticky right-0 z-20">-{formatNumber(getRowTotal('camera_minus'))}</td>
+                            {/* Next Mon (ENABLED NOW) */}
+                            <td className={`${BORDER_CLASS} ${COL_HIGHLIGHT}`}>
+                                <InputCell value={data['next_monday'].camera_minus} onChange={(v) => handleSimpleChange('next_monday', 'camera_minus', v)} colorClass="text-slate-400" />
+                            </td>
+
+                            <td className="p-2 text-right font-mono text-slate-400 bg-slate-900/20 sticky right-0 z-20">
+                                {formatNumber(getRowTotal('camera_minus'))}
+                            </td>
                         </tr>
 
+                        {/* Spacer */}
                         <tr className="bg-slate-950 h-2"><td colSpan={14}></td></tr>
 
-                        {/* --- PÚBLICO --- */}
+                        {/* --- PÚBLICO (OUT columns only) --- */}
                         <tr className="bg-emerald-950/20 border-b border-emerald-900/30">
-                            <td colSpan={14} className="px-0 py-0 sticky left-0 bg-slate-900 z-20 p-0 border-r border-slate-800">
+                            <td colSpan={14} className={`px-0 py-0 sticky left-0 bg-slate-900 z-20 p-0 ${BORDER_CLASS}`}>
                                 <div className="flex items-center justify-between px-3 py-1 bg-slate-900/80 w-full min-w-[150px]">
                                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Público</span>
                                     <button onClick={addPublicRow} className="flex items-center gap-1 text-[10px] bg-emerald-900/50 hover:bg-emerald-800 text-emerald-400 px-2 py-0.5 rounded border border-emerald-800/50 transition-colors"><Plus size={10} /> Agregar</button>
                                 </div>
                             </td>
                         </tr>
+
                         {Array.from({ length: maxPublicRows }).map((_, rowIndex) => (
                             <tr key={`public-row-${rowIndex}`} className="bg-emerald-950/5 hover:bg-emerald-900/10 transition-colors group">
-                                <td className="p-2 pl-4 text-sm font-bold text-emerald-400 border-r border-slate-800 sticky left-0 bg-slate-900 z-20 border-l-4 border-l-emerald-500/0">
+                                <td className={`p-2 pl-4 text-sm font-bold text-emerald-400 ${BORDER_CLASS} sticky left-0 bg-slate-900 z-20 border-l-4 border-l-emerald-500/0`}>
                                     <div className="flex items-center justify-between group-hover:border-l-emerald-500">
                                         <span>Público</span>
                                         <button onClick={() => removePublicRow(rowIndex)} className="opacity-0 group-hover:opacity-100 p-1 text-rose-500 hover:text-rose-300 hover:bg-rose-900/20 rounded transition-all"><Trash2 size={12} /></button>
                                     </div>
                                 </td>
-                                <td className={`border-r border-slate-800/30 ${COL_STANDARD}`}><InputCell value={data['monday'].public[rowIndex] || 0} onChange={(v) => handlePublicRowChange('monday', rowIndex, v)} colorClass="text-emerald-300" /></td>
+                                
+                                {/* Lunes */}
+                                <td className={`${BORDER_CLASS} ${COL_STANDARD}`}>
+                                    <InputCell value={data['monday'].public[rowIndex] || 0} onChange={(v) => handlePublicRowChange('monday', rowIndex, v)} colorClass="text-emerald-300" />
+                                </td>
+
+                                {/* Tue-Sat */}
                                 {DAYS_OF_WEEK.slice(1).map(day => (
                                     <React.Fragment key={day.id}>
-                                        <td className={`border-r border-slate-800/30 ${COL_HIGHLIGHT}`}><InputCell value={data[day.id].public[rowIndex] || 0} onChange={(v) => handlePublicRowChange(day.id, rowIndex, v)} colorClass="text-emerald-300" /></td>
-                                        <td className={`border-r border-slate-800/30 ${COL_STANDARD}`}><div className="w-full h-full bg-slate-900/10"></div></td>
+                                        <td className={`${BORDER_CLASS} ${COL_HIGHLIGHT}`}>
+                                             <InputCell value={data[day.id].public[rowIndex] || 0} onChange={(v) => handlePublicRowChange(day.id, rowIndex, v)} colorClass="text-emerald-300" />
+                                        </td>
+                                        <td className={`${BORDER_CLASS} ${COL_STANDARD}`}>
+                                            <div className="w-full h-full bg-slate-900/10"></div>
+                                        </td>
                                     </React.Fragment>
                                 ))}
-                                <td className={`border-r border-slate-800/30 ${COL_HIGHLIGHT}`}><InputCell value={data['next_monday'].public[rowIndex] || 0} onChange={(v) => handlePublicRowChange('next_monday', rowIndex, v)} colorClass="text-slate-400" /></td>
-                                <td className="p-2 text-right font-mono font-bold text-emerald-300/70 bg-slate-900/30 sticky right-0 z-20">{formatNumber(getRowTotal('public', rowIndex))}</td>
+                                
+                                {/* Next Mon */}
+                                <td className={`${BORDER_CLASS} ${COL_HIGHLIGHT}`}>
+                                    <InputCell value={data['next_monday'].public[rowIndex] || 0} onChange={(v) => handlePublicRowChange('next_monday', rowIndex, v)} colorClass="text-slate-400" />
+                                </td>
+
+                                <td className="p-2 text-right font-mono font-bold text-emerald-300/70 bg-slate-900/30 sticky right-0 z-20">
+                                    {formatNumber(getRowTotal('public', rowIndex))}
+                                </td>
                             </tr>
                         ))}
 
+                        {/* Spacer */}
                         <tr className="bg-slate-950 h-2"><td colSpan={14}></td></tr>
 
-                        {/* --- CHOFERES --- */}
-                        <tr className="bg-slate-800/50"><td colSpan={14} className="px-3 py-1 text-[10px] font-bold text-slate-500 uppercase tracking-widest bg-slate-900/80 sticky left-0">Choferes</td></tr>
+                        {/* --- CHOFERES - REPARTO ONLY (OUT columns only) --- */}
+                        <tr className="bg-slate-800/50"><td colSpan={14} className="px-3 py-1 text-[10px] font-bold text-slate-500 uppercase tracking-widest bg-slate-900/80 sticky left-0 border-l-4 border-l-blue-500">Choferes - Reparto</td></tr>
                         {DRIVERS_LIST.map(driver => (
-                            <tr key={driver} className="hover:bg-slate-800/30 transition-colors">
-                                <td className="p-2 pl-4 text-sm text-slate-300 font-medium border-r border-slate-800 sticky left-0 bg-slate-900 z-20">{driver}</td>
-                                <td className={`border-r border-slate-800/30 ${COL_STANDARD}`}><InputCell value={data['monday'].drivers[driver]} onChange={(v) => handleDeepChange('monday', 'drivers', driver, v)} colorClass="text-blue-200" /></td>
+                            <tr key={`out-${driver}`} className="hover:bg-slate-800/30 transition-colors">
+                                <td className={`p-2 pl-4 text-sm text-slate-300 font-medium ${BORDER_CLASS} sticky left-0 bg-slate-900 z-20`}>
+                                    {driver}
+                                </td>
+                                
+                                {/* Lunes (Out) */}
+                                <td className={`${BORDER_CLASS} ${COL_STANDARD}`}>
+                                    <InputCell value={data['monday'].drivers[driver]} onChange={(v) => handleDeepChange('monday', 'drivers', driver, v)} colorClass="text-blue-200" />
+                                </td>
+
+                                {/* Tue-Sat (Out | Empty In) */}
                                 {DAYS_OF_WEEK.slice(1).map(day => (
                                     <React.Fragment key={day.id}>
-                                        <td className={`border-r border-slate-800/30 ${COL_HIGHLIGHT}`}><InputCell value={data[day.id].drivers[driver]} onChange={(v) => handleDeepChange(day.id, 'drivers', driver, v)} colorClass="text-blue-200" /></td>
-                                        <td className={`border-r border-slate-800/30 ${COL_STANDARD}`}><InputCell value={data[day.id].drivers_in?.[driver]} onChange={(v) => handleDeepChange(day.id, 'drivers_in', driver, v)} colorClass="text-rose-300" bgClass="bg-rose-950/20" /></td>
+                                        <td className={`${BORDER_CLASS} ${COL_HIGHLIGHT}`}>
+                                            <InputCell value={data[day.id].drivers[driver]} onChange={(v) => handleDeepChange(day.id, 'drivers', driver, v)} colorClass="text-blue-200" />
+                                        </td>
+                                        <td className={`${BORDER_CLASS} ${COL_STANDARD}`}>
+                                            <div className="w-full h-full bg-slate-900/10"></div>
+                                        </td>
                                     </React.Fragment>
                                 ))}
-                                <td className={`border-r border-slate-800/30 ${COL_HIGHLIGHT}`}><InputCell value={data['next_monday'].drivers[driver]} onChange={(v) => handleDeepChange('next_monday', 'drivers', driver, v)} colorClass="text-slate-400" /></td>
-                                <td className="p-2 text-right font-mono text-slate-400 bg-slate-900/20 sticky right-0 z-20">{formatNumber(getRowTotal('drivers_out', driver) - getRowTotal('drivers_in', driver))}</td>
+
+                                {/* Next Mon (Out) */}
+                                <td className={`${BORDER_CLASS} ${COL_HIGHLIGHT}`}>
+                                    <InputCell value={data['next_monday'].drivers[driver]} onChange={(v) => handleDeepChange('next_monday', 'drivers', driver, v)} colorClass="text-slate-400" />
+                                </td>
+
+                                <td className="p-2 text-right font-mono text-slate-400 bg-slate-900/20 sticky right-0 z-20">
+                                    {formatNumber(getRowTotal('drivers_out', driver))}
+                                </td>
                             </tr>
                         ))}
 
                         <tr className="bg-slate-950 h-2"><td colSpan={14}></td></tr>
 
-                        {/* --- ZONAS REPARTO (OUT) --- */}
+                        {/* --- CHOFERES - DEVOLUCIÓN (IN) - NEW SECTION --- */}
+                        <tr className="bg-slate-800/50"><td colSpan={14} className="px-3 py-1 text-[10px] font-bold text-rose-500 uppercase tracking-widest bg-slate-900/80 sticky left-0 border-l-4 border-l-rose-500">Choferes - Devolución</td></tr>
+                        {DRIVERS_LIST.map(driver => (
+                            <tr key={`in-${driver}`} className="hover:bg-rose-950/5 transition-colors">
+                                <td className={`p-2 pl-4 text-sm text-rose-300 font-medium ${BORDER_CLASS} sticky left-0 bg-slate-900 z-20`}>{driver}</td>
+                                
+                                {/* Lunes (ENABLED NOW) */}
+                                <td className={`${BORDER_CLASS} ${COL_STANDARD}`}><InputCell value={data['monday'].drivers_in?.[driver]} onChange={(v) => handleDeepChange('monday', 'drivers_in', driver, v)} colorClass="text-rose-300" bgClass="bg-rose-950/20" /></td>
+                                
+                                {/* Tue-Sat (Col 1 Blocked, Col 2 Enabled) */}
+                                {DAYS_OF_WEEK.slice(1).map(day => (
+                                    <React.Fragment key={day.id}>
+                                        <td className={`${BORDER_CLASS} ${COL_HIGHLIGHT}`}><div className="w-full h-full bg-slate-900/10"></div></td>
+                                        <td className={`${BORDER_CLASS} ${COL_STANDARD}`}><InputCell value={data[day.id].drivers_in?.[driver]} onChange={(v) => handleDeepChange(day.id, 'drivers_in', driver, v)} colorClass="text-rose-300" bgClass="bg-rose-950/20" /></td>
+                                    </React.Fragment>
+                                ))}
+                                
+                                {/* Next Mon (ENABLED NOW) */}
+                                <td className={`${BORDER_CLASS} ${COL_HIGHLIGHT}`}><InputCell value={data['next_monday'].drivers_in?.[driver]} onChange={(v) => handleDeepChange('next_monday', 'drivers_in', driver, v)} colorClass="text-slate-400" /></td>
+                                
+                                <td className="p-2 text-right font-mono text-rose-400/70 bg-slate-900/20 sticky right-0 z-20">-{formatNumber(getRowTotal('drivers_in', driver))}</td>
+                            </tr>
+                        ))}
+
+                        <tr className="bg-slate-950 h-2"><td colSpan={14}></td></tr>
+
+                        {/* --- ZONAS REPARTO (OUT columns only) --- */}
                         <tr className="bg-slate-800/50"><td colSpan={14} className="px-3 py-1 text-[10px] font-bold text-sky-500 uppercase tracking-widest bg-slate-900/80 sticky left-0 border-l-4 border-l-sky-500">Zonas - Reparto</td></tr>
                         {ROUTES_LIST.map(route => (
                             <tr key={`out-${route}`} className="hover:bg-slate-800/30 transition-colors">
-                                <td className="p-2 pl-4 text-sm text-sky-300 font-medium border-r border-slate-800 sticky left-0 bg-slate-900 z-20">{route}</td>
-                                <td className={`border-r border-slate-800/30 ${COL_STANDARD}`}><InputCell value={data['monday'].routes_out[route]} onChange={(v) => handleDeepChange('monday', 'routes_out', route, v)} colorClass="text-sky-200" /></td>
+                                <td className={`p-2 pl-4 text-sm text-sky-300 font-medium ${BORDER_CLASS} sticky left-0 bg-slate-900 z-20`}>{route}</td>
+                                
+                                {/* Lunes */}
+                                <td className={`${BORDER_CLASS} ${COL_STANDARD}`}><InputCell value={data['monday'].routes_out[route]} onChange={(v) => handleDeepChange('monday', 'routes_out', route, v)} colorClass="text-sky-200" /></td>
+                                
+                                {/* Tue-Sat */}
                                 {DAYS_OF_WEEK.slice(1).map(day => (
                                     <React.Fragment key={day.id}>
-                                        <td className={`border-r border-slate-800/30 ${COL_HIGHLIGHT}`}><InputCell value={data[day.id].routes_out[route]} onChange={(v) => handleDeepChange(day.id, 'routes_out', route, v)} colorClass="text-sky-200" /></td>
-                                        <td className={`border-r border-slate-800/30 ${COL_STANDARD}`}><div className="w-full h-full bg-slate-900/10"></div></td>
+                                        <td className={`${BORDER_CLASS} ${COL_HIGHLIGHT}`}><InputCell value={data[day.id].routes_out[route]} onChange={(v) => handleDeepChange(day.id, 'routes_out', route, v)} colorClass="text-sky-200" /></td>
+                                        <td className={`${BORDER_CLASS} ${COL_STANDARD}`}><div className="w-full h-full bg-slate-900/10"></div></td>
                                     </React.Fragment>
                                 ))}
-                                <td className={`border-r border-slate-800/30 ${COL_HIGHLIGHT}`}><InputCell value={data['next_monday'].routes_out[route]} onChange={(v) => handleDeepChange('next_monday', 'routes_out', route, v)} colorClass="text-slate-400" /></td>
+                                
+                                {/* Next Mon */}
+                                <td className={`${BORDER_CLASS} ${COL_HIGHLIGHT}`}><InputCell value={data['next_monday'].routes_out[route]} onChange={(v) => handleDeepChange('next_monday', 'routes_out', route, v)} colorClass="text-slate-400" /></td>
+                                
                                 <td className="p-2 text-right font-mono text-sky-400/70 bg-slate-900/20 sticky right-0 z-20">{formatNumber(getRowTotal('routes_out', route))}</td>
                             </tr>
                         ))}
 
                         <tr className="bg-slate-950 h-2"><td colSpan={14}></td></tr>
 
-                        {/* --- ZONAS DEVOLUCIÓN (IN) --- */}
+                        {/* --- ZONAS DEVOLUCIÓN (IN columns only) --- */}
                         <tr className="bg-slate-800/50"><td colSpan={14} className="px-3 py-1 text-[10px] font-bold text-rose-500 uppercase tracking-widest bg-slate-900/80 sticky left-0 border-l-4 border-l-rose-500">Zonas - Devolución</td></tr>
                         {ROUTES_LIST.map(route => (
                             <tr key={`in-${route}`} className="hover:bg-rose-950/5 transition-colors">
-                                <td className="p-2 pl-4 text-sm text-rose-300 font-medium border-r border-slate-800 sticky left-0 bg-slate-900 z-20">{route}</td>
-                                <td className={`border-r border-slate-800/30 ${COL_STANDARD}`}><div className="w-full h-full bg-slate-900/10"></div></td>
+                                <td className={`p-2 pl-4 text-sm text-rose-300 font-medium ${BORDER_CLASS} sticky left-0 bg-slate-900 z-20`}>{route}</td>
+                                
+                                {/* Lunes (ENABLED NOW) */}
+                                <td className={`${BORDER_CLASS} ${COL_STANDARD}`}><InputCell value={data['monday'].routes_in[route]} onChange={(v) => handleDeepChange('monday', 'routes_in', route, v)} colorClass="text-rose-300" bgClass="bg-rose-950/20" /></td>
+                                
+                                {/* Tue-Sat */}
                                 {DAYS_OF_WEEK.slice(1).map(day => (
                                     <React.Fragment key={day.id}>
-                                        <td className={`border-r border-slate-800/30 ${COL_HIGHLIGHT}`}><div className="w-full h-full bg-slate-900/10"></div></td>
-                                        <td className={`border-r border-slate-800/30 ${COL_STANDARD}`}><InputCell value={data[day.id].routes_in[route]} onChange={(v) => handleDeepChange(day.id, 'routes_in', route, v)} colorClass="text-rose-300" bgClass="bg-rose-950/20" /></td>
+                                        <td className={`${BORDER_CLASS} ${COL_HIGHLIGHT}`}><div className="w-full h-full bg-slate-900/10"></div></td>
+                                        <td className={`${BORDER_CLASS} ${COL_STANDARD}`}><InputCell value={data[day.id].routes_in[route]} onChange={(v) => handleDeepChange(day.id, 'routes_in', route, v)} colorClass="text-rose-300" bgClass="bg-rose-950/20" /></td>
                                     </React.Fragment>
                                 ))}
-                                <td className={`border-r border-slate-800/30 ${COL_HIGHLIGHT}`}><div className="w-full h-full bg-slate-900/10"></div></td>
+                                
+                                {/* Next Mon (ENABLED NOW) */}
+                                <td className={`${BORDER_CLASS} ${COL_HIGHLIGHT}`}><InputCell value={data['next_monday'].routes_in[route]} onChange={(v) => handleDeepChange('next_monday', 'routes_in', route, v)} colorClass="text-slate-400" /></td>
+                                
                                 <td className="p-2 text-right font-mono text-rose-400/70 bg-slate-900/20 sticky right-0 z-20">-{formatNumber(getRowTotal('routes_in', route))}</td>
                             </tr>
                         ))}
@@ -421,38 +537,38 @@ export const KilosApp: React.FC<KilosAppProps> = ({ db, weekKey }) => {
                     </tbody>
                     <tfoot className="sticky bottom-0 z-40 shadow-[0_-5px_10px_rgba(0,0,0,0.3)]">
                          <tr className="bg-slate-900 font-bold border-t border-slate-700">
-                            <td className="p-4 text-slate-400 text-xs uppercase tracking-wider sticky left-0 bg-slate-900 border-r border-slate-800 z-50">
+                            <td className={`p-4 text-slate-400 text-xs uppercase tracking-wider sticky left-0 bg-slate-900 ${BORDER_CLASS} z-50`}>
                                 Sumatoria Pares
                             </td>
                             
                             {/* Par 1: Lunes + Martes(Out) */}
-                            <td colSpan={2} className={`p-2 text-center font-mono text-base border-r border-slate-800/50 text-white`}>
-                                {formatNumber(getColumnVal('monday', 'OUT') + getColumnVal('tuesday', 'OUT'))}
+                            <td colSpan={2} className={`p-2 text-center font-mono text-base ${BORDER_CLASS} border-slate-800/50 text-white`}>
+                                {formatNumber(getColumnVal('monday', 'NET') + getColumnVal('tuesday', 'OUT'))}
                             </td>
 
                             {/* Par 2: Martes(In) + Miercoles(Out) */}
-                            <td colSpan={2} className={`p-2 text-center font-mono text-base border-r border-slate-800/50 text-white`}>
+                            <td colSpan={2} className={`p-2 text-center font-mono text-base ${BORDER_CLASS} border-slate-800/50 text-white`}>
                                 {formatNumber(getColumnVal('tuesday', 'IN') + getColumnVal('wednesday', 'OUT'))}
                             </td>
 
                             {/* Par 3: Miercoles(In) + Jueves(Out) */}
-                            <td colSpan={2} className={`p-2 text-center font-mono text-base border-r border-slate-800/50 text-white`}>
+                            <td colSpan={2} className={`p-2 text-center font-mono text-base ${BORDER_CLASS} border-slate-800/50 text-white`}>
                                 {formatNumber(getColumnVal('wednesday', 'IN') + getColumnVal('thursday', 'OUT'))}
                             </td>
 
                             {/* Par 4: Jueves(In) + Viernes(Out) */}
-                            <td colSpan={2} className={`p-2 text-center font-mono text-base border-r border-slate-800/50 text-white`}>
+                            <td colSpan={2} className={`p-2 text-center font-mono text-base ${BORDER_CLASS} border-slate-800/50 text-white`}>
                                 {formatNumber(getColumnVal('thursday', 'IN') + getColumnVal('friday', 'OUT'))}
                             </td>
 
                             {/* Par 5: Viernes(In) + Sabado(Out) */}
-                            <td colSpan={2} className={`p-2 text-center font-mono text-base border-r border-slate-800/50 text-white`}>
+                            <td colSpan={2} className={`p-2 text-center font-mono text-base ${BORDER_CLASS} border-slate-800/50 text-white`}>
                                 {formatNumber(getColumnVal('friday', 'IN') + getColumnVal('saturday', 'OUT'))}
                             </td>
                             
                             {/* Par 6: Sabado(In) + NextMon(Out) */}
-                            <td colSpan={2} className={`p-2 text-center font-mono text-base border-r border-slate-800/50 text-white`}>
-                                {formatNumber(getColumnVal('saturday', 'IN') + getColumnVal('next_monday', 'OUT'))}
+                            <td colSpan={2} className={`p-2 text-center font-mono text-base ${BORDER_CLASS} border-slate-800/50 text-white`}>
+                                {formatNumber(getColumnVal('saturday', 'IN') + getColumnVal('next_monday', 'NET'))}
                             </td>
 
                             <td className="p-4 text-right font-mono text-orange-400 text-lg bg-slate-900/90 sticky right-0 z-50">

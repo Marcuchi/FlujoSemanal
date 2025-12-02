@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Trash2, Edit2, Check, X, ArrowLeftRight } from 'lucide-react';
 import { Transaction, TransactionType } from '../types';
@@ -168,11 +169,11 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
           onChange={(e) => setTempTitle(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Descripción..."
-          className="w-full text-sm font-medium border-b border-slate-600 focus:border-indigo-400 focus:outline-none py-1 bg-transparent text-slate-100 placeholder-slate-500"
+          className="w-full text-xl font-medium border-b border-slate-600 focus:border-indigo-400 focus:outline-none py-1 bg-transparent text-slate-100 placeholder-slate-500"
         />
         <div className="flex items-center justify-between gap-2">
           <div className="relative flex-1">
-            <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-500">$</span>
+            <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-lg font-semibold text-slate-500">$</span>
             <input
               ref={amountInputRef}
               type="text"
@@ -182,12 +183,12 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
               onKeyDown={handleKeyDown}
               onFocus={(e) => e.target.select()}
               placeholder="0"
-              className="w-full text-right text-sm font-mono border-b border-slate-600 focus:border-indigo-400 focus:outline-none py-1 pl-5 bg-transparent text-slate-100 placeholder-slate-500"
+              className="w-full text-right text-xl font-mono border-b border-slate-600 focus:border-indigo-400 focus:outline-none py-1 pl-5 bg-transparent text-slate-100 placeholder-slate-500"
             />
           </div>
           <div className="flex items-center gap-1">
-             <button type="button" onClick={handleCancel} className="p-1.5 rounded-md hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors"><X size={16} /></button>
-             <button type="submit" className="p-1.5 rounded-md bg-indigo-600 text-white hover:bg-indigo-500 transition-colors shadow-sm"><Check size={16} /></button>
+             <button type="button" onClick={handleCancel} className="p-1.5 rounded-md hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors"><X size={18} /></button>
+             <button type="submit" className="p-1.5 rounded-md bg-indigo-600 text-white hover:bg-indigo-500 transition-colors shadow-sm"><Check size={18} /></button>
           </div>
         </div>
       </form>
@@ -204,13 +205,13 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
   else if (type === 'salaries') moveButtonTitle = 'Mover a Gastos';
 
   return (
-    <div className={`group relative p-2 rounded-lg ${theme.hoverBg} bg-black/20 transition-colors flex items-center justify-between border border-transparent hover:border-white/5`}>
-      <div className="flex items-center gap-2 overflow-hidden">
-        <span className={`w-1 h-5 rounded-full ${theme.indicator} flex-shrink-0`}></span>
-        <span className={`text-xs ${theme.textTitle} truncate font-medium`}>{transaction.title || <i className={theme.subtle}>Sin descripción</i>}</span>
+    <div className={`group relative p-2.5 rounded-lg ${theme.hoverBg} bg-black/20 transition-colors flex items-center justify-between border border-transparent hover:border-white/5`}>
+      <div className="flex items-center gap-3 overflow-hidden">
+        <span className={`w-1.5 h-6 rounded-full ${theme.indicator} flex-shrink-0`}></span>
+        <span className={`text-lg ${theme.textTitle} truncate font-medium`}>{transaction.title || <i className={theme.subtle}>Sin descripción</i>}</span>
       </div>
       
-      <span className={`text-sm font-mono font-semibold ${theme.textAmount} whitespace-nowrap`}>
+      <span className={`text-xl font-mono font-bold ${theme.textAmount} whitespace-nowrap`}>
         {formatCurrency(transaction.amount)}
       </span>
 
@@ -222,12 +223,12 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
              className="p-1.5 rounded-md bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white transition-colors shadow-sm border border-slate-600" 
              title={moveButtonTitle}
            >
-             <ArrowLeftRight size={14} />
+             <ArrowLeftRight size={16} />
            </button>
         )}
 
-        <button onClick={() => setIsEditing(true)} className="p-1.5 rounded-md bg-slate-700 hover:bg-slate-600 text-white transition-colors shadow-sm border border-slate-600" title="Modificar"><Edit2 size={14} /></button>
-        <button onClick={() => onRemove(transaction.id)} className="p-1.5 rounded-md bg-rose-900 hover:bg-rose-800 text-white transition-colors shadow-sm border border-rose-950" title="Eliminar"><Trash2 size={14} /></button>
+        <button onClick={() => setIsEditing(true)} className="p-1.5 rounded-md bg-slate-700 hover:bg-slate-600 text-white transition-colors shadow-sm border border-slate-600" title="Modificar"><Edit2 size={16} /></button>
+        <button onClick={() => onRemove(transaction.id)} className="p-1.5 rounded-md bg-rose-900 hover:bg-rose-800 text-white transition-colors shadow-sm border border-rose-950" title="Eliminar"><Trash2 size={16} /></button>
       </div>
     </div>
   );
