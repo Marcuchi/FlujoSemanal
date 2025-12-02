@@ -84,8 +84,10 @@ export interface CCTransaction {
   id: string;
   date: string; // YYYY-MM-DD
   description: string;
-  delivery: number; // Entrega (Paga)
-  debit: number;    // Debe (Saca/Deuda aumenta)
+  quantity?: number; // Cantidad de cajones
+  price?: number;    // Precio por cajón
+  delivery: number; // Entrega (Paga - Haber)
+  debit: number;    // Debe (Saca/Deuda aumenta - Calculado: Cantidad * Precio)
 }
 
 export interface CCAccountData {
@@ -113,6 +115,9 @@ export interface Cheque {
 export interface GeneralItem {
   id: string;
   name: string;
+  cuil: string;
+  phone: string;
+  location: string;
 }
 
 export interface Client {

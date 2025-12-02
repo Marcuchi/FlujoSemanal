@@ -1,6 +1,7 @@
+
 import React from 'react';
 import { Database, ref, onValue, set } from 'firebase/database';
-import { ArrowLeft, Plus, Trash2, Edit2, Save, X, DollarSign, Calendar, FileText, ArrowUpDown } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Edit2, Save, X, DollarSign, Calendar, Package, ArrowUpDown, Calculator } from 'lucide-react';
 import { CCData, CCAccountData, CCTransaction } from '../types';
 import { generateId } from '../utils';
 
@@ -30,14 +31,14 @@ export const CurrentAccountsApp: React.FC<CurrentAccountsAppProps> = ({ db }) =>
 
   // New Transaction State
   const [newDate, setNewDate] = React.useState(new Date().toISOString().slice(0, 10));
-  const [newDesc, setNewDesc] = React.useState('');
   
-  // Input Display States (for formatting)
-  const [deliveryDisplay, setDeliveryDisplay] = React.useState('');
-  const [debitDisplay, setDebitDisplay] = React.useState('');
-  // Raw numeric values for logic
-  const [rawDelivery, setRawDelivery] = React.useState(0);
-  const [rawDebit, setRawDebit] = React.useState(0);
+  // Inputs
+  const [quantity, setQuantity] = React.useState(''); // Cantidad de cajones
+  const [priceDisplay, setPriceDisplay] = React.useState(''); // Precio visual
+  const [rawPrice, setRawPrice] = React.useState(0); // Precio numérico
+
+  const [deliveryDisplay, setDeliveryDisplay] = React.useState(''); // Haber visual
+  const [rawDelivery, setRawDelivery] = React.useState(0); // Haber numérico
   
   // Edit Initial Balance State
   const [isEditingInitial, setIsEditingInitial] = React.useState(false);
@@ -162,16 +163,38 @@ export const CurrentAccountsApp: React.FC<CurrentAccountsAppProps> = ({ db }) =>
       }
   };
 
+  const handleQuantityInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const val = e.target.value;
+      if (val === '' || /^\d+$/.test(val)) {
+          setQuantity(val);
+      }
+  };
+
   const handleAddTransaction = (e: React.FormEvent) => {
       e.preventDefault();
       if (!selectedAccount) return;
 
+      const qty = parseInt(quantity, 10) || 0;
+      
+      // Calculate Debit automatically
+      const calculatedDebit = qty * rawPrice;
+      
+      // Auto-generate description or leave empty based on transaction type
+      let desc = '';
+      if (qty > 0 && rawPrice > 0) {
+          desc = `${qty} cajones`;
+      } else if (rawDelivery > 0) {
+          desc = 'Pago / Entrega';
+      }
+
       const transaction: CCTransaction = {
           id: generateId(),
           date: newDate,
-          description: newDesc,
+          description: desc,
+          quantity: qty > 0 ? qty : undefined,
+          price: rawPrice > 0 ? rawPrice : undefined,
           delivery: rawDelivery,
-          debit: rawDebit
+          debit: calculatedDebit
       };
 
       const currentAccount = getAccountData(selectedAccount);
@@ -182,11 +205,11 @@ export const CurrentAccountsApp: React.FC<CurrentAccountsAppProps> = ({ db }) =>
       saveData({ ...data, [selectedAccount]: updatedAccount });
 
       // Reset Form
-      setNewDesc('');
+      setQuantity('');
+      setPriceDisplay('');
+      setRawPrice(0);
       setDeliveryDisplay('');
       setRawDelivery(0);
-      setDebitDisplay('');
-      setRawDebit(0);
   };
 
   const handleRemoveTransaction = (id: string) => {
@@ -198,6 +221,10 @@ export const CurrentAccountsApp: React.FC<CurrentAccountsAppProps> = ({ db }) =>
       
       saveData({ ...data, [selectedAccount]: { ...currentAccount, transactions: updatedTransactions } });
   };
+
+  // Calculated values for the form preview
+  const currentQty = parseInt(quantity, 10) || 0;
+  const currentDebit = currentQty * rawPrice;
 
   if (loading) return <div className="text-emerald-500 p-8 animate-pulse text-center">Cargando Cuentas...</div>;
 
@@ -350,7 +377,7 @@ export const CurrentAccountsApp: React.FC<CurrentAccountsAppProps> = ({ db }) =>
 
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto p-2 sm:p-6 custom-scrollbar">
-            <div className="max-w-4xl mx-auto space-y-6">
+            <div className="max-w-5xl mx-auto space-y-6">
 
                 {/* Initial Balance Card */}
                 <div className="bg-white dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 p-4 flex items-center justify-between shadow-sm">
@@ -392,58 +419,86 @@ export const CurrentAccountsApp: React.FC<CurrentAccountsAppProps> = ({ db }) =>
                     )}
                 </div>
 
-                {/* Add Transaction Form (Now at Top) */}
+                {/* Add Transaction Form - Redesigned */}
                 <form onSubmit={handleAddTransaction} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-lg">
                     <h3 className="text-xs font-bold uppercase tracking-wider mb-3 text-emerald-600 dark:text-emerald-400">Nuevo Movimiento</h3>
-                    <div className="flex flex-col md:flex-row gap-3">
-                        <div className="relative">
-                            <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                            <input 
-                                type="date" 
-                                required
-                                value={newDate}
-                                onChange={e => setNewDate(e.target.value)}
-                                className="w-full md:w-auto bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg py-2 pl-8 pr-3 text-sm text-slate-700 dark:text-white focus:outline-none focus:border-emerald-500"
-                            />
-                        </div>
-                        <div className="relative flex-1">
-                            <FileText className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                            <input 
-                                type="text" 
-                                placeholder="Descripción..."
-                                required
-                                value={newDesc}
-                                onChange={e => setNewDesc(e.target.value)}
-                                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg py-2 pl-8 pr-3 text-sm text-slate-700 dark:text-white focus:outline-none focus:border-emerald-500"
-                            />
-                        </div>
-                        <div className="grid grid-cols-2 gap-3 md:w-64">
+                    
+                    <div className="flex flex-col xl:flex-row gap-3 items-end">
+                        
+                        {/* Fecha */}
+                        <div className="relative w-full xl:w-auto">
+                            <label className="text-[10px] text-slate-400 font-bold uppercase mb-1 block">Fecha</label>
                             <div className="relative">
+                                <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                                <input 
+                                    type="date" 
+                                    required
+                                    value={newDate}
+                                    onChange={e => setNewDate(e.target.value)}
+                                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg py-2 pl-8 pr-3 text-sm text-slate-700 dark:text-white focus:outline-none focus:border-emerald-500"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Cantidad Cajones */}
+                        <div className="relative w-full xl:w-32">
+                            <label className="text-[10px] text-slate-400 font-bold uppercase mb-1 block">Cant. Cajones</label>
+                            <div className="relative">
+                                <Package className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                                <input 
+                                    type="text" 
+                                    inputMode="numeric"
+                                    placeholder="0"
+                                    value={quantity}
+                                    onChange={handleQuantityInput}
+                                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg py-2 pl-8 pr-3 text-sm text-slate-700 dark:text-white focus:outline-none focus:border-emerald-500 font-mono"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Precio Unitario */}
+                        <div className="relative w-full xl:w-36">
+                            <label className="text-[10px] text-slate-400 font-bold uppercase mb-1 block">Precio x Cajón</label>
+                            <div className="relative">
+                                <DollarSign className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" size={12} />
+                                <input 
+                                    type="text" 
+                                    inputMode="numeric"
+                                    placeholder="0"
+                                    value={priceDisplay}
+                                    onChange={(e) => handleMoneyInput(e, setPriceDisplay, setRawPrice)}
+                                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg py-2 pl-6 pr-2 text-sm text-slate-700 dark:text-white focus:outline-none focus:border-emerald-500 font-mono"
+                                />
+                            </div>
+                        </div>
+
+                        {/* DEBE (Calculado) - Read Only Preview */}
+                        <div className="relative w-full xl:w-40 opacity-75">
+                             <label className="text-[10px] text-rose-500/80 font-bold uppercase mb-1 block flex items-center gap-1"><Calculator size={10}/> Total Compra (Debe)</label>
+                             <div className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg py-2 px-3 text-sm font-mono text-rose-600 dark:text-rose-400 text-right font-bold h-[38px] flex items-center justify-end">
+                                 {formatCurrency(currentDebit)}
+                             </div>
+                        </div>
+
+                        {/* HABER (Pago) */}
+                        <div className="relative w-full xl:w-40 ml-0 xl:ml-4">
+                             <label className="text-[10px] text-emerald-500/80 font-bold uppercase mb-1 block">Haber (Paga)</label>
+                             <div className="relative">
                                 <DollarSign className="absolute left-2 top-1/2 -translate-y-1/2 text-emerald-500" size={12} />
                                 <input 
                                     type="text" 
                                     inputMode="numeric"
-                                    placeholder="Haber"
+                                    placeholder="0"
                                     value={deliveryDisplay}
                                     onChange={(e) => handleMoneyInput(e, setDeliveryDisplay, setRawDelivery)}
-                                    className="w-full bg-slate-50 dark:bg-slate-950 border rounded-lg py-2 pl-6 pr-2 text-sm font-mono focus:outline-none border-emerald-200 dark:border-emerald-900/50 text-emerald-700 dark:text-emerald-300 placeholder-emerald-800/20 dark:placeholder-emerald-900/50 focus:border-emerald-500"
-                                />
-                            </div>
-                            <div className="relative">
-                                <DollarSign className="absolute left-2 top-1/2 -translate-y-1/2 text-rose-500" size={12} />
-                                <input 
-                                    type="text" 
-                                    inputMode="numeric"
-                                    placeholder="Debe"
-                                    value={debitDisplay}
-                                    onChange={(e) => handleMoneyInput(e, setDebitDisplay, setRawDebit)}
-                                    className="w-full bg-slate-50 dark:bg-slate-950 border border-rose-200 dark:border-rose-900/50 rounded-lg py-2 pl-6 pr-2 text-sm text-rose-700 dark:text-rose-300 placeholder-rose-800/20 dark:placeholder-rose-900/50 focus:border-rose-500 focus:outline-none font-mono"
+                                    className="w-full bg-slate-50 dark:bg-slate-950 border border-emerald-200 dark:border-emerald-900/50 rounded-lg py-2 pl-6 pr-2 text-sm font-mono focus:outline-none text-emerald-700 dark:text-emerald-300 placeholder-emerald-800/20 dark:placeholder-emerald-900/50 focus:border-emerald-500 font-bold"
                                 />
                             </div>
                         </div>
+
                         <button 
                             type="submit"
-                            className="text-white font-bold p-2 rounded-lg transition-colors flex items-center justify-center shadow-lg bg-emerald-600 hover:bg-emerald-500 shadow-emerald-200 dark:shadow-emerald-900/20"
+                            className="w-full xl:w-auto text-white font-bold p-2.5 rounded-lg transition-colors flex items-center justify-center shadow-lg bg-emerald-600 hover:bg-emerald-500 shadow-emerald-200 dark:shadow-emerald-900/20 mt-2 xl:mt-0"
                         >
                             <Plus size={20} />
                         </button>
@@ -460,10 +515,11 @@ export const CurrentAccountsApp: React.FC<CurrentAccountsAppProps> = ({ db }) =>
                                         Fecha
                                         <ArrowUpDown size={14} className={sortNewest ? "text-emerald-500" : "text-slate-400"} />
                                     </th>
-                                    <th className="p-4">Descripción</th>
-                                    <th className="p-4 text-right text-emerald-600 dark:text-emerald-500">Haber</th>
-                                    <th className="p-4 text-right text-rose-600 dark:text-rose-500">Debe</th>
-                                    <th className="p-4 text-right text-slate-800 dark:text-white bg-slate-50 dark:bg-slate-900/50">Deuda</th>
+                                    <th className="p-4 text-center">Cant.</th>
+                                    <th className="p-4 text-right">Precio Unit.</th>
+                                    <th className="p-4 text-right text-rose-600 dark:text-rose-500 bg-rose-50/50 dark:bg-rose-900/10">Debe (Compra)</th>
+                                    <th className="p-4 text-right text-emerald-600 dark:text-emerald-500 bg-emerald-50/50 dark:bg-emerald-900/10">Haber (Paga)</th>
+                                    <th className="p-4 text-right text-slate-800 dark:text-white bg-slate-50 dark:bg-slate-900/50">Deuda (Saldo)</th>
                                     <th className="p-4 w-10"></th>
                                 </tr>
                             </thead>
@@ -471,20 +527,41 @@ export const CurrentAccountsApp: React.FC<CurrentAccountsAppProps> = ({ db }) =>
                                 {displayTransactions.map((t) => (
                                     <tr key={t.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group">
                                         <td className="p-3 text-sm text-slate-700 dark:text-white whitespace-nowrap font-mono">{t.date.split('-').reverse().join('/')}</td>
-                                        <td className="p-3 text-sm text-slate-700 dark:text-white font-medium">{t.description}</td>
-                                        <td className="p-3 text-right font-mono text-emerald-600 dark:text-emerald-400">
-                                            {t.delivery > 0 ? formatCurrency(t.delivery) : <span className="text-slate-300 dark:text-slate-600">-</span>}
+                                        
+                                        {/* Cantidad */}
+                                        <td className="p-3 text-sm text-center text-slate-700 dark:text-slate-300">
+                                            {t.quantity ? (
+                                                <span className="font-mono bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+                                                    {t.quantity}
+                                                </span>
+                                            ) : '-'}
                                         </td>
-                                        <td className="p-3 text-right font-mono text-rose-600 dark:text-rose-400">
+                                        
+                                        {/* Precio Unitario */}
+                                        <td className="p-3 text-sm text-right text-slate-600 dark:text-slate-400 font-mono">
+                                            {t.price ? formatCurrency(t.price) : '-'}
+                                        </td>
+
+                                        {/* Debe */}
+                                        <td className="p-3 text-right font-mono text-rose-600 dark:text-rose-400 bg-rose-50/30 dark:bg-rose-900/5 font-medium">
                                             {t.debit > 0 ? formatCurrency(t.debit) : <span className="text-slate-300 dark:text-slate-600">-</span>}
                                         </td>
+
+                                        {/* Haber */}
+                                        <td className="p-3 text-right font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-50/30 dark:bg-emerald-900/5 font-medium">
+                                            {t.delivery > 0 ? formatCurrency(t.delivery) : <span className="text-slate-300 dark:text-slate-600">-</span>}
+                                        </td>
+
+                                        {/* Saldo */}
                                         <td className="p-3 text-right font-mono font-bold text-slate-800 dark:text-white bg-slate-50/50 dark:bg-slate-900/30">
                                             {formatCurrency(t.balanceAfter)}
                                         </td>
+
                                         <td className="p-3 text-center">
                                             <button 
                                                 onClick={() => handleRemoveTransaction(t.id)}
                                                 className="opacity-0 group-hover:opacity-100 p-1.5 text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-950/30 rounded transition-all"
+                                                title="Eliminar movimiento"
                                             >
                                                 <Trash2 size={14} />
                                             </button>
@@ -493,7 +570,7 @@ export const CurrentAccountsApp: React.FC<CurrentAccountsAppProps> = ({ db }) =>
                                 ))}
                                 {(!accountData.transactions || accountData.transactions.length === 0) && (
                                     <tr>
-                                        <td colSpan={6} className="p-8 text-center text-slate-500 italic">No hay movimientos registrados.</td>
+                                        <td colSpan={7} className="p-8 text-center text-slate-500 italic">No hay movimientos registrados.</td>
                                     </tr>
                                 )}
                             </tbody>
