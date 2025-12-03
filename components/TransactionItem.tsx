@@ -176,7 +176,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
             <input
               ref={amountInputRef}
               type="text"
-              inputMode="numeric"
+              inputMode="text"
               value={inputValue}
               onChange={handleAmountChange}
               onKeyDown={handleKeyDown}
