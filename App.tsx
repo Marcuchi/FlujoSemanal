@@ -34,10 +34,8 @@ const createInitialState = (): WeekData => {
   return state;
 };
 
-// Helper to calculate the closing balance of a week data object
-// Accepts an optional 'startBalance' which is used if Monday is set to Automatic (undefined manualInitialAmount)
+// Helper to calculate the closing balance of a week data object (Office)
 const calculateWeeklyBalance = (data: WeekData, startBalance: number = 0): number => {
-    // If Monday has a manual initial amount, use it. Otherwise use the passed startBalance (from previous week close)
     let balance = data['monday']?.manualInitialAmount !== undefined 
         ? data['monday']!.manualInitialAmount! 
         : startBalance;
@@ -46,7 +44,6 @@ const calculateWeeklyBalance = (data: WeekData, startBalance: number = 0): numbe
         const d = data[day.id];
         if (!d) return;
         
-        // If a specific day has a manual override, it resets the balance anchor
         if (d.manualInitialAmount !== undefined) {
              balance = d.manualInitialAmount;
         }
@@ -56,10 +53,6 @@ const calculateWeeklyBalance = (data: WeekData, startBalance: number = 0): numbe
         const expenses = d.expenses?.reduce((acc, t) => acc + t.amount, 0) || 0;
         const salaries = d.salaries?.reduce((acc, t) => acc + t.amount, 0) || 0;
         
-        // Handle logic:
-        // "Oficina" in toBox: Adds to Office (Reverse transfer).
-        // "Tesoro" in toBox: Subtracts from Office (Transfer to Treasury).
-        // Other in toBox: Ignored by Office balance.
         let treasuryToOffice = 0;
         let officeToTreasury = 0;
 
@@ -75,6 +68,35 @@ const calculateWeeklyBalance = (data: WeekData, startBalance: number = 0): numbe
         }
         
         balance = balance + income + deliveries - expenses - salaries + treasuryToOffice - officeToTreasury;
+    });
+    return balance;
+};
+
+// Helper to calculate the closing Treasury total of a week
+const calculateWeeklyTreasury = (data: WeekData, startBalance: number = 0): number => {
+    let balance = 0;
+    
+    // Determine start balance for Treasury
+    if (data['monday']?.initialBoxAmount !== undefined) {
+        balance = data['monday'].initialBoxAmount;
+    } else {
+        balance = startBalance;
+    }
+
+    Object.values(data).forEach(day => {
+        if (day.toBox) {
+            day.toBox.forEach(t => {
+                const title = t.title.trim().toLowerCase();
+                if (title === 'oficina') {
+                    // Returns to office, subtract from Treasury
+                    balance -= t.amount;
+                } else if (title === 'tesoro') { 
+                    // "Tesoro": Add to Treasury
+                    balance += t.amount;
+                }
+                // Generic items are ignored in this specific metric
+            });
+        }
     });
     return balance;
 };
@@ -100,8 +122,10 @@ const App: React.FC = () => {
   // State for Zoom Level
   const [zoomLevel, setZoomLevel] = React.useState(90);
 
-  // State for Previous Week's Close (for Automatic Monday Initial)
+  // State for Previous Week's Close (for Automatic Monday Initial Office)
   const [prevWeekClose, setPrevWeekClose] = React.useState(0);
+  // State for Previous Week's Treasury Total (for Automatic Monday Initial Treasury)
+  const [prevWeekTreasury, setPrevWeekTreasury] = React.useState(0);
 
   // Derived week key (e.g., "2024-04-15")
   const currentWeekKey = React.useMemo(() => getWeekKey(currentDate), [currentDate]);
@@ -115,7 +139,6 @@ const App: React.FC = () => {
   }, []);
 
   React.useEffect(() => {
-    // Applying zoom to root html element as percentage
     document.documentElement.style.fontSize = `${zoomLevel}%`;
     localStorage.setItem('app_zoom_level', zoomLevel.toString());
   }, [zoomLevel]);
@@ -184,35 +207,52 @@ const App: React.FC = () => {
           setHistory(data || []);
       });
 
-      // 4. Load Previous Week Data for "Automatic" Calculation
+      // 4. Load Previous Week Data for "Automatic" Calculation (Office & Treasury)
       const prevWeekKey = getWeekKey(addWeeks(currentDate, -1));
       const prevPrevWeekKey = getWeekKey(addWeeks(currentDate, -2));
 
       get(ref(db!, `weeks/${prevWeekKey}/data`)).then((snap) => {
           if (snap.exists()) {
               const prevData = snap.val();
-              // Check if the previous week starts Automatically (manualInitialAmount is undefined)
-              // If so, we need the closing balance of the week BEFORE that to calculate correctly.
+              
+              // --- Office Balance Logic ---
               if (prevData['monday']?.manualInitialAmount === undefined) {
                   get(ref(db!, `weeks/${prevPrevWeekKey}/data`)).then((snap2) => {
                       let startOfPrev = 0;
                       if (snap2.exists()) {
-                          // Calculate closing of Week -2 to assume as start of Week -1
                           startOfPrev = calculateWeeklyBalance(snap2.val(), 0); 
                       }
                       setPrevWeekClose(calculateWeeklyBalance(prevData, startOfPrev));
                   }).catch(() => {
-                      // If fetch fails, just calculate prevData with 0 start
                       setPrevWeekClose(calculateWeeklyBalance(prevData, 0));
                   });
               } else {
-                  // Previous week has manual start, so we can calculate directly
                   setPrevWeekClose(calculateWeeklyBalance(prevData, 0));
               }
+
+              // --- Treasury Balance Logic ---
+              if (prevData['monday']?.initialBoxAmount === undefined) {
+                  get(ref(db!, `weeks/${prevPrevWeekKey}/data`)).then((snap2) => {
+                      let startTreasuryPrev = 0;
+                      if (snap2.exists()) {
+                          startTreasuryPrev = calculateWeeklyTreasury(snap2.val(), 0);
+                      }
+                      setPrevWeekTreasury(calculateWeeklyTreasury(prevData, startTreasuryPrev));
+                  }).catch(() => {
+                      setPrevWeekTreasury(calculateWeeklyTreasury(prevData, 0));
+                  });
+              } else {
+                  setPrevWeekTreasury(calculateWeeklyTreasury(prevData, 0));
+              }
+
           } else {
               setPrevWeekClose(0);
+              setPrevWeekTreasury(0);
           }
-      }).catch(() => setPrevWeekClose(0));
+      }).catch(() => {
+          setPrevWeekClose(0);
+          setPrevWeekTreasury(0);
+      });
 
       return () => {
         unsubscribeWeek();
@@ -244,19 +284,38 @@ const App: React.FC = () => {
       if (savedPrev) {
           try {
              const prevData = JSON.parse(savedPrev);
+             const savedPrevPrev = localStorage.getItem(`weekData_${prevPrevWeekKey}`);
+             const prevPrevData = savedPrevPrev ? JSON.parse(savedPrevPrev) : null;
+
+             // Office
              if (prevData['monday']?.manualInitialAmount === undefined) {
-                 const savedPrevPrev = localStorage.getItem(`weekData_${prevPrevWeekKey}`);
                  let startOfPrev = 0;
-                 if (savedPrevPrev) {
-                     startOfPrev = calculateWeeklyBalance(JSON.parse(savedPrevPrev), 0);
+                 if (prevPrevData) {
+                     startOfPrev = calculateWeeklyBalance(prevPrevData, 0);
                  }
                  setPrevWeekClose(calculateWeeklyBalance(prevData, startOfPrev));
              } else {
                  setPrevWeekClose(calculateWeeklyBalance(prevData, 0));
              }
-          } catch { setPrevWeekClose(0); }
+
+             // Treasury
+             if (prevData['monday']?.initialBoxAmount === undefined) {
+                 let startTreasuryPrev = 0;
+                 if (prevPrevData) {
+                    startTreasuryPrev = calculateWeeklyTreasury(prevPrevData, 0);
+                 }
+                 setPrevWeekTreasury(calculateWeeklyTreasury(prevData, startTreasuryPrev));
+             } else {
+                 setPrevWeekTreasury(calculateWeeklyTreasury(prevData, 0));
+             }
+
+          } catch { 
+              setPrevWeekClose(0); 
+              setPrevWeekTreasury(0);
+          }
       } else {
           setPrevWeekClose(0);
+          setPrevWeekTreasury(0);
       }
 
       setLoading(false);
@@ -467,11 +526,6 @@ const App: React.FC = () => {
       const dayExpense = day.expenses?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
       const daySalaries = day.salaries?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
       
-      // Treasury Calculations:
-      // 'dayTreasuryAdd': Sum of ALL items in toBox that are NOT "Oficina". These add to Treasury.
-      // (Even "Tesoro" adds to treasury here, because it's a transfer IN to treasury)
-      // 'dayTreasurySub': Sum of "Oficina" items in toBox. These subtract from Treasury (Return to Office).
-      
       let dayTreasuryAdd = 0;
       let dayTreasurySub = 0;
 
@@ -479,16 +533,23 @@ const App: React.FC = () => {
         day.toBox.forEach(item => {
             const t = item.title.trim().toLowerCase();
             if (t === 'oficina') {
-                // Transfers back to office: Subtract from Treasury
                 dayTreasurySub += item.amount;
-            } else {
-                // Generic OR "Tesoro": Add to Treasury
+            } else if (t === 'tesoro') {
                 dayTreasuryAdd += item.amount;
             }
+            // Generic items ignored for total
         });
       }
       
-      const initialBox = day.initialBoxAmount || 0; 
+      // Treasury Initial logic:
+      // For Monday, if manual is set, use it. If not, use calculated prevWeekTreasury.
+      // For other days, initialBoxAmount should generally be 0 or undefined, but we keep the property check.
+      let initialBox = 0;
+      if (day.id === 'monday') {
+           initialBox = day.initialBoxAmount !== undefined ? day.initialBoxAmount : prevWeekTreasury;
+      } else {
+           initialBox = day.initialBoxAmount || 0;
+      }
 
       return {
         income: acc.income + dayIncome + dayDeliveries,
@@ -497,17 +558,16 @@ const App: React.FC = () => {
       };
     },
     { income: 0, expense: 0, toBox: 0 }
-  ), [weekData]);
+  ), [weekData, prevWeekTreasury]);
 
   const netTotal = totals.income - totals.expense;
 
   const runningBalances = React.useMemo(() => {
     const balances: Record<string, number> = {};
-    let currentBalance = prevWeekClose; // Start with previous week's close
+    let currentBalance = prevWeekClose; 
 
     for (const day of DAYS_OF_WEEK) {
       const data = weekData[day.id];
-      // If manual is set, it overrides the running balance for calculation, otherwise use current
       const effectiveInitial = data?.manualInitialAmount !== undefined ? data.manualInitialAmount : currentBalance;
       
       balances[day.id] = currentBalance;
@@ -532,7 +592,6 @@ const App: React.FC = () => {
             });
         }
 
-        // Current Balance = Start + Income - Expenses + (From Treasury "Oficina") - (To Treasury "Tesoro")
         currentBalance = effectiveInitial + income + deliveries - expense - salaries + treasuryToOffice - officeToTreasury;
       }
     }
@@ -546,32 +605,7 @@ const App: React.FC = () => {
 
   const handleNextWeek = () => {
     const nextDate = addWeeks(currentDate, 1);
-    const nextWeekKey = getWeekKey(nextDate);
-    
-    const carryOverTreasury = totals.toBox; // Current week's total treasury
-
-    if (db) {
-        const nextWeekRef = ref(db!, `weeks/${nextWeekKey}/data`);
-        get(nextWeekRef).then((snapshot) => {
-            if (!snapshot.exists()) {
-                const newState = createInitialState();
-                // We do NOT set manualInitialAmount here. 
-                // By leaving it undefined, it will pick up the 'Automatic' value 
-                // derived from 'prevWeekClose' when that week loads.
-                newState['monday'].initialBoxAmount = carryOverTreasury;
-                set(nextWeekRef, JSON.parse(JSON.stringify(newState)));
-            }
-            setCurrentDate(nextDate);
-        });
-    } else {
-        const savedNext = localStorage.getItem(`weekData_${nextWeekKey}`);
-        if (!savedNext) {
-             const newState = createInitialState();
-             newState['monday'].initialBoxAmount = carryOverTreasury;
-             localStorage.setItem(`weekData_${nextWeekKey}`, JSON.stringify(newState));
-        }
-        setCurrentDate(nextDate);
-    }
+    setCurrentDate(nextDate);
   };
 
   const handleDateSelect = (date: Date) => {
@@ -781,6 +815,7 @@ const App: React.FC = () => {
                         dayData={weekData[day.id]} 
                         onUpdate={handleUpdateDay}
                         previousBalance={runningBalances[day.id]}
+                        prevWeekTreasury={prevWeekTreasury}
                         onAddToHistory={handleAddToHistory}
                     />
                 ))}

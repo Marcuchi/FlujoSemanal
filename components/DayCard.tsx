@@ -11,10 +11,11 @@ interface DayCardProps {
   dayData: DayData;
   onUpdate: (updatedDay: DayData) => void;
   previousBalance: number;
+  prevWeekTreasury?: number;
   onAddToHistory: (item: HistoryItem) => void;
 }
 
-export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBalance = 0, onAddToHistory }) => {
+export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBalance = 0, prevWeekTreasury = 0, onAddToHistory }) => {
   
   if (!dayData) return null;
 
@@ -29,7 +30,11 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
   const isManualInitial = dayData.manualInitialAmount !== undefined;
   const effectiveInitialAmount = isManualInitial ? dayData.manualInitialAmount! : previousBalance;
   const isMonday = dayData.id === 'monday';
-  const effectiveBoxInitial = isMonday ? (dayData.initialBoxAmount || 0) : 0;
+  
+  // Logic for Initial Box Amount (Treasury)
+  // If manual exists, use it. If not, use prevWeekTreasury (Automatic).
+  const isManualBoxInitial = dayData.initialBoxAmount !== undefined;
+  const effectiveBoxInitial = isMonday ? (isManualBoxInitial ? dayData.initialBoxAmount! : prevWeekTreasury) : 0;
 
   const handleAddTransaction = (type: TransactionType) => {
     const newTransaction: Transaction = {
@@ -133,14 +138,23 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
     if (e.key === 'Escape') setIsEditingInitial(false);
   };
 
+  // --- Initial Box Handlers ---
+
   const saveBoxInitial = () => {
       const val = parseFloat(tempBoxInitial.replace(/\./g, '').replace(/,/g, '.'));
       if (!isNaN(val)) {
         onUpdate({ ...dayData, initialBoxAmount: val });
-      } else if (tempBoxInitial === '') {
-        onUpdate({ ...dayData, initialBoxAmount: 0 });
+      } else {
+        // If empty or NaN, we treat it as reset to auto? 
+        // Or if user explicitly cleared it. 
+        // For now, if empty, we remove the manual override.
+        onUpdate({ ...dayData, initialBoxAmount: undefined });
       }
       setIsEditingBoxInitial(false);
+  };
+
+  const resetBoxInitial = () => {
+      onUpdate({ ...dayData, initialBoxAmount: undefined });
   };
 
   const startEditingBoxInitial = () => {
@@ -203,9 +217,11 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
   // Initial + Income - Expenses - Salaries + (From Treasury "Oficina") - (To Treasury "Tesoro")
   const totalOficina = effectiveInitialAmount + totalIncome + totalDeliveries - totalExpense - totalSalaries + treasuryToOfficeTransfer - officeToTreasuryTransfer;
 
-  // Treasury Total:
-  // Initial Box + All Additions ("Tesoro" + Generic) - Transfers Back to Office ("Oficina")
-  const totalToBoxWithInitial = effectiveBoxInitial + treasuryAddition + officeToTreasuryTransfer - treasuryToOfficeTransfer;
+  // Treasury Flow (Day Only):
+  // Strictly: Items named "Tesoro" - Items named "Oficina".
+  // Generic items (treasuryAddition) are IGNORED for the indicator as requested.
+  // NOTE: This excludes the Initial Box Amount (from Monday) for visual display purposes on the card.
+  const treasuryDayFlow = officeToTreasuryTransfer - treasuryToOfficeTransfer;
 
   const MetricDisplay = ({ label, value, icon: Icon, colorClass, borderClass }: { label: string; value: number; icon: any; colorClass: string; borderClass?: string }) => (
     <div className={`flex items-center justify-between p-3 rounded-lg bg-slate-800 border ${borderClass || 'border-slate-700'}`}>
@@ -241,7 +257,7 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
         </div>
         <div className="space-y-3">
           <MetricDisplay label="Oficina" value={totalOficina} icon={Briefcase} colorClass="text-blue-400" borderClass="border-blue-900/30 bg-blue-950/20" />
-          <MetricDisplay label="Tesoro" value={totalToBoxWithInitial} icon={Wallet} colorClass="text-indigo-400" borderClass="border-indigo-900/30 bg-indigo-950/20" />
+          <MetricDisplay label="Tesoro" value={treasuryDayFlow} icon={Wallet} colorClass="text-indigo-400" borderClass="border-indigo-900/30 bg-indigo-950/20" />
         </div>
       </div>
 
@@ -302,6 +318,11 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
                     <Archive size={20} className="text-indigo-400"/> 
                     Tesoro Inicial
                   </h3>
+                  {isManualBoxInitial && !isEditingBoxInitial && (
+                    <button onClick={resetBoxInitial} title="Restaurar a Automático" className="p-1 rounded hover:bg-slate-700 text-slate-400 hover:text-indigo-400 transition-colors">
+                      <RotateCcw size={18} />
+                    </button>
+                  )}
                 </div>
                 <div className="p-3">
                   {isEditingBoxInitial ? (
@@ -322,12 +343,12 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
                         <button onClick={() => setIsEditingBoxInitial(false)} className="p-2 bg-slate-700 rounded text-slate-300"><X size={20}/></button>
                       </div>
                   ) : (
-                      <div onClick={startEditingBoxInitial} className="cursor-pointer p-3 rounded border border-transparent hover:border-slate-600 hover:bg-slate-800 transition-all flex justify-between items-center group bg-slate-800/50">
-                        <span className="text-lg text-indigo-300 font-medium">
-                          Valor Inicial
-                        </span>
+                      <div onClick={startEditingBoxInitial} className={`cursor-pointer p-3 rounded border border-transparent hover:border-slate-600 hover:bg-slate-800 transition-all flex justify-between items-center group ${isManualBoxInitial ? 'bg-slate-800/50' : ''}`}>
+                         <span className={`text-lg ${isManualBoxInitial ? 'text-indigo-300 font-medium' : 'text-slate-500 italic'}`}>
+                            {isManualBoxInitial ? 'Manual' : 'Automático'}
+                         </span>
                         <div className="flex items-center gap-2">
-                          <span className="font-mono font-bold text-2xl text-indigo-200">
+                          <span className={`font-mono font-bold text-2xl ${isManualBoxInitial ? 'text-indigo-200' : 'text-slate-400'}`}>
                             {formatCurrency(effectiveBoxInitial)}
                           </span>
                           <Edit2 size={18} className="opacity-0 group-hover:opacity-100 text-slate-500" />
@@ -493,7 +514,7 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
                 A Tesoro
               </div>
               <span className="text-lg font-mono font-bold text-indigo-300 bg-indigo-900/60 px-3 py-1 rounded border border-indigo-800/50">
-                {formatCurrency(totalToBoxWithInitial)}
+                {formatCurrency(treasuryDayFlow)}
               </span>
             </h3>
             <button onClick={() => handleAddTransaction('toBox')} className="p-1.5 rounded bg-indigo-900 hover:bg-indigo-800 text-indigo-100 transition-colors border border-indigo-800">
