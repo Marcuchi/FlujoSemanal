@@ -90,11 +90,10 @@ const calculateWeeklyTreasury = (data: WeekData, startBalance: number = 0): numb
                 if (title === 'oficina') {
                     // Returns to office, subtract from Treasury
                     balance -= t.amount;
-                } else if (title === 'tesoro') { 
-                    // "Tesoro": Add to Treasury
+                } else { 
+                    // "Tesoro" OR Generic items: Add to Treasury
                     balance += t.amount;
                 }
-                // Generic items are ignored in this specific metric
             });
         }
     });
@@ -534,10 +533,10 @@ const App: React.FC = () => {
             const t = item.title.trim().toLowerCase();
             if (t === 'oficina') {
                 dayTreasurySub += item.amount;
-            } else if (t === 'tesoro') {
+            } else {
+                // "Tesoro" OR Generic items: Add to Treasury
                 dayTreasuryAdd += item.amount;
             }
-            // Generic items ignored for total
         });
       }
       
