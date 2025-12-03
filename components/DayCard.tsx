@@ -175,10 +175,37 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
   const totalDeliveries = React.useMemo(() => dayData.deliveries.reduce((acc, curr) => acc + curr.amount, 0), [dayData.deliveries]);
   const totalExpense = React.useMemo(() => dayData.expenses.reduce((acc, curr) => acc + curr.amount, 0), [dayData.expenses]);
   const totalSalaries = React.useMemo(() => dayData.salaries.reduce((acc, curr) => acc + curr.amount, 0), [dayData.salaries]);
-  const totalToBox = React.useMemo(() => dayData.toBox.reduce((acc, curr) => acc + curr.amount, 0), [dayData.toBox]);
   
-  const totalOficina = effectiveInitialAmount + totalIncome + totalDeliveries - totalExpense - totalSalaries - totalToBox;
-  const totalToBoxWithInitial = totalToBox + effectiveBoxInitial;
+  // Revised Logic for "A Tesoro" (toBox)
+  // 1. "oficina": Transfers FROM Treasury TO Office. (+Office, -Treasury)
+  // 2. "tesoro": Transfers FROM Office TO Treasury. (-Office, +Treasury)
+  // 3. Generic/Other: External addition to Treasury. (No effect on Office, +Treasury)
+  
+  const { treasuryAddition, treasuryToOfficeTransfer, officeToTreasuryTransfer } = React.useMemo(() => {
+    return dayData.toBox.reduce((acc, curr) => {
+      const t = curr.title.trim().toLowerCase();
+      
+      if (t === 'oficina') {
+        // Transfer FROM Treasury TO Office
+        acc.treasuryToOfficeTransfer += curr.amount;
+      } else if (t === 'tesoro') {
+        // Transfer FROM Office TO Treasury
+        acc.officeToTreasuryTransfer += curr.amount;
+      } else {
+        // Just added to Treasury (does not affect Office balance)
+        acc.treasuryAddition += curr.amount;
+      }
+      return acc;
+    }, { treasuryAddition: 0, treasuryToOfficeTransfer: 0, officeToTreasuryTransfer: 0 });
+  }, [dayData.toBox]);
+  
+  // Office Total:
+  // Initial + Income - Expenses - Salaries + (From Treasury "Oficina") - (To Treasury "Tesoro")
+  const totalOficina = effectiveInitialAmount + totalIncome + totalDeliveries - totalExpense - totalSalaries + treasuryToOfficeTransfer - officeToTreasuryTransfer;
+
+  // Treasury Total:
+  // Initial Box + All Additions ("Tesoro" + Generic) - Transfers Back to Office ("Oficina")
+  const totalToBoxWithInitial = effectiveBoxInitial + treasuryAddition + officeToTreasuryTransfer - treasuryToOfficeTransfer;
 
   const MetricDisplay = ({ label, value, icon: Icon, colorClass, borderClass }: { label: string; value: number; icon: any; colorClass: string; borderClass?: string }) => (
     <div className={`flex items-center justify-between p-3 rounded-lg bg-slate-800 border ${borderClass || 'border-slate-700'}`}>
@@ -465,7 +492,7 @@ export const DayCard: React.FC<DayCardProps> = ({ dayData, onUpdate, previousBal
                 <Archive size={20} className="text-indigo-400"/> 
                 A Tesoro
               </div>
-              <span className="ml-2 text-lg font-mono font-bold text-indigo-300 bg-indigo-900/60 px-3 py-1 rounded border border-indigo-800/50">
+              <span className="text-lg font-mono font-bold text-indigo-300 bg-indigo-900/60 px-3 py-1 rounded border border-indigo-800/50">
                 {formatCurrency(totalToBoxWithInitial)}
               </span>
             </h3>

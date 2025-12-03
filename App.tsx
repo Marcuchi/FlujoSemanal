@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Download, Upload, PieChart as PieChartIcon, History, ChevronLeft, ChevronRight, Calendar, Menu, LayoutGrid, Scale, BookUser, Banknote, Database, StickyNote, ZoomIn, ZoomOut } from 'lucide-react';
 import { ref, onValue, set, get, child } from 'firebase/database';
@@ -54,9 +55,26 @@ const calculateWeeklyBalance = (data: WeekData, startBalance: number = 0): numbe
         const deliveries = d.deliveries?.reduce((acc, t) => acc + t.amount, 0) || 0;
         const expenses = d.expenses?.reduce((acc, t) => acc + t.amount, 0) || 0;
         const salaries = d.salaries?.reduce((acc, t) => acc + t.amount, 0) || 0;
-        const toBox = d.toBox?.reduce((acc, t) => acc + t.amount, 0) || 0;
         
-        balance = balance + income + deliveries - expenses - salaries - toBox;
+        // Handle logic:
+        // "Oficina" in toBox: Adds to Office (Reverse transfer).
+        // "Tesoro" in toBox: Subtracts from Office (Transfer to Treasury).
+        // Other in toBox: Ignored by Office balance.
+        let treasuryToOffice = 0;
+        let officeToTreasury = 0;
+
+        if (d.toBox) {
+            d.toBox.forEach(t => {
+                const title = t.title.trim().toLowerCase();
+                if (title === 'oficina') {
+                    treasuryToOffice += t.amount;
+                } else if (title === 'tesoro') {
+                    officeToTreasury += t.amount;
+                }
+            });
+        }
+        
+        balance = balance + income + deliveries - expenses - salaries + treasuryToOffice - officeToTreasury;
     });
     return balance;
 };
@@ -448,13 +466,34 @@ const App: React.FC = () => {
       const dayDeliveries = day.deliveries?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
       const dayExpense = day.expenses?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
       const daySalaries = day.salaries?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
-      const dayToBox = day.toBox?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
+      
+      // Treasury Calculations:
+      // 'dayTreasuryAdd': Sum of ALL items in toBox that are NOT "Oficina". These add to Treasury.
+      // (Even "Tesoro" adds to treasury here, because it's a transfer IN to treasury)
+      // 'dayTreasurySub': Sum of "Oficina" items in toBox. These subtract from Treasury (Return to Office).
+      
+      let dayTreasuryAdd = 0;
+      let dayTreasurySub = 0;
+
+      if (day.toBox) {
+        day.toBox.forEach(item => {
+            const t = item.title.trim().toLowerCase();
+            if (t === 'oficina') {
+                // Transfers back to office: Subtract from Treasury
+                dayTreasurySub += item.amount;
+            } else {
+                // Generic OR "Tesoro": Add to Treasury
+                dayTreasuryAdd += item.amount;
+            }
+        });
+      }
+      
       const initialBox = day.initialBoxAmount || 0; 
 
       return {
         income: acc.income + dayIncome + dayDeliveries,
         expense: acc.expense + dayExpense + daySalaries, 
-        toBox: acc.toBox + dayToBox + initialBox,
+        toBox: acc.toBox + dayTreasuryAdd - dayTreasurySub + initialBox,
       };
     },
     { income: 0, expense: 0, toBox: 0 }
@@ -478,8 +517,23 @@ const App: React.FC = () => {
         const deliveries = data.deliveries?.reduce((s, t) => s + (t.amount || 0), 0) || 0;
         const expense = data.expenses?.reduce((s, t) => s + (t.amount || 0), 0) || 0;
         const salaries = data.salaries?.reduce((s, t) => s + (t.amount || 0), 0) || 0;
-        const toBox = data.toBox?.reduce((s, t) => s + (t.amount || 0), 0) || 0;
-        currentBalance = effectiveInitial + income + deliveries - expense - salaries - toBox;
+        
+        let treasuryToOffice = 0;
+        let officeToTreasury = 0;
+
+        if (data.toBox) {
+            data.toBox.forEach(t => {
+                const title = t.title.trim().toLowerCase();
+                if (title === 'oficina') {
+                    treasuryToOffice += t.amount;
+                } else if (title === 'tesoro') {
+                    officeToTreasury += t.amount;
+                }
+            });
+        }
+
+        // Current Balance = Start + Income - Expenses + (From Treasury "Oficina") - (To Treasury "Tesoro")
+        currentBalance = effectiveInitial + income + deliveries - expense - salaries + treasuryToOffice - officeToTreasury;
       }
     }
     balances['saturday_close'] = currentBalance;
