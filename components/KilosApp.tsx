@@ -116,13 +116,19 @@ export const KilosApp: React.FC<KilosAppProps> = ({ db, weekKey }) => {
   const [blackColumns, setBlackColumns] = React.useState<boolean[]>(Array(COLUMNS.length).fill(false));
 
   const toggleColumn = (idx: number) => {
-    setBlackColumns(prev => {
-        const next = [...prev];
-        next[idx] = !next[idx];
-        return next;
-    });
+    const next = [...blackColumns];
+    next[idx] = !next[idx];
+    setBlackColumns(next);
+    
+    // Save settings PER WEEK
+    if (db) {
+        set(ref(db, `weeks/${weekKey}/kilos_black_columns`), next).catch(console.error);
+    } else {
+        localStorage.setItem(`kilos_black_columns_${weekKey}`, JSON.stringify(next));
+    }
   };
 
+  // Load Main Data
   React.useEffect(() => {
     if (db) {
       setLoading(true);
@@ -142,6 +148,37 @@ export const KilosApp: React.FC<KilosAppProps> = ({ db, weekKey }) => {
         setData({});
       }
       setLoading(false);
+    }
+  }, [db, weekKey]);
+
+  // Load Settings (Black Columns) PER WEEK
+  React.useEffect(() => {
+    if (db) {
+      const settingsRef = ref(db, `weeks/${weekKey}/kilos_black_columns`);
+      const unsubscribe = onValue(settingsRef, (snapshot) => {
+        const val = snapshot.val();
+        if (val && Array.isArray(val)) {
+             // Ensure length matches just in case columns config changed
+             if (val.length === COLUMNS.length) {
+                 setBlackColumns(val);
+             } else {
+                 const adjusted = [...val];
+                 while(adjusted.length < COLUMNS.length) adjusted.push(false);
+                 setBlackColumns(adjusted.slice(0, COLUMNS.length));
+             }
+        } else {
+             // Reset if no specific config for this week
+             setBlackColumns(Array(COLUMNS.length).fill(false));
+        }
+      });
+      return () => unsubscribe();
+    } else {
+       const saved = localStorage.getItem(`kilos_black_columns_${weekKey}`);
+       if (saved) {
+           try { setBlackColumns(JSON.parse(saved)); } catch(e) { setBlackColumns(Array(COLUMNS.length).fill(false)); }
+       } else {
+           setBlackColumns(Array(COLUMNS.length).fill(false));
+       }
     }
   }, [db, weekKey]);
 
