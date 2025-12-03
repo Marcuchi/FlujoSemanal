@@ -675,7 +675,6 @@ const App: React.FC = () => {
       <MenuModal 
         isOpen={showMenu} 
         onClose={() => setShowMenu(false)} 
-        onReset={handleReset} 
         currentApp={currentApp}
         onSwitchApp={setCurrentApp}
       />

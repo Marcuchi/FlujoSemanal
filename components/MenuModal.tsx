@@ -6,27 +6,16 @@ import { AppMode } from '../types';
 interface MenuModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onReset: () => void;
   currentApp: AppMode;
   onSwitchApp: (app: AppMode) => void;
 }
 
-export const MenuModal: React.FC<MenuModalProps> = ({ isOpen, onClose, onReset, currentApp, onSwitchApp }) => {
+export const MenuModal: React.FC<MenuModalProps> = ({ isOpen, onClose, currentApp, onSwitchApp }) => {
   if (!isOpen) return null;
 
   const handleAppClick = (app: AppMode) => {
     onSwitchApp(app);
     onClose();
-  };
-
-  const handleResetClick = () => {
-    const password = window.prompt("Introduce la contraseña para reiniciar la semana:");
-    if (password === "secreta") {
-      onReset();
-      onClose();
-    } else if (password !== null) {
-      alert("Contraseña incorrecta.");
-    }
   };
 
   return (
@@ -190,17 +179,6 @@ export const MenuModal: React.FC<MenuModalProps> = ({ isOpen, onClose, onReset, 
               )}
             </button>
           </div>
-          
-          <div className="mt-8 pt-6 border-t border-slate-800">
-             <button 
-               onClick={handleResetClick}
-               className="w-full p-4 rounded-xl bg-slate-900 border border-slate-800 hover:border-red-500/50 hover:bg-red-950/10 transition-colors group flex items-center justify-center gap-2"
-             >
-               <span className="text-slate-400 group-hover:text-red-400 font-bold text-sm">Reiniciar Semana Actual</span>
-             </button>
-             <p className="text-center text-[10px] text-slate-600 mt-2">Requiere contraseña</p>
-          </div>
-
         </div>
 
       </div>

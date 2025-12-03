@@ -1,13 +1,36 @@
 
 import React from 'react';
 import { Database as DBRef, ref, onValue, set } from 'firebase/database';
-import { ChevronDown, ChevronUp, Plus, Trash2, User, Users, Truck, ArrowUpDown, Calendar, Phone, MapPin, CreditCard, Tag, Edit2, Save, X, Check, Map } from 'lucide-react';
-import { GeneralData, GeneralItem, Employee, Supplier, Client } from '../types';
+import { ChevronDown, ChevronUp, Plus, Trash2, User, Users, Truck, ArrowUpDown, MapPin, Edit2, Check, X, Tag } from 'lucide-react';
+import { GeneralData, Employee, Supplier, Client } from '../types';
 import { generateId, formatCurrency } from '../utils';
 
 interface GeneralDataAppProps {
   db: DBRef | null;
 }
+
+const INITIAL_EMPLOYEES: Employee[] = [
+  { id: '1', lastName: 'BUSTAMANTE', firstName: 'Ramón Emanuel', dni: '36.431.396', cuil: '23-36431396-9', address: 'Calle 3 N° 78 - B° Remedios de escalada', startDate: '2007-11-21', birthDate: '1991-09-22', phone: '152686790' },
+  { id: '2', lastName: 'POLANCO', firstName: 'Mauro Gabriel', dni: '33.893.482', cuil: '20-33893482-4', address: 'Ibar Segura Funes 9064', startDate: '2006-09-07', birthDate: '1987-12-24', phone: '152655459' },
+  { id: '3', lastName: 'BUSTAMANTE', firstName: 'José Roque', dni: '11.558.586', cuil: '20-11558586-0', address: 'Calle 3 N° 78 - B° Remedios de escalada', startDate: '2007-06-01', birthDate: '1955-03-31', phone: '152827732' },
+  { id: '4', lastName: 'GODOY', firstName: 'Walter Daniel', dni: '27.172.575', cuil: '20-27172575-3', address: 'Mza. 2 Lote 13 - B° 1ro de Agosto', startDate: '1999-01-02', birthDate: '1979-02-04', phone: '157665974' },
+  { id: '5', lastName: 'HERRERA', firstName: 'Ruben Alberto', dni: '26.994.733', cuil: '20-26994733-1', address: 'De la Cueca 342 Guiñazú', startDate: '1996-01-02', birthDate: '1979-01-21', phone: '156259100' },
+  { id: '6', lastName: 'LUNA', firstName: 'Guillermo Damian', dni: '27.246.128', cuil: '20-27246128-8', address: 'Mza. 107 lote 16 - Juan Pablo II', startDate: '2007-03-06', birthDate: '1979-03-07', phone: '153528809' },
+  { id: '7', lastName: 'MEDRANO', firstName: 'Martín Miguel', dni: '18.593.831', cuil: '20-18593831-0', address: 'Del gato s/n Guiñazú', startDate: '1997-01-02', birthDate: '1967-09-19', phone: '153600063' },
+  { id: '8', lastName: 'ROMERO', firstName: 'Jonatan', dni: '37.133.412', cuil: '20-37133412-3', address: 'Pujada casa 49 R Escalada', startDate: '2010-10-01', birthDate: '1992-11-22', phone: '156572393' },
+  { id: '9', lastName: 'BUSTO', firstName: 'Eduardo Javier', dni: '31.742.880', cuil: '20-31742880-5', address: 'Del Cielito 53 B° Guiñazú', startDate: '2012-01-03', birthDate: '1985-02-14', phone: '152413998' },
+  { id: '10', lastName: 'ARTEGA REINAGA', firstName: 'Zenobio', dni: '94.136.450', cuil: '20-94136450-1', address: 'José R. Figueroa N° 604 - B° San Ignacio', startDate: '2009-06-02', birthDate: '1986-02-20', phone: '153168869' },
+  { id: '11', lastName: 'Leiva', firstName: 'Maximiliano', dni: '36.983.515', cuil: '20-36983515-8', address: 'De la Cueca 329 Guiñazú', startDate: '2013-10-01', birthDate: '1992-10-10', phone: '152641452' },
+  { id: '12', lastName: 'Leiva', firstName: 'Sergio Matias', dni: '39.444.292', cuil: '20-39444292-6', address: 'Del gato 355 Guiñazú', startDate: '2013-10-01', birthDate: '1996-01-04', phone: '153198710' },
+  { id: '13', lastName: 'Villán', firstName: 'Leonardo', dni: '31.056.879', cuil: '20-31056879-2', address: 'Miguel Cané 252 B norte', startDate: '2012-10-23', birthDate: '1984-12-05', phone: '157461099' },
+  { id: '14', lastName: 'Gutierrez', firstName: 'Maximiliano', dni: '34.069.177', cuil: '20-34069177-7', address: 'Del Gato325 Guiñazú', startDate: '2011-12-07', birthDate: '1988-10-17', phone: '152604479' },
+  { id: '15', lastName: 'Villán', firstName: 'Gastón Alan', dni: '37.314.730', cuil: '20-37314730-4', address: 'Miguel Cané 252 B norte', startDate: '2010-09-10', birthDate: '1991-10-02', phone: '155101405' },
+  { id: '16', lastName: 'Righes', firstName: 'Sergio Eduardo', dni: '32.458.486', cuil: '20-32458486-3', address: 'Av. Japón 500', startDate: '2012-10-01', birthDate: '1986-09-29', phone: '156452071' },
+  { id: '17', lastName: 'González', firstName: 'Rodolfo Eduardo', dni: '16.907.860', cuil: '20-16907860-3', address: 'El Pehual 685 Guiñazú', startDate: '2014-07-01', birthDate: '1964-05-03', phone: '153977709' },
+  { id: '18', lastName: 'Gómez', firstName: 'Jorge Ignacio', dni: '24.394.772', cuil: '20-24394772-4', address: 'Jose Superí 2984 Los Paraísos', startDate: '2013-10-17', birthDate: '1975-03-24', phone: '157382255' },
+  { id: '19', lastName: 'Gómez', firstName: 'Franco Maximiliano', dni: '39.495.132', cuil: '20-39495132-4', address: 'Jose Superí 2984 Los Paraísos', startDate: '2013-10-31', birthDate: '1996-01-15', phone: '156349036' },
+  { id: '20', lastName: 'Yudicello', firstName: 'Lorena Jaquelina', dni: '27.921.684', cuil: '27-27921684-4', address: 'Arquímedes 2837 Los Paraísos', startDate: '2014-08-01', birthDate: '1980-02-09', phone: '153907513' }
+];
 
 const createInitialState = (): GeneralData => ({
   clients: [],
@@ -30,13 +53,27 @@ export const GeneralDataApp: React.FC<GeneralDataAppProps> = ({ db }) => {
       const unsubscribe = onValue(dataRef, (snapshot) => {
         const val = snapshot.val();
         if (val) {
+          // Si existe data en DB pero employees está vacío, cargamos los iniciales Y los guardamos en DB
+          let employees = val.employees || [];
+          
+          if (employees.length === 0) {
+              employees = INITIAL_EMPLOYEES;
+              // Persistimos en Firebase automáticamente
+              set(ref(db, 'general_data/employees'), employees).catch(console.error);
+          }
+
           setData({
             clients: val.clients || [],
             suppliers: val.suppliers || [],
-            employees: val.employees || []
+            employees: employees
           });
         } else {
-          setData(createInitialState());
+          // Primera vez, cargamos todo inicial
+          setData({
+             clients: [],
+             suppliers: [],
+             employees: INITIAL_EMPLOYEES
+          });
         }
         setLoading(false);
       });
@@ -44,7 +81,18 @@ export const GeneralDataApp: React.FC<GeneralDataAppProps> = ({ db }) => {
     } else {
       const saved = localStorage.getItem('general_data');
       if (saved) {
-        try { setData(JSON.parse(saved)); } catch (e) { setData(createInitialState()); }
+        try { 
+            const parsed = JSON.parse(saved);
+            if (!parsed.employees || parsed.employees.length === 0) {
+                parsed.employees = INITIAL_EMPLOYEES;
+            }
+            setData(parsed);
+        } catch (e) { 
+            setData({ ...createInitialState(), employees: INITIAL_EMPLOYEES }); 
+        }
+      } else {
+        // Primera vez local
+        setData({ ...createInitialState(), employees: INITIAL_EMPLOYEES });
       }
       setLoading(false);
     }
@@ -120,7 +168,7 @@ const EmployeeSection: React.FC<EmployeeSectionProps> = ({ items, isOpen, onTogg
     const [editForm, setEditForm] = React.useState<Employee | null>(null);
 
     // Sort State
-    const [sortConfig, setSortConfig] = React.useState<{ key: 'lastName' | 'startDate' | null, direction: 'asc' | 'desc' }>({
+    const [sortConfig, setSortConfig] = React.useState<{ key: keyof Employee | null, direction: 'asc' | 'desc' }>({
         key: 'lastName', direction: 'asc'
     });
 
@@ -161,7 +209,7 @@ const EmployeeSection: React.FC<EmployeeSectionProps> = ({ items, isOpen, onTogg
         }
     };
 
-    const handleSort = (key: 'lastName' | 'startDate') => {
+    const handleSort = (key: keyof Employee) => {
         let direction: 'asc' | 'desc' = 'asc';
         if (sortConfig.key === key && sortConfig.direction === 'asc') {
             direction = 'desc';
@@ -173,8 +221,8 @@ const EmployeeSection: React.FC<EmployeeSectionProps> = ({ items, isOpen, onTogg
         let sortable = [...items];
         if (sortConfig.key) {
             sortable.sort((a, b) => {
-                let valA = a[sortConfig.key!].toLowerCase();
-                let valB = b[sortConfig.key!].toLowerCase();
+                const valA = (a[sortConfig.key!] || '').toString().toLowerCase();
+                const valB = (b[sortConfig.key!] || '').toString().toLowerCase();
                 
                 if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
                 if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
@@ -335,7 +383,7 @@ const SupplierSection: React.FC<SupplierSectionProps> = ({ items, isOpen, onTogg
     const [editPriceDisplay, setEditPriceDisplay] = React.useState('');
 
     // Sort State
-    const [sortConfig, setSortConfig] = React.useState<{ key: 'name' | 'price' | null, direction: 'asc' | 'desc' }>({
+    const [sortConfig, setSortConfig] = React.useState<{ key: keyof Supplier | null, direction: 'asc' | 'desc' }>({
         key: 'name', direction: 'asc'
     });
 
@@ -383,7 +431,7 @@ const SupplierSection: React.FC<SupplierSectionProps> = ({ items, isOpen, onTogg
         }
     };
 
-    const handleSort = (key: 'name' | 'price') => {
+    const handleSort = (key: keyof Supplier) => {
         let direction: 'asc' | 'desc' = 'asc';
         if (sortConfig.key === key && sortConfig.direction === 'asc') {
             direction = 'desc';
@@ -400,8 +448,8 @@ const SupplierSection: React.FC<SupplierSectionProps> = ({ items, isOpen, onTogg
                      const valB = b.price || 0;
                      return sortConfig.direction === 'asc' ? valA - valB : valB - valA;
                 }
-                const valA = (a.name || '').toLowerCase();
-                const valB = (b.name || '').toLowerCase();
+                const valA = (a[sortConfig.key!] || '').toString().toLowerCase();
+                const valB = (b[sortConfig.key!] || '').toString().toLowerCase();
                 return sortConfig.direction === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
             });
         }
@@ -515,7 +563,7 @@ const SupplierSection: React.FC<SupplierSectionProps> = ({ items, isOpen, onTogg
 };
 
 
-// --- CLIENT SECTION (Refactored to Table) ---
+// --- CLIENT SECTION ---
 
 interface ClientSectionProps {
     items: Client[];
@@ -535,7 +583,7 @@ const ClientSection: React.FC<ClientSectionProps> = ({ items, isOpen, onToggle, 
     const [editForm, setEditForm] = React.useState<Client | null>(null);
 
     // Sort State
-    const [sortConfig, setSortConfig] = React.useState<{ key: 'name' | 'location' | null, direction: 'asc' | 'desc' }>({
+    const [sortConfig, setSortConfig] = React.useState<{ key: keyof Client | null, direction: 'asc' | 'desc' }>({
         key: 'name', direction: 'asc'
     });
 
@@ -568,7 +616,7 @@ const ClientSection: React.FC<ClientSectionProps> = ({ items, isOpen, onToggle, 
         setEditForm(null);
     };
 
-    const handleSort = (key: 'name' | 'location') => {
+    const handleSort = (key: keyof Client) => {
         let direction: 'asc' | 'desc' = 'asc';
         if (sortConfig.key === key && sortConfig.direction === 'asc') {
             direction = 'desc';
@@ -580,8 +628,8 @@ const ClientSection: React.FC<ClientSectionProps> = ({ items, isOpen, onToggle, 
         let sortable = [...items];
         if (sortConfig.key) {
             sortable.sort((a, b) => {
-                const valA = (a[sortConfig.key!] || '').toLowerCase();
-                const valB = (b[sortConfig.key!] || '').toLowerCase();
+                const valA = (a[sortConfig.key!] || '').toString().toLowerCase();
+                const valB = (b[sortConfig.key!] || '').toString().toLowerCase();
                 return sortConfig.direction === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
             });
         }
