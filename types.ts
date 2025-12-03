@@ -30,7 +30,12 @@ export type WeekData = Record<string, DayData>;
 
 // --- KILOS APP TYPES ---
 
-export const DRIVERS_LIST = [
+// New Simplified Data Structure for Text Grid
+// Key = Row Identifier (e.g., 'client_Amilcar', 'public_0')
+// Value = Array of strings (12 columns)
+export type KilosWeekData = Record<string, string[]>;
+
+export const KILOS_CLIENTS_LIST = [
   'Amilcar',
   'Diego Malageño',
   'Reina Alba',
@@ -41,10 +46,11 @@ export const DRIVERS_LIST = [
   'Tomas',
   'Sanchez',
   'Ortega',
-  'Alexis'
+  'Alexis',
+  'Fratelli'
 ];
 
-export const ROUTES_LIST = [
+export const KILOS_ZONES_LIST = [
   'Alta Gracia',
   'Calera',
   'Centro Garbino',
@@ -53,28 +59,15 @@ export const ROUTES_LIST = [
   'Malvinas'
 ];
 
-export interface KilosDayData {
-  id: string;
-  // Particulares (Array to allow multiple entries)
-  public: number[];
-  public_in?: number[]; // Added for cross-column editing 
-  // Choferes (Keyed by driver name)
-  drivers: Record<string, number>; // Out
-  drivers_in: Record<string, number>; // In (Returns)
-  // Reparto Zonas (Keyed by route name)
-  routes_out: Record<string, number>;
-  // Devolución Zonas (Keyed by route name)
-  routes_in: Record<string, number>;
-  // Camara
-  camera_plus: number;
-  camera_plus_in?: number; // Added for cross-column editing
-  camera_minus: number;
-  camera_minus_out?: number; // Added for cross-column editing
-}
-
-export interface KilosWeekData {
-  [key: string]: KilosDayData;
-}
+export const KILOS_ZONES_DEV_LIST = [
+  'Alta Gracia',
+  'Calera',
+  'Carlos Paz',
+  'Garbino',
+  'Gaston',
+  'Gral',
+  'Malvinas'
+];
 
 // --- CURRENT ACCOUNTS (CC) TYPES ---
 
@@ -112,7 +105,7 @@ export interface Cheque {
 export interface GeneralItem {
   id: string;
   name: string;
-}
+  }
 
 export interface Client {
   id: string;

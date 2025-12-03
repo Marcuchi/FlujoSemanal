@@ -1,5 +1,5 @@
 import React from 'react';
-import { Download, Upload, PieChart as PieChartIcon, History, ChevronLeft, ChevronRight, Calendar, Menu, LayoutGrid, Scale, BookUser, Banknote, Database, StickyNote } from 'lucide-react';
+import { Download, Upload, PieChart as PieChartIcon, History, ChevronLeft, ChevronRight, Calendar, Menu, LayoutGrid, Scale, BookUser, Banknote, Database, StickyNote, ZoomIn, ZoomOut } from 'lucide-react';
 import { ref, onValue, set, get, child } from 'firebase/database';
 import { db } from './firebaseConfig';
 import { DAYS_OF_WEEK, WeekData, DayData, HistoryItem, AppMode } from './types';
@@ -33,6 +33,34 @@ const createInitialState = (): WeekData => {
   return state;
 };
 
+// Helper to calculate the closing balance of a week data object
+// Accepts an optional 'startBalance' which is used if Monday is set to Automatic (undefined manualInitialAmount)
+const calculateWeeklyBalance = (data: WeekData, startBalance: number = 0): number => {
+    // If Monday has a manual initial amount, use it. Otherwise use the passed startBalance (from previous week close)
+    let balance = data['monday']?.manualInitialAmount !== undefined 
+        ? data['monday']!.manualInitialAmount! 
+        : startBalance;
+    
+    DAYS_OF_WEEK.forEach(day => {
+        const d = data[day.id];
+        if (!d) return;
+        
+        // If a specific day has a manual override, it resets the balance anchor
+        if (d.manualInitialAmount !== undefined) {
+             balance = d.manualInitialAmount;
+        }
+        
+        const income = d.incomes?.reduce((acc, t) => acc + t.amount, 0) || 0;
+        const deliveries = d.deliveries?.reduce((acc, t) => acc + t.amount, 0) || 0;
+        const expenses = d.expenses?.reduce((acc, t) => acc + t.amount, 0) || 0;
+        const salaries = d.salaries?.reduce((acc, t) => acc + t.amount, 0) || 0;
+        const toBox = d.toBox?.reduce((acc, t) => acc + t.amount, 0) || 0;
+        
+        balance = balance + income + deliveries - expenses - salaries - toBox;
+    });
+    return balance;
+};
+
 const App: React.FC = () => {
   const [currentDate, setCurrentDate] = React.useState(new Date());
   const [weekData, setWeekData] = React.useState<WeekData>(createInitialState());
@@ -50,9 +78,32 @@ const App: React.FC = () => {
   const [showExportModal, setShowExportModal] = React.useState(false);
   const [showImportModal, setShowImportModal] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
+  
+  // State for Zoom Level
+  const [zoomLevel, setZoomLevel] = React.useState(90);
+
+  // State for Previous Week's Close (for Automatic Monday Initial)
+  const [prevWeekClose, setPrevWeekClose] = React.useState(0);
 
   // Derived week key (e.g., "2024-04-15")
   const currentWeekKey = React.useMemo(() => getWeekKey(currentDate), [currentDate]);
+
+  // --- Zoom Logic ---
+  React.useEffect(() => {
+    const savedZoom = localStorage.getItem('app_zoom_level');
+    if (savedZoom) {
+      setZoomLevel(parseInt(savedZoom, 10));
+    }
+  }, []);
+
+  React.useEffect(() => {
+    // Applying zoom to root html element as percentage
+    document.documentElement.style.fontSize = `${zoomLevel}%`;
+    localStorage.setItem('app_zoom_level', zoomLevel.toString());
+  }, [zoomLevel]);
+
+  const handleZoomIn = () => setZoomLevel(prev => Math.min(prev + 5, 150));
+  const handleZoomOut = () => setZoomLevel(prev => Math.max(prev - 5, 30));
 
   // --- Data Loading Effect ---
   React.useEffect(() => {
@@ -115,6 +166,36 @@ const App: React.FC = () => {
           setHistory(data || []);
       });
 
+      // 4. Load Previous Week Data for "Automatic" Calculation
+      const prevWeekKey = getWeekKey(addWeeks(currentDate, -1));
+      const prevPrevWeekKey = getWeekKey(addWeeks(currentDate, -2));
+
+      get(ref(db!, `weeks/${prevWeekKey}/data`)).then((snap) => {
+          if (snap.exists()) {
+              const prevData = snap.val();
+              // Check if the previous week starts Automatically (manualInitialAmount is undefined)
+              // If so, we need the closing balance of the week BEFORE that to calculate correctly.
+              if (prevData['monday']?.manualInitialAmount === undefined) {
+                  get(ref(db!, `weeks/${prevPrevWeekKey}/data`)).then((snap2) => {
+                      let startOfPrev = 0;
+                      if (snap2.exists()) {
+                          // Calculate closing of Week -2 to assume as start of Week -1
+                          startOfPrev = calculateWeeklyBalance(snap2.val(), 0); 
+                      }
+                      setPrevWeekClose(calculateWeeklyBalance(prevData, startOfPrev));
+                  }).catch(() => {
+                      // If fetch fails, just calculate prevData with 0 start
+                      setPrevWeekClose(calculateWeeklyBalance(prevData, 0));
+                  });
+              } else {
+                  // Previous week has manual start, so we can calculate directly
+                  setPrevWeekClose(calculateWeeklyBalance(prevData, 0));
+              }
+          } else {
+              setPrevWeekClose(0);
+          }
+      }).catch(() => setPrevWeekClose(0));
+
       return () => {
         unsubscribeWeek();
         unsubscribeHistory();
@@ -135,6 +216,29 @@ const App: React.FC = () => {
          try { setHistory(JSON.parse(savedHistory)); } catch (e) { console.error(e); }
       } else {
         setHistory([]);
+      }
+
+      // Load Previous Week Local
+      const prevWeekKey = getWeekKey(addWeeks(currentDate, -1));
+      const prevPrevWeekKey = getWeekKey(addWeeks(currentDate, -2));
+      const savedPrev = localStorage.getItem(`weekData_${prevWeekKey}`);
+      
+      if (savedPrev) {
+          try {
+             const prevData = JSON.parse(savedPrev);
+             if (prevData['monday']?.manualInitialAmount === undefined) {
+                 const savedPrevPrev = localStorage.getItem(`weekData_${prevPrevWeekKey}`);
+                 let startOfPrev = 0;
+                 if (savedPrevPrev) {
+                     startOfPrev = calculateWeeklyBalance(JSON.parse(savedPrevPrev), 0);
+                 }
+                 setPrevWeekClose(calculateWeeklyBalance(prevData, startOfPrev));
+             } else {
+                 setPrevWeekClose(calculateWeeklyBalance(prevData, 0));
+             }
+          } catch { setPrevWeekClose(0); }
+      } else {
+          setPrevWeekClose(0);
       }
 
       setLoading(false);
@@ -360,11 +464,13 @@ const App: React.FC = () => {
 
   const runningBalances = React.useMemo(() => {
     const balances: Record<string, number> = {};
-    let currentBalance = 0;
+    let currentBalance = prevWeekClose; // Start with previous week's close
 
     for (const day of DAYS_OF_WEEK) {
       const data = weekData[day.id];
-      const effectiveInitial = data?.manualInitialAmount ?? currentBalance;
+      // If manual is set, it overrides the running balance for calculation, otherwise use current
+      const effectiveInitial = data?.manualInitialAmount !== undefined ? data.manualInitialAmount : currentBalance;
+      
       balances[day.id] = currentBalance;
       
       if (data) {
@@ -378,7 +484,7 @@ const App: React.FC = () => {
     }
     balances['saturday_close'] = currentBalance;
     return balances;
-  }, [weekData]);
+  }, [weekData, prevWeekClose]);
 
   // --- Navigation & Logic ---
 
@@ -388,8 +494,6 @@ const App: React.FC = () => {
     const nextDate = addWeeks(currentDate, 1);
     const nextWeekKey = getWeekKey(nextDate);
     
-    // Logic to carry over balances from current week to next if next doesn't exist
-    const carryOverOffice = runningBalances['saturday_close'] || 0;
     const carryOverTreasury = totals.toBox; // Current week's total treasury
 
     if (db) {
@@ -397,7 +501,9 @@ const App: React.FC = () => {
         get(nextWeekRef).then((snapshot) => {
             if (!snapshot.exists()) {
                 const newState = createInitialState();
-                newState['monday'].manualInitialAmount = carryOverOffice;
+                // We do NOT set manualInitialAmount here. 
+                // By leaving it undefined, it will pick up the 'Automatic' value 
+                // derived from 'prevWeekClose' when that week loads.
                 newState['monday'].initialBoxAmount = carryOverTreasury;
                 set(nextWeekRef, JSON.parse(JSON.stringify(newState)));
             }
@@ -407,7 +513,6 @@ const App: React.FC = () => {
         const savedNext = localStorage.getItem(`weekData_${nextWeekKey}`);
         if (!savedNext) {
              const newState = createInitialState();
-             newState['monday'].manualInitialAmount = carryOverOffice;
              newState['monday'].initialBoxAmount = carryOverTreasury;
              localStorage.setItem(`weekData_${nextWeekKey}`, JSON.stringify(newState));
         }
@@ -478,6 +583,29 @@ const App: React.FC = () => {
             
             <div className="flex items-center gap-2 flex-shrink-0">
               
+              {/* Zoom Controls */}
+              <div className="flex items-center bg-slate-800 rounded-lg border border-slate-700 mr-2">
+                <button 
+                    type="button"
+                    onClick={handleZoomOut} 
+                    className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-l-lg transition-colors border-r border-slate-700/50" 
+                    title="Reducir tamaño"
+                >
+                    <ZoomOut size={14} />
+                </button>
+                <div className="w-9 text-center text-[10px] font-mono font-bold text-slate-500 select-none">
+                    {zoomLevel}%
+                </div>
+                <button 
+                    type="button"
+                    onClick={handleZoomIn} 
+                    className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-r-lg transition-colors border-l border-slate-700/50" 
+                    title="Aumentar tamaño"
+                >
+                    <ZoomIn size={14} />
+                </button>
+              </div>
+
               {currentApp === 'FLOW' && (
                   <>
                       <button 
