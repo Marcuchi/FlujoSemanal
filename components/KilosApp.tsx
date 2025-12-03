@@ -11,12 +11,6 @@ interface KilosAppProps {
 
 // --- CONFIGURATION ---
 
-// Sombreado solicitado:
-// Lunes (0): No shaded
-// Martes (1): Shaded (Primera aparición)
-// Martes (2): No shaded
-// ...
-// Lunes (11): Shaded (Segunda aparición)
 const COLUMNS = [
   { label: 'Lunes', shaded: false },      // 0
   { label: 'Martes', shaded: true },      // 1 (Primera aparición)
@@ -33,23 +27,44 @@ const COLUMNS = [
 ];
 
 // Styles
-const CELL_BORDER = "border border-slate-500"; 
+const CELL_BORDER = "border border-slate-600"; 
 const HEADER_STYLE = "p-2 text-[10px] sm:text-xs font-bold text-slate-300 uppercase text-center bg-slate-900 tracking-tighter";
 const CELL_INPUT = "w-full h-full bg-transparent text-center text-sm text-slate-200 focus:outline-none focus:bg-indigo-900/30 font-mono font-medium";
 const LABEL_CELL = "p-2 text-xs font-bold text-slate-300 uppercase bg-slate-900 sticky left-0 z-10 border-r-2 border-r-slate-500 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.5)]";
 const SUM_CELL = "w-full h-full flex items-center justify-center text-xs font-mono font-bold text-slate-400 bg-slate-950/50";
-const TOTAL_ROW_STYLE = "bg-slate-800 font-bold text-slate-100";
+const TOTAL_ROW_STYLE = "bg-slate-800 font-bold text-slate-100 border border-slate-500";
 
 // --- HELPERS ---
 
-// Parsea el valor a float, si es texto devuelve 0 para la suma
+// Parses values handling Argentine format (1.000 = 1000 | 1,5 = 1.5) and text
 const parseVal = (val: string) => {
   if (!val) return 0;
-  // Reemplazar coma por punto para parseo y eliminar caracteres no numéricos excepto punto y coma y menos
-  const clean = val.replace(/,/g, '.').replace(/[^\d.-]/g, '');
+  
+  // Si contiene letras, se considera texto y no se suma.
+  if (/[a-zA-ZñÑáéíóúÁÉÍÓÚ]/.test(val)) return 0;
+
+  // 1. Keep digits, dots, commas, minus
+  let clean = val.replace(/[^\d.,-]/g, '');
+  
+  // 2. Remove dots (thousands separator in AR)
+  clean = clean.replace(/\./g, '');
+  
+  // 3. Replace comma with dot (decimal separator in AR)
+  clean = clean.replace(/,/g, '.');
+
   const num = parseFloat(clean);
   return isNaN(num) ? 0 : num;
 };
+
+// Separator Component - Respects sticky column structure
+const SeparatorRow = () => (
+  <tr>
+    {/* Sticky part of the separator */}
+    <td className="sticky left-0 z-10 bg-black border-y border-slate-600 h-3 border-r-2 border-r-slate-500"></td>
+    {/* Rest of the separator */}
+    <td colSpan={COLUMNS.length + 2} className="bg-black border-y border-slate-600 h-3"></td>
+  </tr>
+);
 
 // --- SUB-COMPONENTS ---
 
@@ -64,7 +79,7 @@ interface TextGridRowProps {
 const TextGridRow: React.FC<TextGridRowProps> = React.memo(({ rowKey, label, data, onUpdate, colorClass = "text-slate-400" }) => {
   const rowValues = data[rowKey] || Array(COLUMNS.length).fill('');
 
-  // Calcular sumatoria total de la fila
+  // Calculate row total
   const totalRow = rowValues.reduce((acc, curr) => acc + parseVal(curr), 0);
 
   return (
@@ -73,7 +88,7 @@ const TextGridRow: React.FC<TextGridRowProps> = React.memo(({ rowKey, label, dat
         {label}
       </td>
       
-      {/* Celdas de Input */}
+      {/* Input Cells */}
       {COLUMNS.map((col, index) => (
         <td 
           key={index} 
@@ -88,10 +103,10 @@ const TextGridRow: React.FC<TextGridRowProps> = React.memo(({ rowKey, label, dat
         </td>
       ))}
 
-      {/* Separador Visual */}
+      {/* Spacer */}
       <td className="w-6 bg-slate-950 border-none"></td>
 
-      {/* Celda de Sumatoria Total */}
+      {/* Row Total Cell */}
       <td className={`${CELL_BORDER} p-0 h-9 min-w-[80px] bg-slate-900 border-slate-600`}>
         <div className={`${SUM_CELL} text-emerald-400`}>
           {totalRow === 0 ? '-' : new Intl.NumberFormat('es-AR').format(totalRow)}
@@ -158,7 +173,7 @@ export const KilosApp: React.FC<KilosAppProps> = ({ db, weekKey }) => {
   const columnTotals = React.useMemo(() => {
       const totals = Array(COLUMNS.length).fill(0);
       
-      // Lista de todas las keys que usamos en la tabla
+      // List all keys used in table to calculate totals
       const allKeys = [
           'camara_plus', 'camara_minus',
           'public_0', 'public_1', 'public_2', 'public_3',
@@ -179,6 +194,16 @@ export const KilosApp: React.FC<KilosAppProps> = ({ db, weekKey }) => {
       });
       return totals;
   }, [data]);
+
+  // Calculate Paired Totals (Sum of Col 1+2, 3+4, etc.)
+  const pairedTotals = React.useMemo(() => {
+    const paired = [];
+    for (let i = 0; i < columnTotals.length; i += 2) {
+      const sum = columnTotals[i] + (columnTotals[i + 1] || 0);
+      paired.push(sum);
+    }
+    return paired;
+  }, [columnTotals]);
 
   const grandTotal = columnTotals.reduce((a, b) => a + b, 0);
 
@@ -205,7 +230,7 @@ export const KilosApp: React.FC<KilosAppProps> = ({ db, weekKey }) => {
                   </th>
                 ))}
                 
-                {/* Header para la Sumatoria */}
+                {/* Spacer & Total Header */}
                 <th className="w-6 bg-slate-950 border-none p-0"></th>
                 <th className={`${CELL_BORDER} ${HEADER_STYLE} min-w-[80px] bg-slate-800 text-emerald-400`}>
                   Total
@@ -215,12 +240,15 @@ export const KilosApp: React.FC<KilosAppProps> = ({ db, weekKey }) => {
             
             <tbody className="divide-y divide-slate-800">
               {/* --- CAMARA --- */}
-              <tr><td colSpan={COLUMNS.length + 3} className="p-1 bg-slate-950 border border-slate-600"></td></tr>
+              <tr>
+                 <td className="sticky left-0 z-10 bg-slate-950 border-b border-slate-600 h-2 border-r-2 border-r-slate-500"></td>
+                 <td colSpan={COLUMNS.length + 2} className="h-2 bg-slate-950 border-b border-slate-600"></td>
+              </tr>
               <TextGridRow rowKey="camara_plus" label="Cámara (+)" data={data} onUpdate={handleUpdate} colorClass="text-amber-200" />
               <TextGridRow rowKey="camara_minus" label="Cámara (-)" data={data} onUpdate={handleUpdate} colorClass="text-purple-200" />
 
               {/* --- PUBLICO --- */}
-              <tr><td colSpan={COLUMNS.length + 3} className="p-1 bg-slate-950 border border-slate-600"></td></tr>
+              <SeparatorRow />
               {[0, 1, 2, 3].map(i => (
                 <TextGridRow 
                     key={`public_${i}`} 
@@ -233,55 +261,79 @@ export const KilosApp: React.FC<KilosAppProps> = ({ db, weekKey }) => {
               ))}
 
               {/* --- CLIENTES --- */}
-              <tr><td colSpan={COLUMNS.length + 3} className="bg-slate-800 text-xs font-bold text-blue-400 uppercase p-2 border border-slate-600 sticky left-0 z-20 shadow-md mt-2">Clientes</td></tr>
+              <SeparatorRow />
+              <tr>
+                  <td className="bg-slate-800 text-xs font-bold text-blue-400 uppercase p-2 border border-slate-600 sticky left-0 z-20 shadow-md border-r-2 border-r-slate-500">Clientes</td>
+                  <td colSpan={COLUMNS.length + 2} className="bg-slate-800 border border-slate-600"></td>
+              </tr>
               {KILOS_CLIENTS_LIST.map(client => (
-                <TextGridRow 
-                    key={`client_${client}`} 
-                    rowKey={`client_${client}`} 
-                    label={client} 
-                    data={data} 
-                    onUpdate={handleUpdate} 
-                    colorClass="text-blue-200"
-                />
+                <React.Fragment key={`client_${client}`}>
+                    <TextGridRow 
+                        rowKey={`client_${client}`} 
+                        label={client} 
+                        data={data} 
+                        onUpdate={handleUpdate} 
+                        colorClass="text-blue-200"
+                    />
+                    {(client === 'Nico' || client === 'Sanchez') && <SeparatorRow />}
+                </React.Fragment>
               ))}
 
               {/* --- ZONAS --- */}
-              <tr><td colSpan={COLUMNS.length + 3} className="bg-slate-800 text-xs font-bold text-sky-400 uppercase p-2 border border-slate-600 sticky left-0 z-20 shadow-md mt-2">Zonas</td></tr>
+              <SeparatorRow />
+              <tr>
+                  <td className="bg-slate-800 text-xs font-bold text-sky-400 uppercase p-2 border border-slate-600 sticky left-0 z-20 shadow-md border-r-2 border-r-slate-500">Zonas</td>
+                  <td colSpan={COLUMNS.length + 2} className="bg-slate-800 border border-slate-600"></td>
+              </tr>
               {KILOS_ZONES_LIST.map(zone => (
-                <TextGridRow 
-                    key={`zone_${zone}`} 
-                    rowKey={`zone_${zone}`} 
-                    label={zone} 
-                    data={data} 
-                    onUpdate={handleUpdate} 
-                    colorClass="text-sky-200"
-                />
+                <React.Fragment key={`zone_${zone}`}>
+                    <TextGridRow 
+                        rowKey={`zone_${zone}`} 
+                        label={zone} 
+                        data={data} 
+                        onUpdate={handleUpdate} 
+                        colorClass="text-sky-200"
+                    />
+                    {zone === 'Centro Garbino' && <SeparatorRow />}
+                </React.Fragment>
               ))}
 
               {/* --- ZONAS DEVOLUCION --- */}
-              <tr><td colSpan={COLUMNS.length + 3} className="bg-slate-800 text-xs font-bold text-rose-400 uppercase p-2 border border-slate-600 sticky left-0 z-20 shadow-md mt-2">Zonas Devolución</td></tr>
+              <SeparatorRow />
+              <tr>
+                  <td className="bg-slate-800 text-xs font-bold text-rose-400 uppercase p-2 border border-slate-600 sticky left-0 z-20 shadow-md border-r-2 border-r-slate-500">Zonas Devolución</td>
+                  <td colSpan={COLUMNS.length + 2} className="bg-slate-800 border border-slate-600"></td>
+              </tr>
               {KILOS_ZONES_DEV_LIST.map(zone => (
-                <TextGridRow 
-                    key={`zone_dev_${zone}`} 
-                    rowKey={`zone_dev_${zone}`} 
-                    label={zone} 
-                    data={data} 
-                    onUpdate={handleUpdate} 
-                    colorClass="text-rose-300"
-                />
+                <React.Fragment key={`zone_dev_${zone}`}>
+                    <TextGridRow 
+                        rowKey={`zone_dev_${zone}`} 
+                        label={zone} 
+                        data={data} 
+                        onUpdate={handleUpdate} 
+                        colorClass="text-rose-300"
+                    />
+                    {zone === 'Gaston' && <SeparatorRow />}
+                </React.Fragment>
               ))}
 
               {/* --- TOTALES VERTICALES --- */}
-               <tr><td colSpan={COLUMNS.length + 3} className="p-2 bg-slate-950 border border-slate-600"></td></tr>
-               <tr className="border-t-2 border-slate-400">
-                    <td className={`${CELL_BORDER} ${LABEL_CELL} text-white bg-slate-800`}>
+               <tr>
+                  <td className="sticky left-0 z-10 bg-slate-950 border-t border-slate-600 h-4 border-r-2 border-r-slate-500"></td>
+                  <td colSpan={COLUMNS.length + 2} className="h-4 bg-slate-950 border-t border-slate-600"></td>
+               </tr>
+               <tr className="border-t-2 border-slate-400 shadow-xl">
+                    <td className={`${CELL_BORDER} ${LABEL_CELL} text-white bg-slate-800 text-right pr-4`}>
                         TOTALES
                     </td>
-                    {columnTotals.map((total, idx) => (
-                        <td key={idx} className={`${CELL_BORDER} ${TOTAL_ROW_STYLE} text-center text-xs p-1`}>
+                    
+                    {/* Render Paired Totals (spanning 2 columns each) */}
+                    {pairedTotals.map((total, idx) => (
+                        <td key={idx} colSpan={2} className={`${TOTAL_ROW_STYLE} text-center text-xs p-1 bg-slate-800 hover:bg-slate-700 transition-colors`}>
                              {total === 0 ? '-' : new Intl.NumberFormat('es-AR').format(total)}
                         </td>
                     ))}
+                    
                     <td className="w-6 bg-slate-950 border-none"></td>
                     <td className={`${CELL_BORDER} ${TOTAL_ROW_STYLE} text-center text-xs p-1 bg-emerald-900 text-emerald-100`}>
                          {grandTotal === 0 ? '-' : new Intl.NumberFormat('es-AR').format(grandTotal)}
