@@ -27,6 +27,14 @@ const COLUMNS = [
   { label: 'Lunes' },
 ];
 
+const ALL_ROW_KEYS = [
+  'camara_plus', 'camara_minus',
+  'public_0', 'public_1', 'public_2', 'public_3',
+  ...KILOS_CLIENTS_LIST.map(c => `client_${c}`),
+  ...KILOS_ZONES_LIST.map(z => `zone_${z}`),
+  ...KILOS_ZONES_DEV_LIST.map(z => `zone_dev_${z}`)
+];
+
 // Styles
 const CELL_BORDER = "border-r border-b border-slate-200"; 
 const HEADER_CELL = "sticky top-0 z-30 bg-slate-50 text-slate-500 font-semibold text-[10px] sm:text-xs uppercase tracking-wider border-b border-slate-300 shadow-sm";
@@ -115,19 +123,6 @@ export const KilosApp: React.FC<KilosAppProps> = ({ db, weekKey }) => {
   const [loading, setLoading] = React.useState(true);
   const [blackColumns, setBlackColumns] = React.useState<boolean[]>(Array(COLUMNS.length).fill(false));
 
-  const toggleColumn = (idx: number) => {
-    const next = [...blackColumns];
-    next[idx] = !next[idx];
-    setBlackColumns(next);
-    
-    // Save settings PER WEEK
-    if (db) {
-        set(ref(db, `weeks/${weekKey}/kilos_black_columns`), next).catch(console.error);
-    } else {
-        localStorage.setItem(`kilos_black_columns_${weekKey}`, JSON.stringify(next));
-    }
-  };
-
   // Load Main Data
   React.useEffect(() => {
     if (db) {
@@ -191,6 +186,45 @@ export const KilosApp: React.FC<KilosAppProps> = ({ db, weekKey }) => {
     }
   };
 
+  const toggleColumn = (idx: number) => {
+    // 1. Toggle Visual State (White <-> Black)
+    const next = [...blackColumns];
+    next[idx] = !next[idx];
+    setBlackColumns(next);
+    
+    // Save visual preference
+    if (db) {
+        set(ref(db, `weeks/${weekKey}/kilos_black_columns`), next).catch(console.error);
+    } else {
+        localStorage.setItem(`kilos_black_columns_${weekKey}`, JSON.stringify(next));
+    }
+
+    // 2. Auto-fill empty cells with '0' in this column
+    const newData = { ...data };
+    let hasChanges = false;
+
+    ALL_ROW_KEYS.forEach(key => {
+        // Get existing row or create new initialized one
+        let row = newData[key] ? [...newData[key]] : Array(COLUMNS.length).fill('');
+        
+        // Ensure row has enough columns (just in case)
+        while(row.length < COLUMNS.length) {
+            row.push('');
+        }
+
+        // Only fill if empty
+        if (row[idx] === '' || row[idx] === null || row[idx] === undefined) {
+            row[idx] = '0';
+            newData[key] = row;
+            hasChanges = true;
+        }
+    });
+
+    if (hasChanges) {
+        saveData(newData);
+    }
+  };
+
   const handleUpdate = React.useCallback((rowKey: string, colIndex: number, value: string) => {
     setData(prev => {
       const currentRows = prev[rowKey] ? [...prev[rowKey]] : Array(COLUMNS.length).fill('');
@@ -205,15 +239,8 @@ export const KilosApp: React.FC<KilosAppProps> = ({ db, weekKey }) => {
   // --- TOTALS CALCULATION ---
   const columnTotals = React.useMemo(() => {
       const totals = Array(COLUMNS.length).fill(0);
-      const allKeys = [
-          'camara_plus', 'camara_minus',
-          'public_0', 'public_1', 'public_2', 'public_3',
-          ...KILOS_CLIENTS_LIST.map(c => `client_${c}`),
-          ...KILOS_ZONES_LIST.map(z => `zone_${z}`),
-          ...KILOS_ZONES_DEV_LIST.map(z => `zone_dev_${z}`)
-      ];
-
-      allKeys.forEach(key => {
+      
+      ALL_ROW_KEYS.forEach(key => {
           const row = data[key];
           if (row) {
               row.forEach((val, colIndex) => {
@@ -269,7 +296,7 @@ export const KilosApp: React.FC<KilosAppProps> = ({ db, weekKey }) => {
                          <button 
                           onClick={() => toggleColumn(idx)}
                           className={`p-1 rounded-full transition-all duration-200 ${isBlack ? 'bg-slate-700 text-yellow-400 hover:bg-slate-600' : 'bg-slate-200 text-slate-400 hover:bg-slate-300 hover:text-slate-600'}`}
-                          title={isBlack ? "Cambiar a Blanco" : "Cambiar a Negro"}
+                          title={isBlack ? "Cambiar a Blanco" : "Cambiar a Negro (Rellena vacíos con 0)"}
                         >
                           {isBlack ? <Sun size={12} /> : <Moon size={12} />}
                         </button>
