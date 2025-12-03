@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { Database, ref, onValue, set } from 'firebase/database';
 import { ArrowLeft, Plus, Trash2, Calendar, ArrowUpDown, Package, DollarSign } from 'lucide-react';
@@ -32,7 +33,7 @@ export const CurrentAccountsApp: React.FC<CurrentAccountsAppProps> = ({ db }) =>
   // New Transaction State
   const [newDate, setNewDate] = React.useState(new Date().toISOString().slice(0, 10));
   
-  // Inputs for New Logic
+  // Inputs
   const [cratesDisplay, setCratesDisplay] = React.useState('');
   const [priceDisplay, setPriceDisplay] = React.useState('');
   const [haberDisplay, setHaberDisplay] = React.useState('');
@@ -82,11 +83,10 @@ export const CurrentAccountsApp: React.FC<CurrentAccountsAppProps> = ({ db }) =>
   };
 
   const calculateBalance = (account: CCAccountData) => {
-      // Start from 0, strictly based on transactions now
+      // Balance = Sum(Debit) - Sum(Delivery)
       let balance = 0;
       if (account.transactions) {
           account.transactions.forEach(t => {
-              // Debit increases debt, Delivery (Haber) decreases debt
               balance = balance + (t.debit || 0) - (t.delivery || 0);
           });
       }
@@ -132,7 +132,6 @@ export const CurrentAccountsApp: React.FC<CurrentAccountsAppProps> = ({ db }) =>
       
       const num = parseInt(digits, 10);
       if (!isNaN(num)) {
-          // Format with dots for thousands
           const formatted = new Intl.NumberFormat('es-AR').format(num);
           setDisplay(formatted);
           setRaw(num);
@@ -151,8 +150,8 @@ export const CurrentAccountsApp: React.FC<CurrentAccountsAppProps> = ({ db }) =>
           date: newDate,
           crates: rawCrates,
           price: rawPrice,
-          debit: calculatedDebit,
-          delivery: rawHaber // Haber
+          debit: calculatedDebit, // Debe
+          delivery: rawHaber      // Haber
       };
 
       const currentAccount = getAccountData(selectedAccount);
@@ -298,7 +297,7 @@ export const CurrentAccountsApp: React.FC<CurrentAccountsAppProps> = ({ db }) =>
   const accountData = getAccountData(selectedAccount);
   
   // Calculate running balance chronologically FIRST
-  let runningBalance = 0; // Starts at 0 now
+  let runningBalance = 0; 
   const transactionsWithBalance = (accountData.transactions || []).map(t => {
       // Logic: Balance = Previous + Debe - Haber
       runningBalance = runningBalance + (t.debit || 0) - (t.delivery || 0);

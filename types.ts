@@ -74,16 +74,13 @@ export const KILOS_ZONES_DEV_LIST = [
 export interface CCTransaction {
   id: string;
   date: string; // YYYY-MM-DD
-  description?: string; // Optional/Deprecated in new UI
   crates?: number;      // Cantidad Cajones
   price?: number;       // Precio x Cajon
   delivery: number;     // Haber (Paga)
   debit: number;        // Debe (Calculated: crates * price)
-  type?: 'REGULAR' | 'TEMPORARY'; 
 }
 
 export interface CCAccountData {
-  initialBalance?: number; // Optional/Deprecated in new UI
   transactions: CCTransaction[];
 }
 
