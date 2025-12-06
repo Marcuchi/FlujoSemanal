@@ -173,7 +173,7 @@ const TextInput = ({
         return (
             <div 
                 onClick={() => setIsEditing(true)}
-                className={`w-full h-full flex items-center px-2 cursor-text ${className} hover:bg-slate-50 transition-colors truncate print:px-0 print:whitespace-normal print:overflow-visible print:h-auto`}
+                className={`w-full h-full flex items-center px-2 cursor-text ${className} hover:bg-slate-50 transition-colors truncate print:px-0 print:whitespace-nowrap print:overflow-hidden print:h-full`}
             >
                 {value || <span className="text-slate-300 italic font-normal print:hidden">{placeholder}</span>}
             </div>
@@ -239,8 +239,7 @@ const ProductSelect = ({
 };
 
 export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestricted = false }) => {
-  // Fix timezone issue by initializing with local date manually if needed, but standard new Date() usually works for local client.
-  // The issue often comes from ISO string conversion.
+  // Fix timezone issue by initializing with local date manually
   const getLocalDateString = (d: Date) => {
       const year = d.getFullYear();
       const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -273,7 +272,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
              (!r.payment || r.payment === 0);
   };
 
-  // Load Data, History, Metadata and Expenses
+  // Load Data
   React.useEffect(() => {
     const dataKey = `deliveries/${zoneName}/${currentDate}`;
     const expensesKey = `delivery_expenses/${zoneName}/${currentDate}`;
@@ -496,8 +495,6 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
   const totalSold = rows.reduce((acc, row) => acc + ((row.weight || 0) * (row.price || 0)), 0);
   const totalExpenses = expenses.reduce((acc, exp) => acc + (exp.amount || 0), 0);
   
-  // Calculate final balances
-  // Row Balance = (Weight * Price) + PrevBalance - Payment
   const finalBalance = rows.reduce((acc, row) => {
       const subtotal = (row.weight || 0) * (row.price || 0);
       const rowBal = subtotal + (row.prevBalance || 0) - (row.payment || 0);
@@ -506,9 +503,8 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
 
   const cashBalance = totalPayment - totalExpenses;
   
-  // Merma Calculation
   const netLoad = (metadata.loadedChicken || 0) - (metadata.returnedChicken || 0);
-  const shrinkage = netLoad - totalWeight; // Merma = (Cargado - Devolucion) - Entregado
+  const shrinkage = netLoad - totalWeight;
 
   const handlePrint = () => {
       window.print();
@@ -543,7 +539,6 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                     className={`flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-700 font-bold border border-slate-300 transition-colors ${isRestricted ? 'cursor-default opacity-80' : ''}`}
                 >
                     <Calendar size={18} className="text-emerald-600" />
-                    {/* Display date with manual parsing to allow string handling */}
                     {(() => {
                         const [y, m, d] = currentDate.split('-').map(Number);
                         const dateObj = new Date(y, m - 1, d);
@@ -554,7 +549,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                 <DayPickerModal 
                     isOpen={showDatePicker} 
                     onClose={() => setShowDatePicker(false)} 
-                    currentDate={new Date(currentDate + 'T12:00:00')} // Add time to avoid timezone shift on init
+                    currentDate={new Date(currentDate + 'T12:00:00')} 
                     onSelectDate={(d) => {
                         setCurrentDate(getLocalDateString(d));
                         setShowDatePicker(false);
@@ -619,8 +614,8 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
             </div>
 
             {/* Print Header (Visible only in print) */}
-            <div className="hidden print:block mb-2">
-                 <div className="flex justify-between items-end border-b border-black pb-1 mb-2">
+            <div className="hidden print:block mb-1">
+                 <div className="flex justify-between items-end border-b border-black pb-1 mb-1">
                      <div>
                          <h1 className="text-lg font-bold text-black uppercase tracking-tight leading-none">Planilla de Reparto</h1>
                          <div className="flex items-center gap-4 mt-1">
@@ -647,7 +642,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                  </div>
                  
                  {/* Metadata Section (Compact) */}
-                 <div className="flex gap-4 mb-2 text-[10px]">
+                 <div className="flex gap-4 mb-1 text-[10px]">
                      <div className="flex items-center gap-1">
                          <span className="font-bold text-black uppercase">Cargado:</span>
                          <span className="font-mono font-bold text-black">{formatDecimal(metadata.loadedChicken)} kg</span>
@@ -719,28 +714,28 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                                 
                                 return (
                                     <tr key={row.id} className={`hover:bg-slate-50 print:hover:bg-transparent group ${isAlternate ? 'print:bg-slate-50' : ''}`}>
-                                        <td className="border-r border-slate-100 print:border-slate-300 h-8 print:h-4">
+                                        <td className="border-r border-slate-100 print:border-slate-300 h-8 print:h-[11px]">
                                             <TextInput 
                                                 value={row.client} 
                                                 onChange={(v) => handleRowChange(row.id, 'client', v)} 
                                                 className="font-bold text-slate-800 text-sm print:text-[9px] print:leading-none"
                                             />
                                         </td>
-                                        <td className="border-r border-slate-100 print:border-slate-300 h-8 print:h-4">
+                                        <td className="border-r border-slate-100 print:border-slate-300 h-8 print:h-[11px]">
                                             <ProductSelect 
                                                 value={row.product} 
                                                 onChange={(v) => handleRowChange(row.id, 'product', v)} 
                                                 className="text-sm text-slate-700 font-medium print:text-[9px] print:leading-none"
                                             />
                                         </td>
-                                        <td className="border-r border-slate-100 print:border-slate-300 h-8 print:h-4">
+                                        <td className="border-r border-slate-100 print:border-slate-300 h-8 print:h-[11px]">
                                             <NumericInput 
                                                 value={row.weight} 
                                                 onChange={(v) => handleRowChange(row.id, 'weight', v)} 
                                                 className="text-slate-700 text-right font-mono text-sm font-medium print:text-[9px] print:leading-none"
                                             />
                                         </td>
-                                        <td className="border-r border-slate-100 print:border-slate-300 h-8 print:h-4">
+                                        <td className="border-r border-slate-100 print:border-slate-300 h-8 print:h-[11px]">
                                             <NumericInput 
                                                 value={row.price} 
                                                 onChange={(v) => handleRowChange(row.id, 'price', v)} 
@@ -748,12 +743,12 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                                                 isCurrency
                                             />
                                         </td>
-                                        <td className="border-r border-slate-100 print:border-slate-300 h-8 print:h-4 px-2 text-right">
+                                        <td className="border-r border-slate-100 print:border-slate-300 h-8 print:h-[11px] px-2 text-right">
                                             <span className="text-sm font-mono text-slate-600 print:text-[9px] print:text-black print:leading-none">
                                                 {subtotal > 0 ? formatCurrency(subtotal) : '-'}
                                             </span>
                                         </td>
-                                        <td className="border-r border-slate-100 print:border-slate-300 h-8 print:h-4">
+                                        <td className="border-r border-slate-100 print:border-slate-300 h-8 print:h-[11px]">
                                              <NumericInput 
                                                 value={row.prevBalance} 
                                                 onChange={(v) => handleRowChange(row.id, 'prevBalance', v)} 
@@ -761,7 +756,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                                                 isCurrency
                                             />
                                         </td>
-                                        <td className="border-r border-slate-100 print:border-slate-300 h-8 print:h-4 bg-emerald-50/30 print:bg-transparent">
+                                        <td className="border-r border-slate-100 print:border-slate-300 h-8 print:h-[11px] bg-emerald-50/30 print:bg-transparent">
                                              <NumericInput 
                                                 value={row.payment} 
                                                 onChange={(v) => handleRowChange(row.id, 'payment', v)} 
@@ -769,7 +764,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                                                 isCurrency
                                             />
                                         </td>
-                                        <td className="h-8 print:h-4 px-2 text-right">
+                                        <td className="h-8 print:h-[11px] px-2 text-right">
                                             <span className={`text-sm font-mono font-bold print:text-[9px] print:leading-none ${balance > 0 ? 'text-rose-600 print:text-black' : 'text-slate-500'}`}>
                                                 {balance !== 0 ? formatCurrency(balance) : '-'}
                                             </span>
@@ -788,11 +783,11 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                             
                             {/* Footer Totals Row */}
                             <tr className="border-t-2 border-slate-400 print:border-black">
-                                <td colSpan={4} className="px-2 py-2 print:py-1 text-right font-bold text-slate-700 border-r border-slate-300 bg-slate-100 print:bg-slate-200 uppercase tracking-wider text-xs print:text-[9px]">TOTALES</td>
-                                <td className="px-2 py-2 print:py-1 text-right font-bold text-slate-800 border-r border-slate-300 bg-slate-50 print:bg-white text-sm print:text-[9px]">{formatCurrency(totalSold)}</td>
-                                <td className="px-2 py-2 print:py-1 text-right font-bold text-slate-800 border-r border-slate-300 bg-slate-50 print:bg-white text-sm print:text-[9px]">-</td>
-                                <td className="px-2 py-2 print:py-1 text-right font-bold text-emerald-700 print:text-black border-r border-slate-300 bg-emerald-50 print:bg-white text-sm print:text-[9px]">{formatCurrency(totalPayment)}</td>
-                                <td className="px-2 py-2 print:py-1 text-right font-bold text-slate-900 bg-slate-50 print:bg-white text-sm print:text-[9px]">{formatCurrency(finalBalance)}</td>
+                                <td colSpan={4} className="px-2 py-2 print:py-[1px] text-right font-bold text-slate-700 border-r border-slate-300 bg-slate-100 print:bg-slate-200 uppercase tracking-wider text-xs print:text-[9px]">TOTALES</td>
+                                <td className="px-2 py-2 print:py-[1px] text-right font-bold text-slate-800 border-r border-slate-300 bg-slate-50 print:bg-white text-sm print:text-[9px]">{formatCurrency(totalSold)}</td>
+                                <td className="px-2 py-2 print:py-[1px] text-right font-bold text-slate-800 border-r border-slate-300 bg-slate-50 print:bg-white text-sm print:text-[9px]">-</td>
+                                <td className="px-2 py-2 print:py-[1px] text-right font-bold text-emerald-700 print:text-black border-r border-slate-300 bg-emerald-50 print:bg-white text-sm print:text-[9px]">{formatCurrency(totalPayment)}</td>
+                                <td className="px-2 py-2 print:py-[1px] text-right font-bold text-slate-900 bg-slate-50 print:bg-white text-sm print:text-[9px]">{formatCurrency(finalBalance)}</td>
                                 <td className="print:hidden"></td>
                             </tr>
                         </tbody>
@@ -811,7 +806,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
             </div>
 
             {/* Expenses Section & Print Summary */}
-            <div className="mt-8 print:mt-4 flex flex-col md:flex-row gap-8 print:gap-4 break-inside-avoid">
+            <div className="mt-8 print:mt-2 flex flex-col md:flex-row gap-8 print:gap-4 break-inside-avoid">
                 
                 {/* Expenses Table */}
                 <div className="flex-1 print:max-w-[40%]">
@@ -819,7 +814,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                          <h3 className="text-sm print:text-[10px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
                             <Receipt size={16} className="print:w-3 print:h-3" /> Gastos
                          </h3>
-                         <button onClick={addExpense} className="print:hidden text-xs flex items-center gap-1 bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded border border-slate-300 transition-colors">
+                         <button onClick={addExpense} className="print:hidden text-xs flex items-center gap-1 bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded border border-slate-300 transition-colors text-black">
                              <Plus size={12} /> Agregar
                          </button>
                     </div>
@@ -836,19 +831,19 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                              <tbody className="divide-y divide-slate-100 print:divide-slate-300">
                                  {expenses.map((exp, index) => (
                                      <tr key={exp.id} className="group hover:bg-slate-50 print:hover:bg-transparent">
-                                         <td className="border-r border-slate-100 print:border-slate-300 h-8 print:h-4">
+                                         <td className="border-r border-slate-100 print:border-slate-300 h-8 print:h-[11px]">
                                              <TextInput 
                                                 value={exp.description}
                                                 onChange={(v) => updateExpense(exp.id, 'description', v)}
                                                 placeholder="Descripción del gasto"
-                                                className="text-sm text-slate-700 print:text-[9px]"
+                                                className="text-sm text-slate-700 print:text-[9px] print:leading-none"
                                              />
                                          </td>
-                                         <td className="h-8 print:h-4 bg-rose-50/30 print:bg-transparent">
+                                         <td className="h-8 print:h-[11px] bg-rose-50/30 print:bg-transparent">
                                              <NumericInput 
                                                 value={exp.amount}
                                                 onChange={(v) => updateExpense(exp.id, 'amount', v)}
-                                                className="text-right text-sm font-mono text-rose-600 font-medium print:text-[9px] print:text-black"
+                                                className="text-right text-sm font-mono text-rose-600 font-medium print:text-[9px] print:text-black print:leading-none"
                                                 isCurrency
                                              />
                                          </td>
@@ -880,7 +875,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                 {/* Totals Summary (Print Optimized) */}
                 <div className="w-full md:w-64 print:w-auto print:min-w-[180px] print:h-auto">
                     <div className="bg-slate-50 border border-slate-300 rounded overflow-hidden print:border print:border-black print:bg-transparent print:shadow-none print:rounded-none">
-                         <div className="flex justify-between items-center p-3 bg-indigo-50 border-t-2 border-slate-300 print:bg-transparent print:border-none print:p-2">
+                         <div className="flex justify-between items-center p-3 bg-indigo-50 border-t-2 border-slate-300 print:!bg-white print:border-none print:p-2">
                              <span className="text-sm font-extrabold text-indigo-700 uppercase print:text-black print:text-lg">EFECTIVO</span>
                              <span className="text-lg font-bold font-mono text-indigo-700 print:text-black print:text-xl">{formatCurrency(cashBalance)}</span>
                         </div>
