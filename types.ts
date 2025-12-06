@@ -28,6 +28,29 @@ export interface HistoryItem extends Transaction {
 
 export type WeekData = Record<string, DayData>;
 
+// --- REPARTOS (DELIVERY) APP TYPES ---
+
+export interface DeliveryRow {
+  id: string;
+  client: string;      // Cliente
+  product: string;     // Articulo
+  weight: number;      // Cantidad Kg
+  price: number;       // Precio kg
+  prevBalance: number; // Saldo Ant
+  payment: number;     // Entrega
+  // Calculated:
+  // Subtotal = weight * price
+  // currentBalance = Subtotal + prevBalance - payment
+}
+
+export interface DeliveryHistoryLog {
+  id: string;
+  timestamp: string;
+  description: string;
+}
+
+export type DeliveryDayData = Record<string, DeliveryRow[]>; // Key is date YYYY-MM-DD
+
 // --- KILOS APP TYPES ---
 
 // New Simplified Data Structure for Text Grid

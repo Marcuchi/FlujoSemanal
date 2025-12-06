@@ -1,6 +1,8 @@
 
+
+
 import React from 'react';
-import { Download, Upload, PieChart as PieChartIcon, History, ChevronLeft, ChevronRight, Calendar, Menu, LayoutGrid, Scale, BookUser, Banknote, Database, StickyNote, ZoomIn, ZoomOut } from 'lucide-react';
+import { Download, Upload, PieChart as PieChartIcon, History, ChevronLeft, ChevronRight, Calendar, Menu, LayoutGrid, Scale, BookUser, Banknote, Database, StickyNote, ZoomIn, ZoomOut, Truck, MapPin, ArrowRight, X } from 'lucide-react';
 import { ref, onValue, set, get, child } from 'firebase/database';
 import { db } from './firebaseConfig';
 import { DAYS_OF_WEEK, WeekData, DayData, HistoryItem, AppMode } from './types';
@@ -16,7 +18,179 @@ import { KilosApp } from './components/KilosApp';
 import { CurrentAccountsApp } from './components/CurrentAccountsApp';
 import { ChequesApp } from './components/ChequesApp';
 import { GeneralDataApp } from './components/GeneralDataApp';
+import { DeliveryApp } from './components/DeliveryApp';
 import { exportToCSV, exportMonthToCSV, parseCSV, parseMonthCSV, getWeekKey, getWeekRangeLabel, addWeeks, getMonday, generateId } from './utils';
+
+// --- LANDING SCREEN COMPONENT ---
+
+interface LandingScreenProps {
+  onEnter: (zone?: string, restricted?: boolean) => void;
+}
+
+const LandingScreen: React.FC<LandingScreenProps> = ({ onEnter }) => {
+  const [showRepartos, setShowRepartos] = React.useState(false);
+  
+  // Password State
+  const [showPassword, setShowPassword] = React.useState(false);
+  const [password, setPassword] = React.useState('');
+  const [error, setError] = React.useState(false);
+
+  const repartosList = [
+    { id: 'malvinas', label: 'Malvinas' },
+    { id: 'flores', label: 'Flores' },
+    { id: 'rodolfo', label: 'Rodolfo' },
+    { id: 'garbino', label: 'Garbino' },
+  ];
+
+  const handleGeneralClick = () => {
+    setShowPassword(true);
+  };
+
+  const handlePasswordSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password === 'alpinito') {
+      onEnter(undefined, false); // Not restricted
+    } else {
+      setError(true);
+      setPassword('');
+    }
+  };
+
+  const closePasswordModal = () => {
+    setShowPassword(false);
+    setError(false);
+    setPassword('');
+  };
+
+  return (
+    <div className="h-screen w-full bg-slate-950 flex flex-col items-center justify-center p-6 relative overflow-hidden">
+      
+      {/* Password Modal */}
+      {showPassword && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+           <div className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-6 relative">
+              <button 
+                onClick={closePasswordModal}
+                className="absolute top-4 right-4 text-slate-500 hover:text-slate-300"
+              >
+                <X size={20} />
+              </button>
+              
+              <div className="flex flex-col items-center mb-6">
+                 <div className="p-3 bg-indigo-900/30 rounded-full border border-indigo-500/30 mb-3">
+                    <LayoutGrid size={24} className="text-indigo-400" />
+                 </div>
+                 <h3 className="text-xl font-bold text-white">Acceso General</h3>
+                 <p className="text-sm text-slate-400">Ingrese contraseña de administrador</p>
+              </div>
+              
+              <form onSubmit={handlePasswordSubmit} className="space-y-4">
+                <div>
+                   <input
+                     type="password"
+                     autoFocus
+                     value={password}
+                     onChange={(e) => { setPassword(e.target.value); setError(false); }}
+                     placeholder="Contraseña"
+                     className={`w-full bg-slate-950 border ${error ? 'border-rose-500' : 'border-slate-700'} rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500 transition-colors text-center tracking-widest`}
+                   />
+                   {error && <p className="text-xs text-rose-500 mt-2 font-medium text-center">Contraseña incorrecta</p>}
+                </div>
+                <button 
+                  type="submit"
+                  className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl transition-colors shadow-lg shadow-indigo-900/20"
+                >
+                  Ingresar
+                </button>
+              </form>
+           </div>
+        </div>
+      )}
+
+      {/* Background Elements */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+        <div className="absolute -top-20 -left-20 w-96 h-96 bg-indigo-900/20 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-emerald-900/10 rounded-full blur-3xl"></div>
+      </div>
+
+      <div className="z-10 w-full max-w-md space-y-8 animate-in fade-in zoom-in duration-500">
+        
+        <div className="text-center space-y-2">
+          <img 
+            src="https://avicolaalpina.com.ar/wp-content/uploads/2025/04/logoCompleto0.png" 
+            alt="Avícola Alpina" 
+            className="h-20 w-auto mx-auto object-contain mb-4 drop-shadow-lg"
+          />
+          <h1 className="text-3xl font-bold text-white tracking-tight">Bienvenido</h1>
+          <p className="text-slate-400 text-sm">Selecciona el área de trabajo</p>
+        </div>
+
+        <div className="grid gap-4">
+          
+          {/* General Button */}
+          <button
+            onClick={handleGeneralClick}
+            className="group relative flex items-center p-5 bg-slate-900 border border-slate-800 hover:border-indigo-500 rounded-2xl transition-all shadow-xl hover:shadow-indigo-900/20"
+          >
+            <div className="h-12 w-12 bg-slate-800 rounded-full flex items-center justify-center mr-4 group-hover:bg-indigo-600 transition-colors">
+              <LayoutGrid size={24} className="text-slate-400 group-hover:text-white" />
+            </div>
+            <div className="flex-1 text-left">
+              <h3 className="text-xl font-bold text-slate-200 group-hover:text-white">General</h3>
+              <p className="text-xs text-slate-500 group-hover:text-slate-400">Administración completa</p>
+            </div>
+            <ArrowRight className="text-slate-700 group-hover:text-indigo-400 transition-colors" />
+          </button>
+
+          {/* Repartos Button */}
+          <div className="relative">
+             <button
+              onClick={() => setShowRepartos(!showRepartos)}
+              className={`w-full group relative flex items-center p-5 bg-slate-900 border border-slate-800 hover:border-emerald-500 rounded-2xl transition-all shadow-xl hover:shadow-emerald-900/20 z-20 ${showRepartos ? 'border-emerald-500/50 bg-slate-800' : ''}`}
+            >
+              <div className="h-12 w-12 bg-slate-800 rounded-full flex items-center justify-center mr-4 group-hover:bg-emerald-600 transition-colors">
+                <Truck size={24} className="text-slate-400 group-hover:text-white" />
+              </div>
+              <div className="flex-1 text-left">
+                <h3 className="text-xl font-bold text-slate-200 group-hover:text-white">Repartos</h3>
+                <p className="text-xs text-slate-500 group-hover:text-slate-400">Gestión por zonas</p>
+              </div>
+              <div className={`transform transition-transform duration-300 ${showRepartos ? 'rotate-90' : ''}`}>
+                 <ArrowRight className="text-slate-700 group-hover:text-emerald-400 transition-colors" />
+              </div>
+            </button>
+
+            {/* Repartos Dropdown List */}
+            <div className={`overflow-hidden transition-all duration-300 ease-in-out ${showRepartos ? 'max-h-96 opacity-100 mt-2' : 'max-h-0 opacity-0'}`}>
+                <div className="bg-slate-900/50 rounded-2xl border border-slate-800 p-2 space-y-1">
+                  {repartosList.map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => onEnter(item.label, true)} // Restricted mode
+                      className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-slate-800 group transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                         <MapPin size={16} className="text-emerald-500" />
+                         <span className="text-slate-300 font-medium group-hover:text-white">{item.label}</span>
+                      </div>
+                      <ChevronRight size={14} className="text-slate-600 group-hover:text-emerald-400" />
+                    </button>
+                  ))}
+                </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+      
+      <div className="absolute bottom-4 text-center">
+        <p className="text-[10px] text-slate-600">Avícola Alpina v1.0.1</p>
+      </div>
+    </div>
+  );
+};
+
+// --- APP COMPONENT ---
 
 const createInitialState = (): WeekData => {
   const state: WeekData = {};
@@ -101,6 +275,10 @@ const calculateWeeklyTreasury = (data: WeekData, startBalance: number = 0): numb
 };
 
 const App: React.FC = () => {
+  const [appStarted, setAppStarted] = React.useState(false);
+  const [activeZone, setActiveZone] = React.useState<string | undefined>(undefined);
+  const [isRestrictedMode, setIsRestrictedMode] = React.useState(false); // New State for mode
+
   const [currentDate, setCurrentDate] = React.useState(new Date());
   const [weekData, setWeekData] = React.useState<WeekData>(createInitialState());
   const [history, setHistory] = React.useState<HistoryItem[]>([]);
@@ -138,15 +316,19 @@ const App: React.FC = () => {
   }, []);
 
   React.useEffect(() => {
-    document.documentElement.style.fontSize = `${zoomLevel}%`;
-    localStorage.setItem('app_zoom_level', zoomLevel.toString());
-  }, [zoomLevel]);
+    if (appStarted) {
+       document.documentElement.style.fontSize = `${zoomLevel}%`;
+       localStorage.setItem('app_zoom_level', zoomLevel.toString());
+    }
+  }, [zoomLevel, appStarted]);
 
   const handleZoomIn = () => setZoomLevel(prev => Math.min(prev + 5, 150));
   const handleZoomOut = () => setZoomLevel(prev => Math.max(prev - 5, 30));
 
   // --- Data Loading Effect ---
   React.useEffect(() => {
+    if (!appStarted) return; // Only load if app started
+
     if (db) {
       setLoading(true);
 
@@ -319,7 +501,7 @@ const App: React.FC = () => {
 
       setLoading(false);
     }
-  }, [currentDate, currentWeekKey, currentApp]);
+  }, [currentDate, currentWeekKey, currentApp, appStarted]);
 
   // --- Save Functions ---
 
@@ -636,11 +818,14 @@ const App: React.FC = () => {
       if (currentApp === 'GENERAL_DATA') {
           return <>Datos<span className="text-cyan-400">Generales</span></>;
       }
+      if (activeZone) {
+          return <>Planilla<span className="text-emerald-400">Reparto</span></>;
+      }
       return <>Flujo<span className="text-indigo-400">Semanal</span></>;
   };
 
   const Header = () => (
-      <header className="bg-slate-900 border-b border-slate-800 shadow-md flex-none z-20">
+      <header className="bg-slate-900 border-b border-slate-800 shadow-md flex-none z-20 print:hidden">
         <div className="max-w-full px-4 py-3">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             
@@ -654,19 +839,21 @@ const App: React.FC = () => {
               <div>
                 <h1 className="text-xl font-bold text-slate-100 leading-tight flex items-center gap-2">
                   {getHeaderContent()}
+                  {activeZone && <span className="text-xs bg-emerald-900/50 text-emerald-300 px-2 py-0.5 rounded border border-emerald-800 ml-2 uppercase tracking-wide">{activeZone}</span>}
                   {isOfflineMode && <span className="text-[10px] bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded ml-2 border border-slate-600">MODO LOCAL</span>}
                 </h1>
                 <p className="text-xs text-slate-400 hidden sm:block">Avícola Alpina</p>
               </div>
             </div>
 
-            {currentApp === 'FLOW' && (
+            {currentApp === 'FLOW' && !activeZone && (
                 <div className="flex-1 overflow-x-auto no-scrollbar mx-4">
                    <Summary totalIncome={totals.income} totalExpense={totals.expense} netTotal={netTotal} totalToBox={totals.toBox} />
                 </div>
             )}
             
             {currentApp !== 'FLOW' && <div className="flex-1"></div>}
+            {currentApp === 'FLOW' && activeZone && <div className="flex-1"></div>}
             
             <div className="flex items-center gap-2 flex-shrink-0">
               
@@ -693,7 +880,7 @@ const App: React.FC = () => {
                 </button>
               </div>
 
-              {currentApp === 'FLOW' && (
+              {currentApp === 'FLOW' && !activeZone && (
                   <>
                       <button 
                         type="button"
@@ -740,6 +927,16 @@ const App: React.FC = () => {
       </header>
   );
 
+  const handleEnterApp = (zone?: string, restricted?: boolean) => {
+    setActiveZone(zone);
+    setIsRestrictedMode(!!restricted);
+    setAppStarted(true);
+  };
+
+  if (!appStarted) {
+    return <LandingScreen onEnter={handleEnterApp} />;
+  }
+
   return (
     <div className="h-screen bg-slate-950 flex flex-col overflow-hidden text-slate-100">
       <input type="file" accept=".csv" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
@@ -764,11 +961,14 @@ const App: React.FC = () => {
         onClose={() => setShowMenu(false)} 
         currentApp={currentApp}
         onSwitchApp={setCurrentApp}
+        onSelectZone={setActiveZone}
+        activeZone={activeZone}
+        isRestrictedMode={isRestrictedMode}
       />
 
       <Header />
 
-      {currentApp !== 'CC' && currentApp !== 'CHEQUES' && currentApp !== 'GENERAL_DATA' && (
+      {currentApp === 'FLOW' && !activeZone && (
         <div className="bg-slate-900/80 border-b border-slate-800 flex items-center justify-center py-2 relative z-40 backdrop-blur-sm flex-none">
           <div className="flex items-center gap-6 bg-slate-800/50 px-4 py-1.5 rounded-full border border-slate-700/50 relative">
               <button 
@@ -806,7 +1006,7 @@ const App: React.FC = () => {
       )}
 
       <main className="flex-1 overflow-x-auto overflow-y-hidden bg-slate-950 relative z-0">
-        {currentApp === 'FLOW' && (
+        {currentApp === 'FLOW' && !activeZone && (
             <div className="h-full flex flex-row p-4 gap-4 w-full">
                 {DAYS_OF_WEEK.map((day) => (
                     <DayCard 
@@ -820,6 +1020,11 @@ const App: React.FC = () => {
                 ))}
             </div>
         )}
+        
+        {currentApp === 'FLOW' && activeZone && (
+            <DeliveryApp db={db} zoneName={activeZone} isRestricted={isRestrictedMode} />
+        )}
+
         {currentApp === 'KILOS' && <KilosApp db={db} weekKey={currentWeekKey} />}
         {currentApp === 'CC' && <CurrentAccountsApp db={db} />}
         {currentApp === 'CHEQUES' && <ChequesApp db={db} />}
