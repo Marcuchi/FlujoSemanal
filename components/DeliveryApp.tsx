@@ -705,7 +705,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                                 <th className="px-2 py-1 text-right text-sm print:text-[9px] print:py-0.5 font-bold text-slate-600 print:text-black uppercase tracking-wider w-20 print:w-12 border-r border-slate-200 print:border-slate-300">Kg</th>
                                 <th className="px-2 py-1 text-right text-sm print:text-[9px] print:py-0.5 font-bold text-slate-600 print:text-black uppercase tracking-wider w-24 print:w-14 border-r border-slate-200 print:border-slate-300">Precio</th>
                                 <th className="px-2 py-1 text-right text-sm print:text-[9px] print:py-0.5 font-bold text-slate-600 print:text-black uppercase tracking-wider w-28 print:w-16 border-r border-slate-200 print:border-slate-300">Subtotal</th>
-                                <th className="px-2 py-1 text-right text-sm print:text-[9px] print:py-0.5 font-bold text-slate-600 print:text-black uppercase tracking-wider w-28 print:w-16 border-r border-slate-200 print:border-slate-300">Saldo Ant</th>
+                                <th className="px-2 py-1 text-right text-sm print:text-[9px] print:py-0.5 font-bold text-slate-600 print:text-black uppercase tracking-wider w-28 print:w-16 border-r border-slate-200 print:border-slate-300 whitespace-nowrap">Saldo Ant</th>
                                 <th className="px-2 py-1 text-right text-sm print:text-[9px] print:py-0.5 font-bold text-emerald-600 print:text-black uppercase tracking-wider w-28 print:w-16 border-r border-slate-200 print:border-slate-300">Entrega</th>
                                 <th className="px-2 py-1 text-right text-sm print:text-[9px] print:py-0.5 font-bold text-slate-600 print:text-black uppercase tracking-wider w-28 print:w-16">Saldo</th>
                                 <th className="px-2 py-1 w-10 print:hidden"></th>
@@ -878,11 +878,9 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                 </div>
 
                 {/* Totals Summary (Print Optimized) */}
-                <div className="w-full md:w-64 print:w-auto print:min-w-[180px] print:flex-1">
-                    <div className="bg-slate-50 border border-slate-300 rounded overflow-hidden print:border-2 print:border-black print:bg-transparent print:shadow-none print:rounded-none">
-                        
-                        {/* Only Efectivo is critical for print summary as requested */}
-                         <div className="flex justify-between items-center p-3 bg-indigo-50 border-t-2 border-slate-300 print:bg-white print:border-none print:p-2">
+                <div className="w-full md:w-64 print:w-auto print:min-w-[180px] print:h-auto">
+                    <div className="bg-slate-50 border border-slate-300 rounded overflow-hidden print:border print:border-black print:bg-transparent print:shadow-none print:rounded-none">
+                         <div className="flex justify-between items-center p-3 bg-indigo-50 border-t-2 border-slate-300 print:bg-transparent print:border-none print:p-2">
                              <span className="text-sm font-extrabold text-indigo-700 uppercase print:text-black print:text-lg">EFECTIVO</span>
                              <span className="text-lg font-bold font-mono text-indigo-700 print:text-black print:text-xl">{formatCurrency(cashBalance)}</span>
                         </div>
