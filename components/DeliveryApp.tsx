@@ -529,7 +529,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
             .no-print {
                 display: none !important;
             }
-            /* Aggressively remove all background colors in print */
+            /* Reset general backgrounds */
             [class*="bg-"] {
                 background-color: white !important;
             }
@@ -538,7 +538,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                 text-shadow: none !important;
                 overflow: visible !important;
             }
-            /* Table Styling for Excel-like look */
+            /* Table Styling */
             table {
                 border-collapse: collapse !important;
                 width: 100%;
@@ -550,13 +550,20 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
             th, td {
                 border: 1px solid #000 !important;
                 padding: 0px 2px !important;
+                /* Default white background */
                 background-color: white !important;
                 color: black !important;
                 font-size: 11px !important; 
                 line-height: 1.1 !important;
                 height: 20px !important; 
             }
-            /* Force all text black in print */
+            /* Allow shading for specific rows */
+            tr.print-shaded td {
+                background-color: #e5e7eb !important; /* gray-200 */
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            /* Force text black */
             th *, td *, div, span, p, h1, h2, h3, h4, input, select {
                 color: #000000 !important;
             }
@@ -751,8 +758,11 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                                 const balance = subtotal + (row.prevBalance || 0) - (row.payment || 0);
                                 const isAlternate = index % 2 === 1;
                                 
+                                // Determine if transaction data is empty
+                                const isTransactionEmpty = !row.product && (!row.weight || row.weight === 0) && (!row.price || row.price === 0) && (!row.prevBalance || row.prevBalance === 0) && (!row.payment || row.payment === 0);
+
                                 return (
-                                    <tr key={row.id} className={`hover:bg-slate-50 print:hover:bg-transparent group ${isAlternate ? 'print:bg-transparent' : ''}`}>
+                                    <tr key={row.id} className={`hover:bg-slate-50 print:hover:bg-transparent group ${isAlternate ? 'print:bg-transparent' : ''} ${isTransactionEmpty ? 'print-shaded' : ''}`}>
                                         <td className="border-r border-slate-100 print:border-black h-11 print:h-[20px]">
                                             <TextInput 
                                                 value={row.client} 
