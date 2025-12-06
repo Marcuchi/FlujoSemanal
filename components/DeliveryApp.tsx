@@ -545,7 +545,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                 background-color: white !important;
             }
             tr {
-                height: 20px !important; 
+                height: 22px !important; 
             }
             th, td {
                 border: 1px solid #000 !important;
@@ -554,14 +554,15 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                 color: black !important;
                 font-size: 12px !important; 
                 line-height: 1.1 !important;
-                height: 20px !important; 
+                height: 22px !important; 
             }
-            th, td, td div, td span, th div, th span, input, select {
-                color: black !important;
+            /* Force all text black in print */
+            th *, td *, div, span, p, h1, h2, h3, h4, input, select {
+                color: #000000 !important;
             }
             thead th {
                 background-color: white !important;
-                color: #000 !important;
+                color: #000000 !important;
                 font-weight: bold !important;
                 font-size: 11px !important; 
             }
@@ -752,28 +753,28 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                                 
                                 return (
                                     <tr key={row.id} className={`hover:bg-slate-50 print:hover:bg-transparent group ${isAlternate ? 'print:bg-transparent' : ''}`}>
-                                        <td className="border-r border-slate-100 print:border-black h-8 print:h-[20px]">
+                                        <td className="border-r border-slate-100 print:border-black h-8 print:h-[22px]">
                                             <TextInput 
                                                 value={row.client} 
                                                 onChange={(v) => handleRowChange(row.id, 'client', v)} 
                                                 className="font-bold text-slate-800 text-sm print:text-[12px] print:text-black print:leading-none"
                                             />
                                         </td>
-                                        <td className="border-r border-slate-100 print:border-black h-8 print:h-[20px]">
+                                        <td className="border-r border-slate-100 print:border-black h-8 print:h-[22px]">
                                             <ProductSelect 
                                                 value={row.product} 
                                                 onChange={(v) => handleRowChange(row.id, 'product', v)} 
                                                 className="text-sm text-slate-700 font-medium print:text-[12px] print:text-black print:leading-none"
                                             />
                                         </td>
-                                        <td className="border-r border-slate-100 print:border-black h-8 print:h-[20px]">
+                                        <td className="border-r border-slate-100 print:border-black h-8 print:h-[22px]">
                                             <NumericInput 
                                                 value={row.weight} 
                                                 onChange={(v) => handleRowChange(row.id, 'weight', v)} 
                                                 className="text-slate-700 text-right font-mono text-sm font-medium print:text-[12px] print:text-black print:leading-none"
                                             />
                                         </td>
-                                        <td className="border-r border-slate-100 print:border-black h-8 print:h-[20px]">
+                                        <td className="border-r border-slate-100 print:border-black h-8 print:h-[22px]">
                                             <NumericInput 
                                                 value={row.price} 
                                                 onChange={(v) => handleRowChange(row.id, 'price', v)} 
@@ -781,12 +782,12 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                                                 isCurrency
                                             />
                                         </td>
-                                        <td className="border-r border-slate-100 print:border-black h-8 print:h-[20px] px-2 text-right">
+                                        <td className="border-r border-slate-100 print:border-black h-8 print:h-[22px] px-2 text-right">
                                             <span className="text-sm font-mono text-slate-600 print:text-[12px] print:text-black print:leading-none">
                                                 {subtotal > 0 ? formatCurrency(subtotal) : '-'}
                                             </span>
                                         </td>
-                                        <td className="border-r border-slate-100 print:border-black h-8 print:h-[20px]">
+                                        <td className="border-r border-slate-100 print:border-black h-8 print:h-[22px]">
                                              <NumericInput 
                                                 value={row.prevBalance} 
                                                 onChange={(v) => handleRowChange(row.id, 'prevBalance', v)} 
@@ -794,7 +795,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                                                 isCurrency
                                             />
                                         </td>
-                                        <td className="border-r border-slate-100 print:border-black h-8 print:h-[20px] bg-emerald-50/30 print:bg-transparent">
+                                        <td className="border-r border-slate-100 print:border-black h-8 print:h-[22px] bg-emerald-50/30 print:bg-transparent">
                                              <NumericInput 
                                                 value={row.payment} 
                                                 onChange={(v) => handleRowChange(row.id, 'payment', v)} 
@@ -802,7 +803,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                                                 isCurrency
                                             />
                                         </td>
-                                        <td className="h-8 print:h-[20px] px-2 text-right print:border print:border-black">
+                                        <td className="h-8 print:h-[22px] px-2 text-right print:border print:border-black">
                                             <span className={`text-sm font-mono font-bold print:text-[12px] print:text-black print:leading-none ${balance > 0 ? 'text-rose-600 print:text-black' : 'text-slate-500'}`}>
                                                 {balance !== 0 ? formatCurrency(balance) : '-'}
                                             </span>
