@@ -564,7 +564,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
   const equivalentCratesBalance = (totalSummaryPPP > 0) ? (totalCurrentBalance / (totalSummaryPPP * 20)) : 0;
 
   return (
-    <div className="h-full flex flex-col bg-slate-950 p-4 sm:p-6 overflow-hidden print:bg-white print:p-0 print:h-auto print:overflow-visible">
+    <div className="h-full flex flex-col bg-slate-950 p-2 sm:p-6 md:overflow-hidden overflow-y-auto print:bg-white print:p-0 print:h-auto print:overflow-visible">
         
         {/* History Modal (Screen Only) */}
         {showHistoryModal && (
@@ -611,7 +611,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
         </div>
 
         {/* --- SCREEN HEADER (Hidden on Print) --- */}
-        <div className="flex-none flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4 bg-slate-900 p-4 rounded-xl border border-slate-800 shadow-md print:hidden relative z-30">
+        <div className="flex-none flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4 bg-slate-900 p-4 rounded-xl border border-slate-800 shadow-md print:hidden relative z-30 shrink-0">
             <div className="flex items-center gap-3">
                 <div className="p-3 bg-emerald-900/30 border border-emerald-500/30 rounded-lg">
                     <MapPin className="text-emerald-400" size={24} />
@@ -673,7 +673,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
         </div>
 
         {/* --- MAIN TABLE --- */}
-        <div className="flex-1 min-h-0 bg-white rounded-xl border border-slate-300 shadow-xl overflow-hidden flex flex-col print:shadow-none print:border-none print:rounded-none z-0 print:block print:h-auto print:overflow-visible">
+        <div className="flex flex-col bg-white rounded-xl border border-slate-300 shadow-xl overflow-hidden z-0 shrink-0 h-[65vh] md:h-auto md:flex-1 md:min-h-0 print:shadow-none print:border-none print:rounded-none print:block print:h-auto print:overflow-visible">
             <div className="overflow-auto custom-scrollbar flex-1 relative bg-slate-50 print:bg-transparent print:overflow-visible">
                 <table className="w-full border-collapse min-w-[1000px] print:min-w-0 print:text-[10px] print:leading-tight">
                     <thead className="sticky top-0 z-20 bg-slate-100 text-xs font-bold text-slate-600 uppercase tracking-wider shadow-sm print:static print:shadow-none print:bg-neutral-600 print:text-white print:border-2 print:border-black print-color-adjust-exact">
@@ -705,44 +705,44 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                                             value={row.client}
                                             onChange={(v) => handleUpdateRow(row.id, 'client', v)}
                                             placeholder="Nombre"
-                                            className="text-sm font-medium text-slate-800 print:text-black uppercase print:text-[10px]"
+                                            className="text-base sm:text-sm font-medium text-slate-800 print:text-black uppercase print:text-[10px]"
                                         />
                                     </td>
                                     <td className="p-0 border-r border-slate-200 print:border-black h-10 print:h-auto">
                                         <ProductSelect 
                                             value={row.product}
                                             onChange={(v) => handleUpdateRow(row.id, 'product', v)}
-                                            className="text-sm text-slate-600 print:text-black print:text-[10px]"
+                                            className="text-base sm:text-sm text-slate-600 print:text-black print:text-[10px]"
                                         />
                                     </td>
                                     <td className="p-0 border-r border-slate-200 h-10 print:border-black print:h-auto">
                                         <NumericInput 
                                             value={row.weight} 
                                             onChange={(v) => handleUpdateRow(row.id, 'weight', v)}
-                                            className="text-slate-800 font-mono text-sm print:text-black text-center print:text-[10px]"
+                                            className="text-slate-800 font-mono text-base sm:text-sm print:text-black text-center print:text-[10px]"
                                         />
                                     </td>
                                     <td className="p-0 border-r border-slate-200 h-10 print:border-black print:h-auto">
                                         <NumericInput 
                                             value={row.price} 
                                             onChange={(v) => handleUpdateRow(row.id, 'price', v)}
-                                            className="text-slate-800 font-mono text-sm print:text-black text-center print:text-[10px]"
+                                            className="text-slate-800 font-mono text-base sm:text-sm print:text-black text-center print:text-[10px]"
                                             isCurrency
                                         />
                                     </td>
-                                    <td className="p-3 border-r border-slate-200 text-right bg-slate-50 font-mono font-bold text-slate-700 text-sm print:bg-transparent print:text-black print:border-black print:p-1 print:text-[10px]">
+                                    <td className="p-3 border-r border-slate-200 text-right bg-slate-50 font-mono font-bold text-slate-700 text-base sm:text-sm print:bg-transparent print:text-black print:border-black print:p-1 print:text-[10px]">
                                         {formatCurrency(subtotal)}
                                     </td>
                                     <td className="p-0 border-r border-slate-200 h-10 print:border-black print:h-auto">
                                         {isRestricted ? (
-                                             <div className="w-full h-full flex items-center justify-end px-3 text-slate-600 font-mono text-sm print:text-black print:p-1 print:text-[10px]">
+                                             <div className="w-full h-full flex items-center justify-end px-3 text-slate-600 font-mono text-base sm:text-sm print:text-black print:p-1 print:text-[10px]">
                                                 {formatCurrency(row.prevBalance)}
                                              </div>
                                         ) : (
                                             <NumericInput 
                                                 value={row.prevBalance} 
                                                 onChange={(v) => handleUpdateRow(row.id, 'prevBalance', v)}
-                                                className="text-slate-600 font-mono text-sm print:text-black text-right print:text-[10px]"
+                                                className="text-slate-600 font-mono text-base sm:text-sm print:text-black text-right print:text-[10px]"
                                                 isCurrency
                                             />
                                         )}
@@ -751,11 +751,11 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                                         <NumericInput 
                                             value={row.payment} 
                                             onChange={(v) => handleUpdateRow(row.id, 'payment', v)}
-                                            className="text-emerald-700 font-bold font-mono text-sm print:text-black text-right print:text-[10px]"
+                                            className="text-emerald-700 font-bold font-mono text-base sm:text-sm print:text-black text-right print:text-[10px]"
                                             isCurrency
                                         />
                                     </td>
-                                    <td className="p-3 text-right bg-slate-50 font-mono font-bold text-indigo-700 text-sm border-r border-slate-200 print:bg-transparent print:text-black print:border-black print:p-1 print:text-[10px]">
+                                    <td className="p-3 text-right bg-slate-50 font-mono font-bold text-indigo-700 text-base sm:text-sm border-r border-slate-200 print:bg-transparent print:text-black print:border-black print:p-1 print:text-[10px]">
                                         {formatCurrency(currentBalance)}
                                     </td>
                                     <td className="p-0 text-center print:hidden">
@@ -932,7 +932,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
 
 
         {/* --- SCREEN ONLY: Summaries & Expenses Grid Container --- */}
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 shrink-0 auto-rows-start print:hidden">
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 shrink-0 auto-rows-start print:hidden pb-4 md:pb-0">
             
             {/* 1. Category Summary */}
             <div className="bg-white rounded-xl border border-slate-300 shadow-md overflow-hidden w-full">
@@ -981,7 +981,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                                 <NumericInput 
                                     value={metadata.loadedChicken} 
                                     onChange={(v) => updateMetadata('loadedChicken', v)}
-                                    className="text-slate-800 font-mono text-center font-bold"
+                                    className="text-slate-800 font-mono text-center font-bold text-base sm:text-sm"
                                 />
                             </td>
                         </tr>
@@ -991,7 +991,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                                 <NumericInput 
                                     value={metadata.returnedChicken} 
                                     onChange={(v) => updateMetadata('returnedChicken', v)}
-                                    className="text-slate-800 font-mono text-center font-bold"
+                                    className="text-slate-800 font-mono text-center font-bold text-base sm:text-sm"
                                 />
                             </td>
                         </tr>
@@ -1040,14 +1040,14 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                                             value={expense.description}
                                             onChange={(v) => handleUpdateExpense(expense.id, 'description', v)}
                                             placeholder="Descripción del gasto"
-                                            className="text-slate-700"
+                                            className="text-slate-700 text-base sm:text-sm"
                                         />
                                     </td>
                                     <td className="p-0 border-r border-slate-200 h-10">
                                         <NumericInput 
                                             value={expense.amount}
                                             onChange={(v) => handleUpdateExpense(expense.id, 'amount', v)}
-                                            className="text-slate-800 font-mono text-right"
+                                            className="text-slate-800 font-mono text-right text-base sm:text-sm"
                                             isCurrency
                                         />
                                     </td>
