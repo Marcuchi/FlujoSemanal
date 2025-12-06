@@ -557,12 +557,21 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                 line-height: 1.1 !important;
                 height: 20px !important; 
             }
-            /* Allow shading for specific rows */
-            tr.print-shaded td {
+            
+            /* -- AGGRESSIVE SHADING FOR EMPTY ROWS -- */
+            tr.print-shaded,
+            tr.print-shaded > td,
+            tr.print-shaded > td > div,
+            tr.print-shaded > td > input {
                 background-color: #e5e7eb !important; /* gray-200 */
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
             }
+            /* Remove any borders inside shaded rows to prevent white lines if any */
+            tr.print-shaded > td {
+                border-color: #000 !important;
+            }
+
             /* Force text black */
             th *, td *, div, span, p, h1, h2, h3, h4, input, select {
                 color: #000000 !important;
@@ -758,7 +767,8 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                                 const balance = subtotal + (row.prevBalance || 0) - (row.payment || 0);
                                 const isAlternate = index % 2 === 1;
                                 
-                                // Determine if transaction data is empty
+                                // Transaction is empty if NO numeric/product data is present.
+                                // Client name presence does NOT count as transaction data for shading purposes.
                                 const isTransactionEmpty = !row.product && (!row.weight || row.weight === 0) && (!row.price || row.price === 0) && (!row.prevBalance || row.prevBalance === 0) && (!row.payment || row.payment === 0);
 
                                 return (
