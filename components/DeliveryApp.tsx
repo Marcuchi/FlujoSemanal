@@ -465,6 +465,10 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
       });
   }, [rows]);
 
+  const totalSummaryWeight = summaryStats.reduce((acc, curr) => acc + curr.totalWeight, 0);
+  const totalSummaryMoney = summaryStats.reduce((acc, curr) => acc + curr.totalMoney, 0);
+  const totalSummaryPPP = totalSummaryWeight > 0 ? totalSummaryMoney / totalSummaryWeight : 0;
+
   return (
     <div className="h-full flex flex-col bg-slate-950 p-4 sm:p-6 overflow-hidden print:bg-white print:p-0 print:h-auto print:overflow-visible">
         
@@ -699,6 +703,14 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                         </tr>
                     ))}
                 </tbody>
+                <tfoot className="font-bold text-slate-800 bg-white print:text-black border-t-2 border-slate-300 print:border-black">
+                    <tr className="text-sm">
+                        <td className="p-3 border-r border-slate-200 print:border-black">Total de Pollo</td>
+                        <td className="p-3 text-center border-r border-slate-200 print:border-black font-mono">{formatDecimal(totalSummaryWeight)}</td>
+                        <td className="p-3 border-r border-slate-200 print:border-black text-right">Precio</td>
+                        <td className="p-3 text-right print:border-black font-mono">{formatCurrency(totalSummaryPPP)}</td>
+                    </tr>
+                </tfoot>
             </table>
         </div>
 
