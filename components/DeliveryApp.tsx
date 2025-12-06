@@ -2,8 +2,8 @@
 
 import React from 'react';
 import { Database, ref, onValue, set } from 'firebase/database';
-import { Calendar, Plus, Trash2, MapPin, Calculator, Printer, ChevronDown, History, X, Clock } from 'lucide-react';
-import { DeliveryRow, DeliveryHistoryLog } from '../types';
+import { Calendar, Plus, Trash2, MapPin, Calculator, Printer, ChevronDown, History, X, Clock, Receipt } from 'lucide-react';
+import { DeliveryRow, DeliveryHistoryLog, DeliveryExpense } from '../types';
 import { generateId } from '../utils';
 import { DayPickerModal } from './DayPickerModal';
 
@@ -242,7 +242,9 @@ const ProductSelect = ({
 export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestricted = false }) => {
   const [currentDate, setCurrentDate] = React.useState(new Date().toISOString().slice(0, 10));
   const [rows, setRows] = React.useState<DeliveryRow[]>([]);
+  const [expenses, setExpenses] = React.useState<DeliveryExpense[]>([]);
   const [history, setHistory] = React.useState<DeliveryHistoryLog[]>([]);
+  const [metadata, setMetadata] = React.useState({ loadedChicken: 0, returnedChicken: 0 });
   const [loading, setLoading] = React.useState(true);
   
   const [showDatePicker, setShowDatePicker] = React.useState(false);
@@ -254,10 +256,12 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
     }
   }, [isRestricted]);
 
-  // Load Data and History
+  // Load Data, History, Metadata and Expenses
   React.useEffect(() => {
     const dataKey = `deliveries/${zoneName}/${currentDate}`;
+    const expensesKey = `delivery_expenses/${zoneName}/${currentDate}`;
     const historyKey = `deliveries_history/${zoneName}/${currentDate}`;
+    const metaKey = `deliveries_metadata/${zoneName}/${currentDate}`;
     
     setLoading(true);
 
@@ -295,17 +299,34 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
         }
       });
 
-      // 2. History Listener
+      // 2. Expenses Listener
+      const expensesRef = ref(db, expensesKey);
+      const unsubscribeExpenses = onValue(expensesRef, (snapshot) => {
+          const val = snapshot.val();
+          setExpenses(val ? (val as DeliveryExpense[]) : []);
+      });
+
+      // 3. History Listener
       const historyRef = ref(db, historyKey);
       const unsubscribeHistory = onValue(historyRef, (snapshot) => {
           const val = snapshot.val();
           setHistory(val ? (Object.values(val) as DeliveryHistoryLog[]) : []);
       });
 
+      // 4. Metadata Listener
+      const metaRef = ref(db, metaKey);
+      const unsubscribeMeta = onValue(metaRef, (snapshot) => {
+          const val = snapshot.val();
+          if (val) setMetadata(val);
+          else setMetadata({ loadedChicken: 0, returnedChicken: 0 });
+      });
+
       setLoading(false);
       return () => {
           unsubscribeData();
+          unsubscribeExpenses();
           unsubscribeHistory();
+          unsubscribeMeta();
       }
     } else {
        // Local Storage
@@ -338,12 +359,27 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
            }
        }
 
+       const savedExpenses = localStorage.getItem(expensesKey);
+       if (savedExpenses) {
+           try { setExpenses(JSON.parse(savedExpenses)); } catch { setExpenses([]); }
+       } else {
+           setExpenses([]);
+       }
+
        const savedHistory = localStorage.getItem(historyKey);
        if (savedHistory) {
            try { setHistory(JSON.parse(savedHistory)); } catch (e) { setHistory([]); }
        } else {
            setHistory([]);
        }
+
+       const savedMeta = localStorage.getItem(metaKey);
+       if (savedMeta) {
+           try { setMetadata(JSON.parse(savedMeta)); } catch { setMetadata({ loadedChicken: 0, returnedChicken: 0 }); }
+       } else {
+           setMetadata({ loadedChicken: 0, returnedChicken: 0 });
+       }
+
        setLoading(false);
     }
   }, [db, zoneName, currentDate]);
@@ -358,6 +394,16 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
       }
   };
 
+  const saveExpenses = (newExpenses: DeliveryExpense[]) => {
+      const expensesKey = `delivery_expenses/${zoneName}/${currentDate}`;
+      if (db) {
+          set(ref(db, expensesKey), newExpenses);
+      } else {
+          setExpenses(newExpenses);
+          localStorage.setItem(expensesKey, JSON.stringify(newExpenses));
+      }
+  };
+
   const saveHistory = (newHistory: DeliveryHistoryLog[]) => {
       const historyKey = `deliveries_history/${zoneName}/${currentDate}`;
       if (db) {
@@ -368,14 +414,23 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
       }
   };
 
+  const updateMetadata = (field: 'loadedChicken' | 'returnedChicken', value: number) => {
+      const newMeta = { ...metadata, [field]: value };
+      setMetadata(newMeta);
+      const metaKey = `deliveries_metadata/${zoneName}/${currentDate}`;
+      if (db) {
+          set(ref(db, metaKey), newMeta);
+      } else {
+          localStorage.setItem(metaKey, JSON.stringify(newMeta));
+      }
+  };
+
   const logChange = (description: string) => {
       const newLog: DeliveryHistoryLog = {
           id: generateId(),
           timestamp: new Date().toISOString(),
           description
       };
-      // Keep sorted newest first implicitly if we prepend, but user wants sorted by time.
-      // We will simply add to list and sort on render.
       saveHistory([...history, newLog]);
   };
 
@@ -424,6 +479,32 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
       }
   };
 
+  // --- Expenses Handlers ---
+
+  const handleAddExpense = () => {
+      const newExpense: DeliveryExpense = {
+          id: generateId(),
+          description: '',
+          amount: 0
+      };
+      saveExpenses([...expenses, newExpense]);
+  };
+
+  const handleUpdateExpense = (id: string, field: keyof DeliveryExpense, value: string | number) => {
+      const updatedExpenses = expenses.map(e => {
+          if (e.id === id) return { ...e, [field]: value };
+          return e;
+      });
+      saveExpenses(updatedExpenses);
+  };
+
+  const handleDeleteExpense = (id: string) => {
+      if (window.confirm('¿Eliminar este gasto?')) {
+          const updatedExpenses = expenses.filter(e => e.id !== id);
+          saveExpenses(updatedExpenses);
+      }
+  };
+
   const handleDateSelect = (date: Date) => {
       const offset = date.getTimezoneOffset();
       const adjustedDate = new Date(date.getTime() - (offset*60*1000));
@@ -437,6 +518,8 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
       const sub = r.weight * r.price;
       return acc + (sub + r.prevBalance - r.payment);
   }, 0);
+
+  const totalExpenses = expenses.reduce((acc, e) => acc + e.amount, 0);
 
   const formatDateForDisplay = (isoDate: string) => {
       if (!isoDate) return '';
@@ -468,6 +551,10 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
   const totalSummaryWeight = summaryStats.reduce((acc, curr) => acc + curr.totalWeight, 0);
   const totalSummaryMoney = summaryStats.reduce((acc, curr) => acc + curr.totalMoney, 0);
   const totalSummaryPPP = totalSummaryWeight > 0 ? totalSummaryMoney / totalSummaryWeight : 0;
+
+  // --- Shrinkage Calculations ---
+  const mermaTotal = metadata.loadedChicken - metadata.returnedChicken - totalSummaryWeight;
+  const mermaPorCajon = mermaTotal / 20;
 
   return (
     <div className="h-full flex flex-col bg-slate-950 p-4 sm:p-6 overflow-hidden print:bg-white print:p-0 print:h-auto print:overflow-visible">
@@ -682,33 +769,145 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
             </div>
         </div>
 
-        {/* Summary Table by Category */}
-        <div className="mt-6 bg-white rounded-xl border border-slate-300 shadow-md overflow-hidden max-w-lg print:mt-4 print:shadow-none print:border-black print:border print:rounded-none">
+        {/* Summaries Container */}
+        <div className="mt-6 flex flex-col md:flex-row gap-6 print:flex-row items-start mb-6">
+            
+            {/* Category Summary */}
+            <div className="bg-white rounded-xl border border-slate-300 shadow-md overflow-hidden flex-1 max-w-lg print:shadow-none print:border-black print:border print:rounded-none">
+                <table className="w-full border-collapse">
+                    <thead className="bg-slate-100 text-xs font-bold text-slate-600 uppercase tracking-wider print:bg-white print:text-black print:border-b print:border-black">
+                        <tr>
+                            <th className="p-3 text-left border-r border-slate-300 print:border-black">Categoría</th>
+                            <th className="p-3 text-center border-r border-slate-300 print:border-black">Cantidad Kg</th>
+                            <th className="p-3 text-center border-r border-slate-300 print:border-black">P.P.P.</th>
+                            <th className="p-3 text-right print:border-black">Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200 print:divide-black">
+                        {summaryStats.map((stat) => (
+                            <tr key={stat.category} className="text-sm print:text-black">
+                                <td className="p-3 font-medium text-slate-800 border-r border-slate-200 print:border-black print:text-black">{stat.category}</td>
+                                <td className="p-3 text-center font-mono text-slate-600 border-r border-slate-200 print:border-black print:text-black">{formatDecimal(stat.totalWeight)}</td>
+                                <td className="p-3 text-center font-mono text-slate-600 border-r border-slate-200 print:border-black print:text-black">{formatCurrency(stat.ppp)}</td>
+                                <td className="p-3 text-right font-mono font-bold text-slate-800 print:text-black">{formatCurrency(stat.totalMoney)}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                    <tfoot className="font-bold text-slate-800 bg-white print:text-black border-t-2 border-slate-300 print:border-black">
+                        <tr className="text-sm">
+                            <td className="p-3 border-r border-slate-200 print:border-black">Total de Pollo</td>
+                            <td className="p-3 text-center border-r border-slate-200 print:border-black font-mono">{formatDecimal(totalSummaryWeight)}</td>
+                            <td className="p-3 border-r border-slate-200 print:border-black text-right">Precio</td>
+                            <td className="p-3 text-right print:border-black font-mono">{formatCurrency(totalSummaryPPP)}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            {/* Shrinkage Control Table */}
+            <div className="bg-white rounded-xl border border-slate-300 shadow-md overflow-hidden flex-1 max-w-sm print:shadow-none print:border-black print:border print:rounded-none">
+                <table className="w-full border-collapse">
+                    <thead className="bg-slate-100 text-xs font-bold text-slate-600 uppercase tracking-wider print:bg-white print:text-black print:border-b print:border-black">
+                        <tr>
+                            <th className="p-3 text-left border-r border-slate-300 print:border-black" colSpan={2}>Control de Mermas</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200 print:divide-black text-sm">
+                        <tr>
+                            <td className="p-3 font-medium text-slate-800 border-r border-slate-200 print:border-black print:text-black">Kg Pollo Cargados</td>
+                            <td className="p-0 h-10 w-32 bg-indigo-50/50 print:bg-transparent">
+                                <NumericInput 
+                                    value={metadata.loadedChicken} 
+                                    onChange={(v) => updateMetadata('loadedChicken', v)}
+                                    className="text-slate-800 font-mono text-center font-bold"
+                                />
+                            </td>
+                        </tr>
+                        <tr>
+                            <td className="p-3 font-medium text-slate-800 border-r border-slate-200 print:border-black print:text-black">Merma por Cajón (x20)</td>
+                            <td className="p-3 text-center font-mono font-bold text-slate-600 print:text-black">
+                                {formatDecimal(mermaPorCajon)}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td className="p-3 font-medium text-slate-800 border-r border-slate-200 print:border-black print:text-black">Kg Pollo Devueltos</td>
+                            <td className="p-0 h-10 w-32 bg-indigo-50/50 print:bg-transparent">
+                                <NumericInput 
+                                    value={metadata.returnedChicken} 
+                                    onChange={(v) => updateMetadata('returnedChicken', v)}
+                                    className="text-slate-800 font-mono text-center font-bold"
+                                />
+                            </td>
+                        </tr>
+                        <tr>
+                            <td className="p-3 font-bold text-slate-800 border-r border-slate-200 print:border-black print:text-black">Merma Total</td>
+                            <td className={`p-3 text-center font-mono font-bold ${mermaTotal < 0 ? 'text-rose-600' : 'text-emerald-600'} print:text-black`}>
+                                {formatDecimal(mermaTotal)}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+
+         {/* Expenses Table (Cuadro de Gastos) */}
+        <div className="bg-white rounded-xl border border-slate-300 shadow-md overflow-hidden max-w-lg print:shadow-none print:border-black print:border print:rounded-none">
+            <div className="p-3 bg-slate-100 border-b border-slate-300 flex justify-between items-center print:bg-white print:border-black">
+                 <h3 className="text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center gap-2 print:text-black">
+                    <Receipt size={16} className="print:hidden"/> Cuadro de Gastos
+                 </h3>
+                 <button onClick={handleAddExpense} className="p-1 hover:bg-slate-200 rounded text-slate-500 hover:text-indigo-600 transition-colors print:hidden">
+                    <Plus size={16} />
+                 </button>
+            </div>
             <table className="w-full border-collapse">
-                <thead className="bg-slate-100 text-xs font-bold text-slate-600 uppercase tracking-wider print:bg-white print:text-black print:border-b print:border-black">
+                <thead className="bg-slate-50 text-xs font-bold text-slate-500 uppercase tracking-wider print:bg-white print:text-black print:border-b print:border-black">
                     <tr>
-                        <th className="p-3 text-left border-r border-slate-300 print:border-black">Categoría</th>
-                        <th className="p-3 text-center border-r border-slate-300 print:border-black">Cantidad Kg</th>
-                        <th className="p-3 text-center border-r border-slate-300 print:border-black">P.P.P.</th>
-                        <th className="p-3 text-right print:border-black">Subtotal</th>
+                        <th className="p-3 text-left border-r border-slate-200 print:border-black">Descripción</th>
+                        <th className="p-3 text-right w-32 border-r border-slate-200 print:border-black">Monto</th>
+                        <th className="p-3 w-10 print:hidden"></th>
                     </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-200 print:divide-black">
-                    {summaryStats.map((stat) => (
-                        <tr key={stat.category} className="text-sm print:text-black">
-                            <td className="p-3 font-medium text-slate-800 border-r border-slate-200 print:border-black print:text-black">{stat.category}</td>
-                            <td className="p-3 text-center font-mono text-slate-600 border-r border-slate-200 print:border-black print:text-black">{formatDecimal(stat.totalWeight)}</td>
-                            <td className="p-3 text-center font-mono text-slate-600 border-r border-slate-200 print:border-black print:text-black">{formatCurrency(stat.ppp)}</td>
-                            <td className="p-3 text-right font-mono font-bold text-slate-800 print:text-black">{formatCurrency(stat.totalMoney)}</td>
-                        </tr>
-                    ))}
+                <tbody className="divide-y divide-slate-200 print:divide-black text-sm">
+                    {expenses.length === 0 ? (
+                        <tr><td colSpan={3} className="p-4 text-center text-slate-400 italic">Sin gastos registrados.</td></tr>
+                    ) : (
+                        expenses.map(expense => (
+                            <tr key={expense.id} className="group hover:bg-slate-50 print:hover:bg-transparent">
+                                <td className="p-0 border-r border-slate-200 h-10 print:border-black">
+                                    <TextInput 
+                                        value={expense.description}
+                                        onChange={(v) => handleUpdateExpense(expense.id, 'description', v)}
+                                        placeholder="Descripción del gasto"
+                                        className="text-slate-700 print:text-black"
+                                    />
+                                </td>
+                                <td className="p-0 border-r border-slate-200 h-10 print:border-black">
+                                    <NumericInput 
+                                        value={expense.amount}
+                                        onChange={(v) => handleUpdateExpense(expense.id, 'amount', v)}
+                                        className="text-slate-800 font-mono text-right print:text-black"
+                                        isCurrency
+                                    />
+                                </td>
+                                <td className="p-0 text-center print:hidden">
+                                     <button 
+                                        onClick={() => handleDeleteExpense(expense.id)}
+                                        className="p-2 text-slate-300 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100"
+                                    >
+                                        <Trash2 size={14} />
+                                    </button>
+                                </td>
+                            </tr>
+                        ))
+                    )}
                 </tbody>
-                <tfoot className="font-bold text-slate-800 bg-white print:text-black border-t-2 border-slate-300 print:border-black">
-                    <tr className="text-sm">
-                        <td className="p-3 border-r border-slate-200 print:border-black">Total de Pollo</td>
-                        <td className="p-3 text-center border-r border-slate-200 print:border-black font-mono">{formatDecimal(totalSummaryWeight)}</td>
-                        <td className="p-3 border-r border-slate-200 print:border-black text-right">Precio</td>
-                        <td className="p-3 text-right print:border-black font-mono">{formatCurrency(totalSummaryPPP)}</td>
+                <tfoot className="bg-slate-100 text-xs font-bold uppercase border-t border-slate-300 print:bg-white print:border-black">
+                    <tr>
+                        <td className="p-3 text-right border-r border-slate-300 text-slate-600 print:border-black print:text-black">Total Gastos</td>
+                        <td className="p-3 text-right font-mono text-rose-600 border-r border-slate-300 print:border-black print:text-black">{formatCurrency(totalExpenses)}</td>
+                        <td className="print:hidden"></td>
                     </tr>
                 </tfoot>
             </table>

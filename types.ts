@@ -43,6 +43,12 @@ export interface DeliveryRow {
   // currentBalance = Subtotal + prevBalance - payment
 }
 
+export interface DeliveryExpense {
+  id: string;
+  description: string;
+  amount: number;
+}
+
 export interface DeliveryHistoryLog {
   id: string;
   timestamp: string;
