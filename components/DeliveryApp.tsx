@@ -554,7 +554,8 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
 
   // --- Shrinkage Calculations ---
   const mermaTotal = metadata.loadedChicken - metadata.returnedChicken - totalSummaryWeight;
-  const mermaPorCajon = mermaTotal / 20;
+  const estimatedCrates = metadata.loadedChicken > 0 ? metadata.loadedChicken / 20 : 0;
+  const mermaPorCajon = estimatedCrates > 0 ? mermaTotal / estimatedCrates : 0;
 
   return (
     <div className="h-full flex flex-col bg-slate-950 p-4 sm:p-6 overflow-hidden print:bg-white print:p-0 print:h-auto print:overflow-visible">
@@ -824,12 +825,6 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                             </td>
                         </tr>
                         <tr>
-                            <td className="p-3 font-medium text-slate-800 border-r border-slate-200 print:border-black print:text-black">Merma por Cajón (x20)</td>
-                            <td className="p-3 text-center font-mono font-bold text-slate-600 print:text-black">
-                                {formatDecimal(mermaPorCajon)}
-                            </td>
-                        </tr>
-                        <tr>
                             <td className="p-3 font-medium text-slate-800 border-r border-slate-200 print:border-black print:text-black">Kg Pollo Devueltos</td>
                             <td className="p-0 h-10 w-32 bg-indigo-50/50 print:bg-transparent">
                                 <NumericInput 
@@ -837,6 +832,12 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                                     onChange={(v) => updateMetadata('returnedChicken', v)}
                                     className="text-slate-800 font-mono text-center font-bold"
                                 />
+                            </td>
+                        </tr>
+                        <tr>
+                            <td className="p-3 font-medium text-slate-800 border-r border-slate-200 print:border-black print:text-black">Merma por Cajón (x20)</td>
+                            <td className="p-3 text-center font-mono font-bold text-slate-600 print:text-black">
+                                {formatDecimal(mermaPorCajon)}
                             </td>
                         </tr>
                         <tr>
