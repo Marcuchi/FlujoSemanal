@@ -521,56 +521,11 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                 margin: 5mm;
             }
             body {
-                background-color: white !important;
-                color: black !important;
                 -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
             }
-            /* Hide scrollbars and app wrappers */
-            ::-webkit-scrollbar { display: none; }
-            
-            /* Global Table Styles for Print */
-            table {
-                width: 100%;
-                border-collapse: collapse;
-                border: 1px solid black;
-                font-size: 10px;
-            }
-            th, td {
-                border: 1px solid black !important;
-                padding: 2px 4px !important;
-                background-color: white !important;
-                color: black !important;
-            }
-            /* Header adjustments */
-            thead th {
-                background-color: #f0f0f0 !important;
-                font-weight: bold;
-                text-transform: uppercase;
-                text-align: center;
-            }
-            /* Remove screen-only elements */
-            .no-print { display: none !important; }
-            
-            /* Ensure inputs look like text */
-            input, select {
-                border: none !important;
-                background: transparent !important;
-                padding: 0 !important;
-                margin: 0 !important;
-                font-size: inherit;
-                color: black !important;
-                appearance: none;
-                -webkit-appearance: none;
-                text-align: inherit;
-            }
-            
-            /* Footer Grid */
-            .print-footer {
-                display: grid;
-                grid-template-columns: 1fr 220px;
-                gap: 20px;
-                margin-top: 10px;
-                page-break-inside: avoid;
+            .no-print {
+                display: none !important;
             }
         }
       `}</style>
@@ -659,8 +614,8 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
             </div>
 
             {/* Print Header (Visible only in print) */}
-            <div className="hidden print:block mb-2">
-                 <div className="flex justify-between items-end border-b-2 border-black pb-2 mb-2">
+            <div className="hidden print:block mb-1">
+                 <div className="flex justify-between items-end border-b border-black pb-1 mb-1">
                      <div>
                          <h1 className="text-lg font-bold text-black uppercase tracking-tight leading-none">Planilla de Reparto</h1>
                          <div className="flex items-center gap-4 mt-1">
@@ -850,48 +805,49 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                 </button>
             </div>
 
-            {/* Expenses Section (Screen Only) */}
-            <div className="mt-8 print:hidden flex flex-col md:flex-row gap-8 break-inside-avoid">
+            {/* Expenses Section & Print Summary */}
+            <div className="mt-8 print:mt-2 flex flex-col md:flex-row gap-8 print:gap-4 break-inside-avoid">
+                
                 {/* Expenses Table */}
-                <div className="flex-1">
-                    <div className="flex justify-between items-center mb-2">
-                         <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
-                            <Receipt size={16} /> Gastos
+                <div className="flex-1 print:max-w-[40%]">
+                    <div className="flex justify-between items-center mb-2 print:mb-1">
+                         <h3 className="text-sm print:text-[10px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                            <Receipt size={16} className="print:w-3 print:h-3" /> Gastos
                          </h3>
-                         <button onClick={addExpense} className="text-xs flex items-center gap-1 bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded border border-slate-300 transition-colors text-black">
+                         <button onClick={addExpense} className="print:hidden text-xs flex items-center gap-1 bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded border border-slate-300 transition-colors text-black">
                              <Plus size={12} /> Agregar
                          </button>
                     </div>
                     
-                    <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+                    <div className="bg-white rounded-lg border border-slate-200 overflow-hidden print:border-none print:rounded-none print:border-t print:border-b print:border-black">
                         <table className="w-full text-left border-collapse">
                              <thead>
-                                <tr className="bg-slate-100 border-b border-slate-300">
-                                    <th className="px-2 py-1 text-left text-xs font-semibold text-slate-600 uppercase border-r border-slate-300">Descripción</th>
-                                    <th className="px-2 py-1 text-right text-xs font-semibold text-slate-600 uppercase w-24">Monto</th>
-                                    <th className="w-8"></th>
+                                <tr className="bg-slate-100 border-b border-slate-300 print:border-black">
+                                    <th className="px-2 py-1 text-left text-xs print:text-[9px] font-semibold text-slate-600 print:text-black uppercase border-r border-slate-300">Descripción</th>
+                                    <th className="px-2 py-1 text-right text-xs print:text-[9px] font-semibold text-slate-600 print:text-black uppercase w-24 print:w-16">Monto</th>
+                                    <th className="w-8 print:hidden"></th>
                                 </tr>
                              </thead>
-                             <tbody className="divide-y divide-slate-100">
+                             <tbody className="divide-y divide-slate-100 print:divide-slate-300">
                                  {expenses.map((exp, index) => (
-                                     <tr key={exp.id} className="group hover:bg-slate-50">
-                                         <td className="border-r border-slate-100 h-8">
+                                     <tr key={exp.id} className="group hover:bg-slate-50 print:hover:bg-transparent">
+                                         <td className="border-r border-slate-100 print:border-slate-300 h-8 print:h-[11px]">
                                              <TextInput 
                                                 value={exp.description}
                                                 onChange={(v) => updateExpense(exp.id, 'description', v)}
                                                 placeholder="Descripción del gasto"
-                                                className="text-sm text-slate-700"
+                                                className="text-sm text-slate-700 print:text-[9px] print:leading-none"
                                              />
                                          </td>
-                                         <td className="h-8 bg-rose-50/30">
+                                         <td className="h-8 print:h-[11px] bg-rose-50/30 print:bg-transparent">
                                              <NumericInput 
                                                 value={exp.amount}
                                                 onChange={(v) => updateExpense(exp.id, 'amount', v)}
-                                                className="text-right text-sm font-mono text-rose-600 font-medium"
+                                                className="text-right text-sm font-mono text-rose-600 font-medium print:text-[9px] print:text-black print:leading-none"
                                                 isCurrency
                                              />
                                          </td>
-                                         <td className="text-center">
+                                         <td className="print:hidden text-center">
                                              <button onClick={() => removeExpense(exp.id)} className="text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100">
                                                  <Trash2 size={12} />
                                              </button>
@@ -900,83 +856,32 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                                  ))}
                                  {expenses.length === 0 && (
                                      <tr>
-                                         <td colSpan={2} className="px-2 py-4 text-center text-slate-400 text-xs italic">Sin gastos</td>
-                                         <td></td>
+                                         <td colSpan={2} className="px-2 py-4 print:py-1 text-center text-slate-400 text-xs italic">Sin gastos</td>
+                                         <td className="print:hidden"></td>
                                      </tr>
                                  )}
                              </tbody>
-                             <tfoot className="border-t border-slate-300 bg-slate-50">
+                             <tfoot className="border-t border-slate-300 print:border-black bg-slate-50 print:bg-slate-100">
                                  <tr>
-                                     <td className="px-2 py-1 text-right text-xs font-bold text-slate-600 border-r border-slate-300">TOTAL</td>
-                                     <td className="px-2 py-1 text-right text-xs font-bold text-rose-600 font-mono">{formatCurrency(totalExpenses)}</td>
-                                     <td></td>
+                                     <td className="px-2 py-1 text-right text-xs print:text-[9px] font-bold text-slate-600 print:text-black border-r border-slate-300">TOTAL</td>
+                                     <td className="px-2 py-1 text-right text-xs print:text-[9px] font-bold text-rose-600 print:text-black font-mono">{formatCurrency(totalExpenses)}</td>
+                                     <td className="print:hidden"></td>
                                  </tr>
                              </tfoot>
                         </table>
                     </div>
                 </div>
 
-                {/* Totals Summary (Screen) */}
-                <div className="w-full md:w-64">
-                    <div className="bg-slate-50 border border-slate-300 rounded overflow-hidden">
-                         <div className="flex justify-between items-center p-3 bg-indigo-50 border-t-2 border-slate-300">
-                             <span className="text-sm font-extrabold text-indigo-700 uppercase">EFECTIVO</span>
-                             <span className="text-lg font-bold font-mono text-indigo-700">{formatCurrency(cashBalance)}</span>
+                {/* Totals Summary (Print Optimized) */}
+                <div className="w-full md:w-64 print:w-auto print:min-w-[180px] print:h-auto">
+                    <div className="bg-slate-50 border border-slate-300 rounded overflow-hidden print:border print:border-black print:bg-transparent print:shadow-none print:rounded-none">
+                         <div className="flex justify-between items-center p-3 bg-indigo-50 border-t-2 border-slate-300 print:!bg-white print:border-none print:p-2">
+                             <span className="text-sm font-extrabold text-indigo-700 uppercase print:text-black print:text-lg">EFECTIVO</span>
+                             <span className="text-lg font-bold font-mono text-indigo-700 print:text-black print:text-xl">{formatCurrency(cashBalance)}</span>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            {/* PRINT ONLY FOOTER (Redesigned) */}
-            <div className="hidden print:block mt-4 print-footer">
-                 {/* Expenses Table (Excel Style) */}
-                 <div>
-                    <h4 className="font-bold text-xs uppercase mb-1 border-b border-black">Gastos</h4>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th style={{textAlign: 'left'}}>Descripción</th>
-                                <th style={{textAlign: 'right', width: '80px'}}>Monto</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {expenses.map(exp => (
-                                <tr key={exp.id}>
-                                    <td>{exp.description}</td>
-                                    <td style={{textAlign: 'right'}}>{formatCurrency(exp.amount)}</td>
-                                </tr>
-                            ))}
-                            {expenses.length === 0 && <tr><td colSpan={2} style={{textAlign: 'center', fontStyle: 'italic'}}>Sin gastos</td></tr>}
-                        </tbody>
-                        <tfoot>
-                            <tr>
-                                <td style={{textAlign: 'right', fontWeight: 'bold'}}>TOTAL</td>
-                                <td style={{textAlign: 'right', fontWeight: 'bold'}}>{formatCurrency(totalExpenses)}</td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                 </div>
-
-                 {/* Summary Table (Excel Style) */}
-                 <div>
-                    <h4 className="font-bold text-xs uppercase mb-1 border-b border-black">Resumen</h4>
-                    <table>
-                        <tbody>
-                            <tr>
-                                <td style={{fontWeight: 'bold'}}>Vendido</td>
-                                <td style={{textAlign: 'right'}}>{formatCurrency(totalSold)}</td>
-                            </tr>
-                            <tr>
-                                <td style={{fontWeight: 'bold'}}>Gastos</td>
-                                <td style={{textAlign: 'right'}}>{formatCurrency(totalExpenses)}</td>
-                            </tr>
-                            <tr>
-                                <td style={{fontWeight: 'bold', fontSize: '12px'}}>EFECTIVO</td>
-                                <td style={{textAlign: 'right', fontWeight: 'bold', fontSize: '12px'}}>{formatCurrency(cashBalance)}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                 </div>
             </div>
 
           </div>
