@@ -1,8 +1,7 @@
 
-
 import React from 'react';
 import { Database, ref, onValue, set } from 'firebase/database';
-import { Calendar, Plus, Trash2, MapPin, Calculator, Printer, ChevronDown, History, X, Clock, Receipt } from 'lucide-react';
+import { Calendar, Plus, Trash2, MapPin, Calculator, Printer, ChevronDown, History, X, Clock, Receipt, Wallet, Coins, AlertCircle } from 'lucide-react';
 import { DeliveryRow, DeliveryHistoryLog, DeliveryExpense } from '../types';
 import { generateId } from '../utils';
 import { DayPickerModal } from './DayPickerModal';
@@ -104,7 +103,7 @@ const NumericInput = ({
 
     if (disabled) {
         return (
-            <div className={`w-full h-full flex items-center px-2 ${alignment} ${className}`}>
+            <div className={`w-full h-full flex items-center px-1 ${alignment} ${className}`}>
                 {displayValue}
             </div>
         );
@@ -114,7 +113,7 @@ const NumericInput = ({
         return (
             <div 
                 onClick={() => setIsEditing(true)}
-                className={`w-full h-full flex items-center px-2 cursor-text ${alignment} ${className} hover:bg-slate-50 transition-colors print:px-0`}
+                className={`w-full h-full flex items-center px-1 cursor-text ${alignment} ${className} hover:bg-slate-50 transition-colors print:px-0`}
             >
                 {displayValue}
             </div>
@@ -131,7 +130,7 @@ const NumericInput = ({
             onChange={handleChange}
             onBlur={commitValue}
             onKeyDown={handleKeyDown}
-            className={`bg-transparent w-full h-full px-2 focus:outline-none focus:bg-indigo-50 transition-all placeholder-slate-400 print:placeholder-transparent ${className}`}
+            className={`bg-transparent w-full h-full px-1 focus:outline-none focus:bg-indigo-50 transition-all placeholder-slate-400 print:placeholder-transparent ${className}`}
         />
     );
 };
@@ -174,7 +173,7 @@ const TextInput = ({
         return (
             <div 
                 onClick={() => setIsEditing(true)}
-                className={`w-full h-full flex items-center px-3 cursor-text ${className} hover:bg-slate-50 transition-colors truncate print:px-0 print:whitespace-normal print:overflow-visible print:h-auto`}
+                className={`w-full h-full flex items-center px-2 cursor-text ${className} hover:bg-slate-50 transition-colors truncate print:px-0 print:whitespace-normal print:overflow-visible print:h-auto`}
             >
                 {value || <span className="text-slate-300 italic font-normal print:hidden">{placeholder}</span>}
             </div>
@@ -190,7 +189,7 @@ const TextInput = ({
             onBlur={commitValue}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
-            className={`bg-transparent w-full h-full px-3 focus:outline-none focus:bg-indigo-50 transition-all ${className}`}
+            className={`bg-transparent w-full h-full px-2 focus:outline-none focus:bg-indigo-50 transition-all ${className}`}
         />
     );
 };
@@ -216,7 +215,7 @@ const ProductSelect = ({
         return (
             <div 
                 onClick={() => setIsEditing(true)}
-                className={`w-full h-full flex items-center px-3 cursor-pointer ${className} hover:bg-slate-50 transition-colors truncate print:px-0`}
+                className={`w-full h-full flex items-center px-2 cursor-pointer ${className} hover:bg-slate-50 transition-colors truncate print:px-0`}
             >
                 {value || <span className="text-slate-300 italic font-normal text-xs print:hidden">Seleccionar...</span>}
             </div>
@@ -229,7 +228,7 @@ const ProductSelect = ({
             value={value}
             onChange={handleChange}
             onBlur={() => setIsEditing(false)}
-            className={`w-full h-full px-2 bg-white focus:outline-none focus:bg-indigo-50 transition-all ${className}`}
+            className={`w-full h-full px-1 bg-white focus:outline-none focus:bg-indigo-50 transition-all ${className}`}
         >
             <option value="">Seleccionar...</option>
             {PRODUCT_CATEGORIES.map(cat => (
@@ -240,7 +239,16 @@ const ProductSelect = ({
 };
 
 export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestricted = false }) => {
-  const [currentDate, setCurrentDate] = React.useState(new Date().toISOString().slice(0, 10));
+  // Fix timezone issue by initializing with local date manually if needed, but standard new Date() usually works for local client.
+  // The issue often comes from ISO string conversion.
+  const getLocalDateString = (d: Date) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+  };
+
+  const [currentDate, setCurrentDate] = React.useState(getLocalDateString(new Date()));
   const [rows, setRows] = React.useState<DeliveryRow[]>([]);
   const [expenses, setExpenses] = React.useState<DeliveryExpense[]>([]);
   const [history, setHistory] = React.useState<DeliveryHistoryLog[]>([]);
@@ -252,9 +260,18 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
 
   React.useEffect(() => {
     if (isRestricted) {
-        setCurrentDate(new Date().toISOString().slice(0, 10));
+        setCurrentDate(getLocalDateString(new Date()));
     }
   }, [isRestricted]);
+
+  const isEmptyRow = (r: DeliveryRow) => {
+      return (!r.client || r.client.trim() === '') && 
+             (!r.product || r.product === '') && 
+             (!r.weight || r.weight === 0) && 
+             (!r.price || r.price === 0) && 
+             (!r.prevBalance || r.prevBalance === 0) && 
+             (!r.payment || r.payment === 0);
+  };
 
   // Load Data, History, Metadata and Expenses
   React.useEffect(() => {
@@ -271,9 +288,16 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
       const unsubscribeData = onValue(deliveryRef, (snapshot) => {
         const val = snapshot.val();
         if (val) {
-           setRows(val as DeliveryRow[]);
+           const loadedRows = val as DeliveryRow[];
+           // Filter "ghost" empty rows if not Malvinas
+           if (zoneName.toLowerCase() !== 'malvinas') {
+               setRows(loadedRows.filter(r => !isEmptyRow(r)));
+           } else {
+               setRows(loadedRows);
+           }
         } else {
            if (zoneName.toLowerCase() === 'malvinas') {
+               // Only actual clients, no extra empty rows
                const initRows = MALVINAS_CLIENTS.map(name => ({
                    id: generateId() + Math.random().toString(36).substring(7),
                    client: name,
@@ -283,16 +307,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                    prevBalance: 0,
                    payment: 0
                }));
-               const extraRows = Array(4).fill(null).map(() => ({
-                   id: generateId() + Math.random().toString(36).substring(7),
-                   client: '',
-                   product: '',
-                   weight: 0,
-                   price: 0,
-                   prevBalance: 0,
-                   payment: 0
-               }));
-               setRows([...initRows, ...extraRows]);
+               setRows(initRows);
            } else {
                setRows([]);
            }
@@ -322,76 +337,64 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
       });
 
       setLoading(false);
+
       return () => {
-          unsubscribeData();
-          unsubscribeExpenses();
-          unsubscribeHistory();
-          unsubscribeMeta();
-      }
+        unsubscribeData();
+        unsubscribeExpenses();
+        unsubscribeHistory();
+        unsubscribeMeta();
+      };
     } else {
-       // Local Storage
-       const savedData = localStorage.getItem(dataKey);
-       if (savedData) {
-           try { setRows(JSON.parse(savedData)); } catch (e) { setRows([]); }
-       } else {
-           if (zoneName.toLowerCase() === 'malvinas') {
-               const initRows = MALVINAS_CLIENTS.map(name => ({
-                   id: generateId() + Math.random().toString(36).substring(7),
-                   client: name,
-                   product: '',
-                   weight: 0,
-                   price: 0,
-                   prevBalance: 0,
-                   payment: 0
-               }));
-               const extraRows = Array(4).fill(null).map(() => ({
-                   id: generateId() + Math.random().toString(36).substring(7),
-                   client: '',
-                   product: '',
-                   weight: 0,
-                   price: 0,
-                   prevBalance: 0,
-                   payment: 0
-               }));
-               setRows([...initRows, ...extraRows]);
+      // Local Storage Fallback
+      const loadedRows = localStorage.getItem(dataKey);
+      const loadedExpenses = localStorage.getItem(expensesKey);
+      const loadedHistory = localStorage.getItem(historyKey);
+      const loadedMeta = localStorage.getItem(metaKey);
+      
+      if (loadedRows) {
+          const parsed = JSON.parse(loadedRows);
+          if (zoneName.toLowerCase() !== 'malvinas') {
+               setRows(parsed.filter((r: DeliveryRow) => !isEmptyRow(r)));
            } else {
-               setRows([]);
+               setRows(parsed);
            }
-       }
+      }
+      else if (zoneName.toLowerCase() === 'malvinas') {
+           const initRows = MALVINAS_CLIENTS.map(name => ({
+               id: generateId() + Math.random().toString(36).substring(7),
+               client: name,
+               product: '',
+               weight: 0,
+               price: 0,
+               prevBalance: 0,
+               payment: 0
+           }));
+           setRows(initRows);
+      } else {
+          setRows([]);
+      }
 
-       const savedExpenses = localStorage.getItem(expensesKey);
-       if (savedExpenses) {
-           try { setExpenses(JSON.parse(savedExpenses)); } catch { setExpenses([]); }
-       } else {
-           setExpenses([]);
-       }
+      if (loadedExpenses) setExpenses(JSON.parse(loadedExpenses));
+      else setExpenses([]);
 
-       const savedHistory = localStorage.getItem(historyKey);
-       if (savedHistory) {
-           try { setHistory(JSON.parse(savedHistory)); } catch (e) { setHistory([]); }
-       } else {
-           setHistory([]);
-       }
+      if (loadedHistory) setHistory(JSON.parse(loadedHistory));
+      else setHistory([]);
+      
+      if (loadedMeta) setMetadata(JSON.parse(loadedMeta));
+      else setMetadata({ loadedChicken: 0, returnedChicken: 0 });
 
-       const savedMeta = localStorage.getItem(metaKey);
-       if (savedMeta) {
-           try { setMetadata(JSON.parse(savedMeta)); } catch { setMetadata({ loadedChicken: 0, returnedChicken: 0 }); }
-       } else {
-           setMetadata({ loadedChicken: 0, returnedChicken: 0 });
-       }
-
-       setLoading(false);
+      setLoading(false);
     }
   }, [db, zoneName, currentDate]);
 
   const saveData = (newRows: DeliveryRow[]) => {
-      const dataKey = `deliveries/${zoneName}/${currentDate}`;
-      if (db) {
-          set(ref(db, dataKey), newRows);
-      } else {
-          setRows(newRows);
-          localStorage.setItem(dataKey, JSON.stringify(newRows));
-      }
+    const dataKey = `deliveries/${zoneName}/${currentDate}`;
+    if (db) {
+      set(ref(db, dataKey), newRows);
+    } else {
+      setRows(newRows);
+      localStorage.setItem(dataKey, JSON.stringify(newRows));
+    }
   };
 
   const saveExpenses = (newExpenses: DeliveryExpense[]) => {
@@ -404,676 +407,536 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
       }
   };
 
-  const saveHistory = (newHistory: DeliveryHistoryLog[]) => {
-      const historyKey = `deliveries_history/${zoneName}/${currentDate}`;
-      if (db) {
-          set(ref(db, historyKey), newHistory);
-      } else {
-          setHistory(newHistory);
-          localStorage.setItem(historyKey, JSON.stringify(newHistory));
-      }
+  const logHistory = (description: string) => {
+    const newLog: DeliveryHistoryLog = {
+        id: generateId(),
+        timestamp: new Date().toISOString(),
+        description
+    };
+    const newHistory = [newLog, ...history];
+    const historyKey = `deliveries_history/${zoneName}/${currentDate}`;
+    
+    if (db) {
+        set(ref(db, historyKey), newHistory);
+    } else {
+        setHistory(newHistory);
+        localStorage.setItem(historyKey, JSON.stringify(newHistory));
+    }
   };
 
-  const updateMetadata = (field: 'loadedChicken' | 'returnedChicken', value: number) => {
-      const newMeta = { ...metadata, [field]: value };
-      setMetadata(newMeta);
+  const saveMetadata = (newMeta: typeof metadata) => {
       const metaKey = `deliveries_metadata/${zoneName}/${currentDate}`;
       if (db) {
           set(ref(db, metaKey), newMeta);
       } else {
+          setMetadata(newMeta);
           localStorage.setItem(metaKey, JSON.stringify(newMeta));
       }
   };
 
-  const logChange = (description: string) => {
-      const newLog: DeliveryHistoryLog = {
-          id: generateId(),
-          timestamp: new Date().toISOString(),
-          description
-      };
-      saveHistory([...history, newLog]);
-  };
+  const handleRowChange = (id: string, field: keyof DeliveryRow, value: any) => {
+    const oldRow = rows.find(r => r.id === id);
+    if (!oldRow) return;
 
-  const handleUpdateRow = (id: string, field: keyof DeliveryRow, value: string | number) => {
-      // Find row to log changes
-      const oldRow = rows.find(r => r.id === id);
-      if (oldRow) {
-          const oldValue = oldRow[field];
-          if (oldValue !== value) {
-              const fieldLabels: Record<string, string> = { 
-                  client: 'Cliente', 
-                  product: 'Artículo', 
-                  weight: 'Kilos', 
-                  price: 'Precio', 
-                  prevBalance: 'Saldo Ant.', 
-                  payment: 'Entrega' 
-              };
-              const label = fieldLabels[field as string] || field;
-              
-              const clientName = oldRow.client ? oldRow.client : '(Sin Nombre)';
-              const fromVal = oldValue === '' || oldValue === 0 ? '-' : oldValue;
-              const toVal = value === '' || value === 0 ? '-' : value;
-
-              logChange(`${clientName}: Modificó ${label} de "${fromVal}" a "${toVal}"`);
-          }
+    const newRows = rows.map(row => {
+      if (row.id === id) {
+        const updated = { ...row, [field]: value };
+        return updated;
       }
-
-      const updatedRows = rows.map(r => {
-          if (r.id === id) {
-              return { ...r, [field]: value };
-          }
-          return r;
-      });
-      saveData(updatedRows);
+      return row;
+    });
+    saveData(newRows);
   };
 
-  const handleDeleteRow = (id: string) => {
-      const rowToDelete = rows.find(r => r.id === id);
-      if(window.confirm('¿Eliminar esta fila?')) {
-          if (rowToDelete) {
-             const name = rowToDelete.client || '(Sin Nombre)';
-             logChange(`Eliminó la fila de: ${name}`);
-          }
-          const updatedRows = rows.filter(r => r.id !== id);
-          saveData(updatedRows);
+  const addRow = () => {
+    const newRow: DeliveryRow = {
+      id: generateId(),
+      client: '',
+      product: '',
+      weight: 0,
+      price: 0,
+      prevBalance: 0,
+      payment: 0
+    };
+    saveData([...rows, newRow]);
+  };
+
+  const removeRow = (id: string) => {
+      if(window.confirm("¿Eliminar fila?")) {
+          const rowToDelete = rows.find(r => r.id === id);
+          if (rowToDelete) logHistory(`Eliminado cliente: ${rowToDelete.client || 'Sin nombre'}`);
+          saveData(rows.filter(r => r.id !== id));
       }
   };
 
-  // --- Expenses Handlers ---
-
-  const handleAddExpense = () => {
-      const newExpense: DeliveryExpense = {
+  // Expense Handlers
+  const addExpense = () => {
+      const newExp: DeliveryExpense = {
           id: generateId(),
           description: '',
           amount: 0
       };
-      saveExpenses([...expenses, newExpense]);
+      saveExpenses([...expenses, newExp]);
   };
 
-  const handleUpdateExpense = (id: string, field: keyof DeliveryExpense, value: string | number) => {
-      const updatedExpenses = expenses.map(e => {
-          if (e.id === id) return { ...e, [field]: value };
-          return e;
-      });
-      saveExpenses(updatedExpenses);
+  const updateExpense = (id: string, field: keyof DeliveryExpense, value: any) => {
+      const newExpenses = expenses.map(e => e.id === id ? { ...e, [field]: value } : e);
+      saveExpenses(newExpenses);
   };
 
-  const handleDeleteExpense = (id: string) => {
-      if (window.confirm('¿Eliminar este gasto?')) {
-          const updatedExpenses = expenses.filter(e => e.id !== id);
-          saveExpenses(updatedExpenses);
+  const removeExpense = (id: string) => {
+      if(window.confirm("¿Eliminar gasto?")) {
+          saveExpenses(expenses.filter(e => e.id !== id));
       }
   };
 
-  const handleDateSelect = (date: Date) => {
-      const offset = date.getTimezoneOffset();
-      const adjustedDate = new Date(date.getTime() - (offset*60*1000));
-      setCurrentDate(adjustedDate.toISOString().split('T')[0]);
-      setShowDatePicker(false);
-  };
-
-  const totalSubtotal = rows.reduce((acc, r) => acc + (r.weight * r.price), 0);
-  const totalPayment = rows.reduce((acc, r) => acc + r.payment, 0);
-  const totalPrevBalance = rows.reduce((acc, r) => acc + r.prevBalance, 0);
-  const totalCurrentBalance = rows.reduce((acc, r) => {
-      const sub = r.weight * r.price;
-      return acc + (sub + r.prevBalance - r.payment);
+  // Calculations
+  const totalWeight = rows.reduce((acc, row) => acc + (row.weight || 0), 0);
+  const totalPayment = rows.reduce((acc, row) => acc + (row.payment || 0), 0);
+  const totalSold = rows.reduce((acc, row) => acc + ((row.weight || 0) * (row.price || 0)), 0);
+  const totalExpenses = expenses.reduce((acc, exp) => acc + (exp.amount || 0), 0);
+  
+  // Calculate final balances
+  // Row Balance = (Weight * Price) + PrevBalance - Payment
+  const finalBalance = rows.reduce((acc, row) => {
+      const subtotal = (row.weight || 0) * (row.price || 0);
+      const rowBal = subtotal + (row.prevBalance || 0) - (row.payment || 0);
+      return acc + rowBal;
   }, 0);
 
-  const totalExpenses = expenses.reduce((acc, e) => acc + e.amount, 0);
-  const totalCash = totalPayment - totalExpenses;
+  const cashBalance = totalPayment - totalExpenses;
+  
+  // Merma Calculation
+  const netLoad = (metadata.loadedChicken || 0) - (metadata.returnedChicken || 0);
+  const shrinkage = netLoad - totalWeight; // Merma = (Cargado - Devolucion) - Entregado
 
-  const formatDateForDisplay = (isoDate: string) => {
-      if (!isoDate) return '';
-      const [year, month, day] = isoDate.split('-');
-      const date = new Date(parseInt(year), parseInt(month)-1, parseInt(day));
-      return date.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'numeric', year: 'numeric' });
+  const handlePrint = () => {
+      window.print();
   };
 
-  const sortedHistory = [...history].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-
-  // --- Category Summary Logic ---
-  const summaryStats = React.useMemo(() => {
-      return PRODUCT_CATEGORIES.map(category => {
-          const categoryRows = rows.filter(r => r.product === category);
-          const totalWeight = categoryRows.reduce((sum, r) => sum + r.weight, 0);
-          const totalMoney = categoryRows.reduce((sum, r) => sum + (r.weight * r.price), 0);
-          
-          const ppp = totalWeight > 0 ? totalMoney / totalWeight : 0;
-          
-          return {
-              category,
-              totalWeight,
-              ppp,
-              totalMoney
-          };
-      });
-  }, [rows]);
-
-  const totalSummaryWeight = summaryStats.reduce((acc, curr) => acc + curr.totalWeight, 0);
-  const totalSummaryMoney = summaryStats.reduce((acc, curr) => acc + curr.totalMoney, 0);
-  const totalSummaryPPP = totalSummaryWeight > 0 ? totalSummaryMoney / totalSummaryWeight : 0;
-
-  // --- Shrinkage Calculations ---
-  const mermaTotal = metadata.loadedChicken - metadata.returnedChicken - totalSummaryWeight;
-  const estimatedCrates = metadata.loadedChicken > 0 ? metadata.loadedChicken / 20 : 0;
-  const mermaPorCajon = estimatedCrates > 0 ? mermaTotal / estimatedCrates : 0;
-
-  // --- Equivalent Balance in Crates Calculation (Approximation) ---
-  // Using Global PPP to estimate debt in crates: Debt / (PPP * 20kg per crate)
-  const equivalentCratesBalance = (totalSummaryPPP > 0) ? (totalCurrentBalance / (totalSummaryPPP * 20)) : 0;
+  if (loading) return <div className="text-emerald-400 p-8 animate-pulse text-center">Cargando Planilla...</div>;
 
   return (
-    <div className="h-full flex flex-col bg-slate-950 p-2 sm:p-6 md:overflow-hidden overflow-y-auto print:bg-white print:p-0 print:h-auto print:overflow-visible">
-        
-        {/* History Modal (Screen Only) */}
-        {showHistoryModal && (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 print:hidden">
-                <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg max-h-[80vh] flex flex-col shadow-2xl overflow-hidden">
-                    <div className="flex justify-between items-center p-4 border-b border-slate-800 bg-slate-900/50">
-                        <div className="flex items-center gap-2">
-                            <History className="text-indigo-400" size={20} />
-                            <h2 className="text-xl font-bold text-slate-100">Historial de Cambios</h2>
-                        </div>
-                        <button onClick={() => setShowHistoryModal(false)} className="p-2 hover:bg-slate-800 rounded-full text-slate-400 hover:text-white transition-colors">
-                            <X size={20} />
-                        </button>
+    <div className="h-full flex flex-col bg-slate-100 overflow-hidden">
+      
+      {/* Top Bar - Controls */}
+      <div className="flex-none bg-white border-b border-slate-200 p-4 flex flex-col md:flex-row items-center justify-between gap-4 print:hidden z-10">
+         <div className="flex items-center gap-4">
+             <div className="relative">
+                <button 
+                    onClick={() => !isRestricted && setShowDatePicker(!showDatePicker)}
+                    className={`flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-700 font-bold border border-slate-300 transition-colors ${isRestricted ? 'cursor-default opacity-80' : ''}`}
+                >
+                    <Calendar size={18} className="text-emerald-600" />
+                    {/* Display date with manual parsing to allow string handling */}
+                    {(() => {
+                        const [y, m, d] = currentDate.split('-').map(Number);
+                        const dateObj = new Date(y, m - 1, d);
+                        return dateObj.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' });
+                    })()}
+                    {!isRestricted && <ChevronDown size={14} />}
+                </button>
+                <DayPickerModal 
+                    isOpen={showDatePicker} 
+                    onClose={() => setShowDatePicker(false)} 
+                    currentDate={new Date(currentDate + 'T12:00:00')} // Add time to avoid timezone shift on init
+                    onSelectDate={(d) => {
+                        setCurrentDate(getLocalDateString(d));
+                        setShowDatePicker(false);
+                    }}
+                />
+             </div>
+             
+             <div className="flex items-center gap-2 text-sm text-slate-500 bg-slate-50 px-3 py-2 rounded-lg border border-slate-200">
+                <MapPin size={16} />
+                <span className="font-semibold uppercase">{zoneName}</span>
+             </div>
+         </div>
+
+         <div className="flex items-center gap-3">
+             <button 
+                onClick={() => setShowHistoryModal(true)}
+                className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors relative"
+                title="Historial de cambios"
+             >
+                <History size={20} />
+             </button>
+             <button 
+                onClick={handlePrint}
+                className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white hover:bg-slate-700 rounded-lg font-semibold transition-colors shadow-sm"
+             >
+                <Printer size={18} />
+                <span className="hidden sm:inline">Imprimir</span>
+             </button>
+         </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
+          
+          <div className="max-w-7xl mx-auto p-4 md:p-8 print:p-0 print:max-w-none">
+            
+            {/* Summary Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 print:hidden mb-6">
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                    <p className="text-xs text-slate-500 font-bold uppercase">Total Kg Entregados</p>
+                    <p className="text-2xl font-bold text-slate-700">{formatDecimal(totalWeight)} <span className="text-sm font-normal text-slate-400">kg</span></p>
+                </div>
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                    <p className="text-xs text-slate-500 font-bold uppercase">Total Vendido</p>
+                    <p className="text-2xl font-bold text-slate-700">{formatCurrency(totalSold)}</p>
+                </div>
+                <div className="bg-white p-4 rounded-xl border border-emerald-100 shadow-sm">
+                    <p className="text-xs text-emerald-600 font-bold uppercase">Total Entregado</p>
+                    <p className="text-2xl font-bold text-emerald-600">{formatCurrency(totalPayment)}</p>
+                </div>
+                <div className="bg-white p-4 rounded-xl border border-rose-100 shadow-sm">
+                    <p className="text-xs text-rose-500 font-bold uppercase">Gastos</p>
+                    <p className="text-2xl font-bold text-rose-500">{formatCurrency(totalExpenses)}</p>
+                </div>
+                 <div className="bg-white p-4 rounded-xl border border-indigo-100 shadow-sm ring-1 ring-indigo-500/20">
+                    <div className="flex items-center gap-2 mb-1">
+                        <Coins size={14} className="text-indigo-500" />
+                        <p className="text-xs text-indigo-600 font-bold uppercase">Efectivo</p>
                     </div>
-                    <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
-                         {sortedHistory.length === 0 ? (
-                             <div className="text-center text-slate-500 italic py-10">No hay movimientos registrados.</div>
-                         ) : (
-                             <div className="space-y-3">
-                                 {sortedHistory.map((item) => (
-                                     <div key={item.id} className="bg-slate-800/50 border border-slate-700/50 p-3 rounded-lg">
-                                         <div className="flex items-center gap-2 mb-1">
-                                             <Clock size={12} className="text-slate-500" />
-                                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                                                {new Date(item.timestamp).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
-                                             </span>
-                                         </div>
-                                         <p className="text-sm text-slate-200">{item.description}</p>
-                                     </div>
-                                 ))}
+                    <p className="text-2xl font-bold text-indigo-600">{formatCurrency(cashBalance)}</p>
+                </div>
+            </div>
+
+            {/* Print Header (Visible only in print) */}
+            <div className="hidden print:block mb-6">
+                 <div className="flex justify-between items-end border-b-2 border-slate-800 pb-4">
+                     <div>
+                         <h1 className="text-3xl font-bold text-slate-900 uppercase tracking-tight">Planilla de Reparto</h1>
+                         <div className="flex items-center gap-4 mt-2">
+                             <div className="flex items-center gap-1">
+                                 <span className="font-bold text-slate-600 text-sm">ZONA:</span>
+                                 <span className="text-lg font-bold text-slate-900 uppercase">{zoneName}</span>
                              </div>
-                         )}
-                    </div>
-                </div>
-            </div>
-        )}
-
-        {/* --- PRINT HEADER (Hidden on Screen) --- */}
-        <div className="hidden print:flex flex-row border-2 border-black mb-2 font-bold text-sm leading-none">
-            <div className="bg-neutral-600 text-white p-2 w-[20%] text-center flex items-center justify-center border-r border-black print-color-adjust-exact">PLANILLA DE REPARTO</div>
-            <div className="p-2 w-[30%] text-center border-r border-black flex items-center justify-center uppercase bg-white">{zoneName}</div>
-            <div className="bg-neutral-600 text-white p-2 w-[15%] text-center flex items-center justify-center border-r border-black print-color-adjust-exact">FECHA</div>
-            <div className="p-2 w-[35%] text-center flex items-center justify-center uppercase bg-white">{formatDateForDisplay(currentDate)}</div>
-        </div>
-
-        {/* --- SCREEN HEADER (Hidden on Print) --- */}
-        <div className="flex-none flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4 bg-slate-900 p-4 rounded-xl border border-slate-800 shadow-md print:hidden relative z-30 shrink-0">
-            <div className="flex items-center gap-3">
-                <div className="p-3 bg-emerald-900/30 border border-emerald-500/30 rounded-lg">
-                    <MapPin className="text-emerald-400" size={24} />
-                </div>
-                <div>
-                    <h2 className="text-xl font-bold text-white uppercase tracking-wider">Planilla de Reparto</h2>
-                    <p className="text-sm font-bold text-emerald-400 uppercase">{zoneName}</p>
-                </div>
-            </div>
-
-            <div className="flex items-center gap-4">
-                {!isRestricted && (
-                    <>
-                        <button 
-                            onClick={() => setShowHistoryModal(true)}
-                            className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg border border-slate-700 transition-colors"
-                            title="Ver Historial"
-                        >
-                            <History size={18} />
-                            <span className="text-sm font-bold hidden sm:inline">Historial</span>
-                        </button>
-                        <button 
-                            onClick={() => window.print()}
-                            className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700 transition-colors"
-                            title="Imprimir Planilla"
-                        >
-                            <Printer size={18} />
-                            <span className="text-sm font-bold hidden sm:inline">Imprimir</span>
-                        </button>
-                    </>
-                )}
-                <div className="relative">
-                    {isRestricted ? (
-                         <div className="flex items-center gap-2 bg-slate-950 px-4 py-2 rounded-full border border-slate-800">
-                            <Calendar className="text-slate-400" size={18} />
-                            <span className="text-white text-sm font-bold capitalize">{formatDateForDisplay(currentDate)}</span>
+                             <div className="w-px h-4 bg-slate-400"></div>
+                             <div className="flex items-center gap-1">
+                                 <span className="font-bold text-slate-600 text-sm">FECHA:</span>
+                                 <span className="text-lg font-bold text-slate-900">
+                                     {(() => {
+                                        const [y, m, d] = currentDate.split('-').map(Number);
+                                        const dateObj = new Date(y, m - 1, d);
+                                        return dateObj.toLocaleDateString('es-AR');
+                                    })()}
+                                 </span>
+                             </div>
                          </div>
-                    ) : (
-                         <>
-                             <button 
-                                onClick={() => setShowDatePicker(!showDatePicker)}
-                                className="flex items-center gap-3 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-full border border-slate-700 transition-all text-sm font-bold text-slate-200 hover:text-white group"
-                             >
-                                <Calendar size={16} className="text-indigo-400 group-hover:text-indigo-300" />
-                                <span className="capitalize">{formatDateForDisplay(currentDate)}</span>
-                                <ChevronDown size={14} className={`text-slate-500 transition-transform ${showDatePicker ? 'rotate-180' : ''}`} />
-                             </button>
-
-                             <DayPickerModal 
-                                isOpen={showDatePicker} 
-                                onClose={() => setShowDatePicker(false)} 
-                                currentDate={new Date(currentDate + 'T12:00:00')} 
-                                onSelectDate={handleDateSelect} 
-                             />
-                         </>
-                    )}
-                </div>
+                     </div>
+                     <div className="text-right">
+                         <div className="text-sm font-bold text-slate-500 uppercase">Avícola Alpina</div>
+                     </div>
+                 </div>
+                 
+                 {/* Metadata Section (Pollo Cargado / Devolución / Merma) */}
+                 <div className="flex gap-8 mt-4 mb-2">
+                     <div className="flex items-center gap-2 bg-slate-50 px-3 py-1 rounded border border-slate-200">
+                         <span className="text-xs font-bold text-slate-500 uppercase">Pollo Cargado:</span>
+                         <span className="font-mono font-bold text-slate-800">{formatDecimal(metadata.loadedChicken)} kg</span>
+                     </div>
+                     <div className="flex items-center gap-2 bg-slate-50 px-3 py-1 rounded border border-slate-200">
+                         <span className="text-xs font-bold text-slate-500 uppercase">Devolución:</span>
+                         <span className="font-mono font-bold text-slate-800">{formatDecimal(metadata.returnedChicken)} kg</span>
+                     </div>
+                     <div className="flex items-center gap-2 bg-slate-50 px-3 py-1 rounded border border-slate-200">
+                         <span className="text-xs font-bold text-slate-500 uppercase">Merma:</span>
+                         <span className={`font-mono font-bold ${shrinkage > 2 ? 'text-red-600' : 'text-slate-800'}`}>{formatDecimal(shrinkage)} kg</span>
+                     </div>
+                 </div>
             </div>
-        </div>
 
-        {/* --- MAIN TABLE --- */}
-        <div className="flex flex-col bg-white rounded-xl border border-slate-300 shadow-xl overflow-hidden z-0 shrink-0 h-[65vh] md:h-auto md:flex-1 md:min-h-0 print:shadow-none print:border-none print:rounded-none print:block print:h-auto print:overflow-visible">
-            <div className="overflow-auto custom-scrollbar flex-1 relative bg-slate-50 print:bg-transparent print:overflow-visible">
-                <table className="w-full border-collapse min-w-[1000px] print:min-w-0 print:text-[10px] print:leading-tight">
-                    <thead className="sticky top-0 z-20 bg-slate-100 text-xs font-bold text-slate-600 uppercase tracking-wider shadow-sm print:static print:shadow-none print:bg-neutral-600 print:text-white print:border-2 print:border-black print-color-adjust-exact">
-                        <tr>
-                            <th className="p-3 border-b border-r border-slate-300 w-12 text-center print:border-black print:text-white print:p-1">N°</th>
-                            <th className="p-3 border-b border-r border-slate-300 text-left w-48 print:border-black print:text-white print:p-1">NOMBRE</th>
-                            <th className="p-3 border-b border-r border-slate-300 text-left w-32 print:border-black print:text-white print:p-1">ARTÍCULO</th>
-                            <th className="p-3 border-b border-r border-slate-300 text-center w-20 print:border-black print:text-white print:p-1">CANTIDAD</th>
-                            <th className="p-3 border-b border-r border-slate-300 text-center w-20 print:border-black print:text-white print:p-1">$</th>
-                            <th className="p-3 border-b border-r border-slate-300 text-right w-24 bg-slate-200 print:bg-transparent print:border-black print:text-white print:p-1">SUBTOT</th>
-                            <th className="p-3 border-b border-r border-slate-300 text-right w-24 print:border-black print:text-white print:p-1">SALD ANT</th>
-                            <th className="p-3 border-b border-r border-slate-300 text-right w-24 text-emerald-700 print:text-white print:border-black print:p-1">ENTREGA</th>
-                            <th className="p-3 border-b border-slate-300 text-right w-24 bg-slate-200 text-indigo-700 print:bg-transparent print:text-white print:border-black print:p-1">SALD ACT</th>
-                            <th className="p-3 border-b border-slate-300 w-10 print:hidden"></th>
-                        </tr>
-                    </thead>
-                    <tbody className="bg-white print:bg-transparent">
-                        {rows.map((row, index) => {
-                            const subtotal = row.weight * row.price;
-                            const currentBalance = subtotal + row.prevBalance - row.payment;
+            {/* Metadata Inputs (Screen only) */}
+            <div className="print:hidden bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-6 flex flex-wrap gap-6 items-center">
+                 <div className="flex items-center gap-2">
+                     <span className="text-xs font-bold text-slate-500 uppercase">Pollo Cargado (kg):</span>
+                     <div className="w-24 h-8 bg-slate-50 rounded border border-slate-300">
+                        <NumericInput 
+                            value={metadata.loadedChicken} 
+                            onChange={(v) => saveMetadata({...metadata, loadedChicken: v})} 
+                            className="font-bold text-slate-700"
+                        />
+                     </div>
+                 </div>
+                 <div className="flex items-center gap-2">
+                     <span className="text-xs font-bold text-slate-500 uppercase">Devolución (kg):</span>
+                     <div className="w-24 h-8 bg-slate-50 rounded border border-slate-300">
+                        <NumericInput 
+                            value={metadata.returnedChicken} 
+                            onChange={(v) => saveMetadata({...metadata, returnedChicken: v})} 
+                            className="font-bold text-slate-700"
+                        />
+                     </div>
+                 </div>
+                 <div className="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
+                     <AlertCircle size={16} className="text-slate-400" />
+                     <span className="text-xs font-bold text-slate-500 uppercase">Merma:</span>
+                     <span className={`font-mono font-bold text-lg ${shrinkage > 0 ? 'text-rose-500' : 'text-emerald-600'}`}>
+                         {formatDecimal(shrinkage)} kg
+                     </span>
+                 </div>
+            </div>
 
-                            return (
-                                <tr key={row.id} className="group hover:bg-indigo-50/30 transition-colors border-b border-slate-200 last:border-0 print:border-b print:border-black print:hover:bg-transparent print:h-6">
-                                    <td className="p-0 border-r border-slate-200 h-10 print:border-black print:h-auto text-center font-mono text-slate-500 print:text-black">
-                                        {index + 400} {/* Example index offset */}
-                                    </td>
-                                    <td className="p-0 border-r border-slate-200 print:border-black h-10 print:h-auto">
-                                        <TextInput 
-                                            value={row.client}
-                                            onChange={(v) => handleUpdateRow(row.id, 'client', v)}
-                                            placeholder="Nombre"
-                                            className="text-base sm:text-sm font-medium text-slate-800 print:text-black uppercase print:text-[10px]"
-                                        />
-                                    </td>
-                                    <td className="p-0 border-r border-slate-200 print:border-black h-10 print:h-auto">
-                                        <ProductSelect 
-                                            value={row.product}
-                                            onChange={(v) => handleUpdateRow(row.id, 'product', v)}
-                                            className="text-base sm:text-sm text-slate-600 print:text-black print:text-[10px]"
-                                        />
-                                    </td>
-                                    <td className="p-0 border-r border-slate-200 h-10 print:border-black print:h-auto">
-                                        <NumericInput 
-                                            value={row.weight} 
-                                            onChange={(v) => handleUpdateRow(row.id, 'weight', v)}
-                                            className="text-slate-800 font-mono text-base sm:text-sm print:text-black text-center print:text-[10px]"
-                                        />
-                                    </td>
-                                    <td className="p-0 border-r border-slate-200 h-10 print:border-black print:h-auto">
-                                        <NumericInput 
-                                            value={row.price} 
-                                            onChange={(v) => handleUpdateRow(row.id, 'price', v)}
-                                            className="text-slate-800 font-mono text-base sm:text-sm print:text-black text-center print:text-[10px]"
-                                            isCurrency
-                                        />
-                                    </td>
-                                    <td className="p-3 border-r border-slate-200 text-right bg-slate-50 font-mono font-bold text-slate-700 text-base sm:text-sm print:bg-transparent print:text-black print:border-black print:p-1 print:text-[10px]">
-                                        {formatCurrency(subtotal)}
-                                    </td>
-                                    <td className="p-0 border-r border-slate-200 h-10 print:border-black print:h-auto">
-                                        {isRestricted ? (
-                                             <div className="w-full h-full flex items-center justify-end px-3 text-slate-600 font-mono text-base sm:text-sm print:text-black print:p-1 print:text-[10px]">
-                                                {formatCurrency(row.prevBalance)}
-                                             </div>
-                                        ) : (
+            {/* Main Table */}
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden print:shadow-none print:border-none print:rounded-none">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                        <thead>
+                            <tr className="bg-slate-50 border-b border-slate-200 print:bg-slate-100 print:border-slate-300">
+                                <th className="px-2 py-1 text-left text-sm font-bold text-slate-600 uppercase tracking-wider border-r border-slate-200">Cliente</th>
+                                <th className="px-2 py-1 text-left text-sm font-bold text-slate-600 uppercase tracking-wider w-36 print:w-28 border-r border-slate-200">Articulo</th>
+                                <th className="px-2 py-1 text-right text-sm font-bold text-slate-600 uppercase tracking-wider w-20 border-r border-slate-200">Kg</th>
+                                <th className="px-2 py-1 text-right text-sm font-bold text-slate-600 uppercase tracking-wider w-24 border-r border-slate-200">$ Precio</th>
+                                <th className="px-2 py-1 text-right text-sm font-bold text-slate-600 uppercase tracking-wider w-28 border-r border-slate-200">Subtotal</th>
+                                <th className="px-2 py-1 text-right text-sm font-bold text-slate-600 uppercase tracking-wider w-28 border-r border-slate-200">Saldo Ant</th>
+                                <th className="px-2 py-1 text-right text-sm font-bold text-emerald-600 uppercase tracking-wider w-28 border-r border-slate-200">Entrega</th>
+                                <th className="px-2 py-1 text-right text-sm font-bold text-slate-600 uppercase tracking-wider w-28">Saldo</th>
+                                <th className="px-2 py-1 w-10 print:hidden"></th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 print:divide-slate-200">
+                            {rows.map((row, index) => {
+                                const subtotal = (row.weight || 0) * (row.price || 0);
+                                const balance = subtotal + (row.prevBalance || 0) - (row.payment || 0);
+                                
+                                return (
+                                    <tr key={row.id} className="hover:bg-slate-50 print:hover:bg-transparent group">
+                                        <td className="border-r border-slate-100 print:border-slate-300 h-8">
+                                            <TextInput 
+                                                value={row.client} 
+                                                onChange={(v) => handleRowChange(row.id, 'client', v)} 
+                                                className="font-bold text-slate-800 text-sm"
+                                            />
+                                        </td>
+                                        <td className="border-r border-slate-100 print:border-slate-300 h-8">
+                                            <ProductSelect 
+                                                value={row.product} 
+                                                onChange={(v) => handleRowChange(row.id, 'product', v)} 
+                                                className="text-sm text-slate-700 font-medium"
+                                            />
+                                        </td>
+                                        <td className="border-r border-slate-100 print:border-slate-300 h-8">
                                             <NumericInput 
-                                                value={row.prevBalance} 
-                                                onChange={(v) => handleUpdateRow(row.id, 'prevBalance', v)}
-                                                className="text-slate-600 font-mono text-base sm:text-sm print:text-black text-right print:text-[10px]"
+                                                value={row.weight} 
+                                                onChange={(v) => handleRowChange(row.id, 'weight', v)} 
+                                                className="text-slate-700 text-right font-mono text-sm font-medium"
+                                            />
+                                        </td>
+                                        <td className="border-r border-slate-100 print:border-slate-300 h-8">
+                                            <NumericInput 
+                                                value={row.price} 
+                                                onChange={(v) => handleRowChange(row.id, 'price', v)} 
+                                                className="text-slate-700 text-right font-mono text-sm font-medium"
                                                 isCurrency
                                             />
-                                        )}
-                                    </td>
-                                    <td className="p-0 border-r border-slate-200 h-10 bg-emerald-50/30 print:bg-transparent print:border-black print:h-auto">
-                                        <NumericInput 
-                                            value={row.payment} 
-                                            onChange={(v) => handleUpdateRow(row.id, 'payment', v)}
-                                            className="text-emerald-700 font-bold font-mono text-base sm:text-sm print:text-black text-right print:text-[10px]"
-                                            isCurrency
-                                        />
-                                    </td>
-                                    <td className="p-3 text-right bg-slate-50 font-mono font-bold text-indigo-700 text-base sm:text-sm border-r border-slate-200 print:bg-transparent print:text-black print:border-black print:p-1 print:text-[10px]">
-                                        {formatCurrency(currentBalance)}
-                                    </td>
-                                    <td className="p-0 text-center print:hidden">
-                                        <button 
-                                            onClick={() => handleDeleteRow(row.id)}
-                                            className="p-2 text-slate-300 hover:text-rose-500 transition-colors"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </td>
-                                </tr>
-                            );
-                        })}
-                    </tbody>
-                    {/* Screen Footer (Hidden on Print) */}
-                    <tfoot className="sticky bottom-0 z-20 bg-slate-800 text-white shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] print:hidden">
-                        <tr className="text-xs font-bold uppercase tracking-wider">
-                            <td colSpan={5} className="p-3 text-right border-r border-slate-600">Totales</td>
-                            <td className="p-3 text-right border-r border-slate-600 font-mono text-amber-300">{formatCurrency(totalSubtotal)}</td>
-                            <td className="p-3 text-right border-r border-slate-600 font-mono">{formatCurrency(totalPrevBalance)}</td>
-                            <td className="p-3 text-right border-r border-slate-600 font-mono text-emerald-300">{formatCurrency(totalPayment)}</td>
-                            <td className="p-3 text-right font-mono text-indigo-300 border-r border-slate-600">{formatCurrency(totalCurrentBalance)}</td>
-                            <td></td>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
-        </div>
-
-        {/* --- PRINT FOOTER GRID (Hidden on Screen) --- */}
-        <div className="hidden print:grid grid-cols-[60%_40%] gap-4 mt-2 text-[10px]">
-             
-             {/* Left Column: Summary + Expenses */}
-             <div className="flex flex-col gap-4">
-                
-                {/* Summary Table */}
-                <table className="w-full border-collapse border-2 border-black">
-                    <thead className="bg-neutral-600 text-white print-color-adjust-exact">
-                        <tr>
-                            <th className="border-r border-b border-black p-1 text-center">Cantidades Por Artículo</th>
-                            <th className="border-r border-b border-black p-1 text-center">PPP</th>
-                            <th className="border-b border-black p-1 text-center">Subtotales</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                         {summaryStats.map((stat) => (
-                            <tr key={stat.category} className="border-b border-black">
-                                <td className="border-r border-black p-1 pl-2">{stat.category}</td>
-                                <td className="border-r border-black p-1 text-center">{formatCurrency(stat.ppp)}</td>
-                                <td className="p-1 text-right pr-2">{formatCurrency(stat.totalMoney)}</td>
+                                        </td>
+                                        <td className="border-r border-slate-100 print:border-slate-300 h-8 px-2 text-right">
+                                            <span className="text-sm font-mono text-slate-600">
+                                                {subtotal > 0 ? formatCurrency(subtotal) : '-'}
+                                            </span>
+                                        </td>
+                                        <td className="border-r border-slate-100 print:border-slate-300 h-8">
+                                             <NumericInput 
+                                                value={row.prevBalance} 
+                                                onChange={(v) => handleRowChange(row.id, 'prevBalance', v)} 
+                                                className="text-slate-600 text-right font-mono text-sm font-medium"
+                                                isCurrency
+                                            />
+                                        </td>
+                                        <td className="border-r border-slate-100 print:border-slate-300 h-8 bg-emerald-50/30 print:bg-transparent">
+                                             <NumericInput 
+                                                value={row.payment} 
+                                                onChange={(v) => handleRowChange(row.id, 'payment', v)} 
+                                                className="text-emerald-700 font-bold text-right font-mono text-sm"
+                                                isCurrency
+                                            />
+                                        </td>
+                                        <td className="h-8 px-2 text-right">
+                                            <span className={`text-sm font-mono font-bold ${balance > 0 ? 'text-rose-600' : 'text-slate-500'}`}>
+                                                {balance !== 0 ? formatCurrency(balance) : '-'}
+                                            </span>
+                                        </td>
+                                        <td className="print:hidden px-1 text-center">
+                                            <button 
+                                                onClick={() => removeRow(row.id)}
+                                                className="text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                            
+                            {/* Footer Totals Row */}
+                            <tr className="border-t-2 border-slate-400 print:border-slate-800">
+                                <td colSpan={4} className="px-2 py-2 text-right font-bold text-slate-700 border-r border-slate-300 bg-slate-100 uppercase tracking-wider text-xs">TOTALES</td>
+                                <td className="px-2 py-2 text-right font-bold text-slate-800 border-r border-slate-300 bg-slate-50 text-sm">{formatCurrency(totalSold)}</td>
+                                <td className="px-2 py-2 text-right font-bold text-slate-800 border-r border-slate-300 bg-slate-50 text-sm">-</td>
+                                <td className="px-2 py-2 text-right font-bold text-emerald-700 border-r border-slate-300 bg-emerald-50 text-sm">{formatCurrency(totalPayment)}</td>
+                                <td className="px-2 py-2 text-right font-bold text-slate-900 bg-slate-50 text-sm">{formatCurrency(finalBalance)}</td>
+                                <td className="print:hidden"></td>
                             </tr>
-                        ))}
-                        {/* Placeholder rows to match look if needed */}
-                         {summaryStats.length < 5 && Array(5 - summaryStats.length).fill(null).map((_, i) => (
-                             <tr key={i} className="border-b border-black h-5">
-                                 <td className="border-r border-black"></td>
-                                 <td className="border-r border-black"></td>
-                                 <td></td>
-                             </tr>
-                         ))}
-                         <tr className="bg-neutral-600 text-white font-bold border-b border-black print-color-adjust-exact">
-                             <td className="border-r border-black p-1 pl-2">Total de Pollo</td>
-                             <td className="border-r border-black p-1 text-center font-bold bg-yellow-300 text-black print-color-adjust-exact">{formatDecimal(totalSummaryWeight)}</td>
-                             <td className="p-1 text-right pr-2">Precio: {formatCurrency(totalSummaryPPP)}</td>
-                         </tr>
-                         <tr className="bg-neutral-600 text-white font-bold print-color-adjust-exact">
-                             <td className="border-r border-black p-1 pl-2">Cant. Congelados</td>
-                             <td className="border-r border-black p-1 text-center bg-yellow-300 text-black print-color-adjust-exact">0</td>
-                             <td className="p-1 text-right pr-2">Total Congelados: $0</td>
-                         </tr>
-                    </tbody>
-                </table>
-
-                {/* Expenses Table */}
-                <table className="w-full border-collapse border-2 border-black">
-                     <thead className="bg-red-600 text-white print-color-adjust-exact">
-                         <tr>
-                             <th colSpan={3} className="border-b border-black p-1 text-center">CUADRO DE GASTOS</th>
-                         </tr>
-                         <tr className="bg-white text-black border-b border-black">
-                             <th className="border-r border-black p-1 w-8">N°</th>
-                             <th className="border-r border-black p-1">Detalle</th>
-                             <th className="p-1 w-24">Monto</th>
-                         </tr>
-                     </thead>
-                     <tbody>
-                         {expenses.length > 0 ? expenses.map((exp, idx) => (
-                             <tr key={exp.id} className="border-b border-black">
-                                 <td className="border-r border-black p-1 text-center">{idx + 1}</td>
-                                 <td className="border-r border-black p-1">{exp.description}</td>
-                                 <td className="p-1 text-right">{formatCurrency(exp.amount)}</td>
-                             </tr>
-                         )) : Array(3).fill(null).map((_, i) => (
-                             <tr key={i} className="border-b border-black h-5">
-                                 <td className="border-r border-black"></td>
-                                 <td className="border-r border-black"></td>
-                                 <td className="border-r border-black"></td>
-                             </tr>
-                         ))}
-                         {/* Fill empty rows to maintain height */}
-                         {expenses.length < 3 && Array(3 - expenses.length).fill(null).map((_, i) => (
-                             <tr key={`empty-${i}`} className="border-b border-black h-5">
-                                 <td className="border-r border-black"></td>
-                                 <td className="border-r border-black"></td>
-                                 <td></td>
-                             </tr>
-                         ))}
-                     </tbody>
-                     <tfoot>
-                         <tr>
-                             <td colSpan={2} className="border-r border-black p-1 text-right font-bold"></td>
-                             <td className="p-1 text-right font-bold">{formatCurrency(totalExpenses)}</td>
-                         </tr>
-                     </tfoot>
-                </table>
-
-             </div>
-
-             {/* Right Column: Stats + Shrinkage + Cash */}
-             <div className="flex flex-col gap-4">
-                 
-                 {/* Top Stats Grid */}
-                 <table className="w-full border-collapse border-2 border-black text-center font-bold">
-                     <thead className="bg-neutral-600 text-white print-color-adjust-exact">
-                         <tr>
-                             <th className="border-r border-black p-1">Σ Sald Ant</th>
-                             <th className="border-r border-black p-1">TOTAL</th>
-                             <th className="p-1">Σ Sald Act</th>
-                         </tr>
-                     </thead>
-                     <tbody>
-                         <tr className="border-b border-black bg-white text-black">
-                             <td className="border-r border-black p-1">{formatCurrency(totalPrevBalance)}</td>
-                             <td className="border-r border-black p-1">{formatCurrency(totalPayment)}</td>
-                             <td className="p-1">{formatCurrency(totalCurrentBalance)}</td>
-                         </tr>
-                     </tbody>
-                 </table>
-
-                 {/* Shrinkage & Equivalents */}
-                 <table className="w-full border-collapse border-2 border-black text-center bg-neutral-600 text-white font-bold print-color-adjust-exact">
-                     <tbody>
-                         <tr className="border-b border-black">
-                             <td className="border-r border-black p-1">Saldo Equivalente En Cajones</td>
-                             <td className="p-1 bg-white text-red-600 print-color-adjust-exact">{formatDecimal(equivalentCratesBalance)}</td>
-                         </tr>
-                         <tr className="border-b border-black">
-                             <td className="border-r border-black p-1">Kg Pollo Cargados</td>
-                             <td className="p-1">Merma x Caj</td>
-                         </tr>
-                         <tr className="border-b border-black bg-white text-black">
-                             <td className="border-r border-black p-1">{formatDecimal(metadata.loadedChicken)}</td>
-                             <td className="p-1">{formatDecimal(mermaPorCajon)}</td>
-                         </tr>
-                         <tr className="border-b border-black">
-                             <td className="border-r border-black p-1">Kg Pollo Devueltos</td>
-                             <td className="p-1">Merma Total (Kg)</td>
-                         </tr>
-                         <tr className="bg-white text-black">
-                             <td className="border-r border-black p-1">{formatDecimal(metadata.returnedChicken)}</td>
-                             <td className="p-1">{formatDecimal(mermaTotal)}</td>
-                         </tr>
-                     </tbody>
-                 </table>
-
-                 {/* Cash Box */}
-                 <div className="mt-auto flex border-2 border-black text-xl font-bold">
-                     <div className="w-1/2 bg-yellow-300 p-2 text-center flex items-center justify-center border-r border-black print-color-adjust-exact">Efectivo</div>
-                     <div className="w-1/2 bg-yellow-300 p-2 text-center flex items-center justify-center print-color-adjust-exact">{formatCurrency(totalCash)}</div>
-                 </div>
-
-             </div>
-        </div>
-
-
-        {/* --- SCREEN ONLY: Summaries & Expenses Grid Container --- */}
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 shrink-0 auto-rows-start print:hidden pb-4 md:pb-0">
-            
-            {/* 1. Category Summary */}
-            <div className="bg-white rounded-xl border border-slate-300 shadow-md overflow-hidden w-full">
-                <table className="w-full border-collapse">
-                    <thead className="bg-slate-100 text-xs font-bold text-slate-600 uppercase tracking-wider">
-                        <tr>
-                            <th className="p-3 text-left border-r border-slate-300">Categoría</th>
-                            <th className="p-3 text-center border-r border-slate-300">Kg</th>
-                            <th className="p-3 text-center border-r border-slate-300">P.P.P.</th>
-                            <th className="p-3 text-right">Subtotal</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200">
-                        {summaryStats.map((stat) => (
-                            <tr key={stat.category} className="text-sm">
-                                <td className="p-3 font-medium text-slate-800 border-r border-slate-200">{stat.category}</td>
-                                <td className="p-3 text-center font-mono text-slate-600 border-r border-slate-200">{formatDecimal(stat.totalWeight)}</td>
-                                <td className="p-3 text-center font-mono text-slate-600 border-r border-slate-200">{formatCurrency(stat.ppp)}</td>
-                                <td className="p-3 text-right font-mono font-bold text-slate-800">{formatCurrency(stat.totalMoney)}</td>
-                            </tr>
-                        ))}
-                    </tbody>
-                    <tfoot className="font-bold text-slate-800 bg-white border-t-2 border-slate-300">
-                        <tr className="text-sm">
-                            <td className="p-3 border-r border-slate-200">Total Pollo</td>
-                            <td className="p-3 text-center border-r border-slate-200 font-mono">{formatDecimal(totalSummaryWeight)}</td>
-                            <td className="p-3 border-r border-slate-200 text-right">Precio</td>
-                            <td className="p-3 text-right font-mono">{formatCurrency(totalSummaryPPP)}</td>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
-
-            {/* 2. Shrinkage Control Table */}
-            <div className="bg-white rounded-xl border border-slate-300 shadow-md overflow-hidden w-full">
-                <table className="w-full border-collapse">
-                    <thead className="bg-slate-100 text-xs font-bold text-slate-600 uppercase tracking-wider">
-                        <tr>
-                            <th className="p-3 text-left border-r border-slate-300" colSpan={2}>Control de Mermas</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200 text-sm">
-                        <tr>
-                            <td className="p-3 font-medium text-slate-800 border-r border-slate-200">Kg Pollo Cargados</td>
-                            <td className="p-0 h-10 w-32 bg-indigo-50/50">
-                                <NumericInput 
-                                    value={metadata.loadedChicken} 
-                                    onChange={(v) => updateMetadata('loadedChicken', v)}
-                                    className="text-slate-800 font-mono text-center font-bold text-base sm:text-sm"
-                                />
-                            </td>
-                        </tr>
-                        <tr>
-                            <td className="p-3 font-medium text-slate-800 border-r border-slate-200">Kg Pollo Devueltos</td>
-                            <td className="p-0 h-10 w-32 bg-indigo-50/50">
-                                <NumericInput 
-                                    value={metadata.returnedChicken} 
-                                    onChange={(v) => updateMetadata('returnedChicken', v)}
-                                    className="text-slate-800 font-mono text-center font-bold text-base sm:text-sm"
-                                />
-                            </td>
-                        </tr>
-                        <tr>
-                            <td className="p-3 font-medium text-slate-800 border-r border-slate-200">Merma por Cajón (x20)</td>
-                            <td className="p-3 text-center font-mono font-bold text-slate-600">
-                                {formatDecimal(mermaPorCajon)}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td className="p-3 font-bold text-slate-800 border-r border-slate-200">Merma Total</td>
-                            <td className={`p-3 text-center font-mono font-bold ${mermaTotal < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
-                                {formatDecimal(mermaTotal)}
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            {/* 3. Expenses Table (Cuadro de Gastos) */}
-            <div className="bg-white rounded-xl border border-slate-300 shadow-md overflow-hidden w-full">
-                <div className="p-3 bg-slate-100 border-b border-slate-300 flex justify-between items-center">
-                    <h3 className="text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center gap-2">
-                        <Receipt size={16}/> Cuadro de Gastos
-                    </h3>
-                    <button onClick={handleAddExpense} className="p-1 hover:bg-slate-200 rounded text-slate-500 hover:text-indigo-600 transition-colors">
-                        <Plus size={16} />
-                    </button>
+                        </tbody>
+                    </table>
                 </div>
-                <table className="w-full border-collapse">
-                    <thead className="bg-slate-50 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                        <tr>
-                            <th className="p-3 text-left border-r border-slate-200">Descripción</th>
-                            <th className="p-3 text-right w-32 border-r border-slate-200">Monto</th>
-                            <th className="p-3 w-10"></th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200 text-sm">
-                        {expenses.length === 0 ? (
-                            <tr><td colSpan={3} className="p-4 text-center text-slate-400 italic">Sin gastos registrados.</td></tr>
-                        ) : (
-                            expenses.map(expense => (
-                                <tr key={expense.id} className="group hover:bg-slate-50">
-                                    <td className="p-0 border-r border-slate-200 h-10">
-                                        <TextInput 
-                                            value={expense.description}
-                                            onChange={(v) => handleUpdateExpense(expense.id, 'description', v)}
-                                            placeholder="Descripción del gasto"
-                                            className="text-slate-700 text-base sm:text-sm"
-                                        />
-                                    </td>
-                                    <td className="p-0 border-r border-slate-200 h-10">
-                                        <NumericInput 
-                                            value={expense.amount}
-                                            onChange={(v) => handleUpdateExpense(expense.id, 'amount', v)}
-                                            className="text-slate-800 font-mono text-right text-base sm:text-sm"
-                                            isCurrency
-                                        />
-                                    </td>
-                                    <td className="p-0 text-center">
-                                        <button 
-                                            onClick={() => handleDeleteExpense(expense.id)}
-                                            className="p-2 text-slate-300 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100"
-                                        >
-                                            <Trash2 size={14} />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))
-                        )}
-                    </tbody>
-                    <tfoot className="bg-slate-100 text-xs font-bold uppercase border-t border-slate-300">
-                        <tr>
-                            <td className="p-3 text-right border-r border-slate-300 text-slate-600">Total Gastos</td>
-                            <td className="p-3 text-right font-mono text-rose-600 border-r border-slate-300">{formatCurrency(totalExpenses)}</td>
-                            <td></td>
-                        </tr>
-                    </tfoot>
-                </table>
             </div>
 
-        </div>
+            {/* Add Row Button (Screen) */}
+            <div className="mt-4 print:hidden">
+                <button 
+                    onClick={addRow}
+                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold transition-colors shadow-lg shadow-indigo-500/20"
+                >
+                    <Plus size={18} /> Agregar Cliente
+                </button>
+            </div>
+
+            {/* Expenses Section & Print Summary */}
+            <div className="mt-8 flex flex-col md:flex-row gap-8 break-inside-avoid">
+                
+                {/* Expenses Table */}
+                <div className="flex-1">
+                    <div className="flex justify-between items-center mb-2 print:mb-1">
+                         <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                            <Receipt size={16} /> Cuadro de Gastos
+                         </h3>
+                         <button onClick={addExpense} className="print:hidden text-xs flex items-center gap-1 bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded border border-slate-300 transition-colors">
+                             <Plus size={12} /> Agregar
+                         </button>
+                    </div>
+                    
+                    <div className="bg-white rounded-lg border border-slate-200 overflow-hidden print:border-none print:rounded-none">
+                        <table className="w-full text-left border-collapse">
+                             <thead>
+                                <tr className="bg-slate-100 border-b border-slate-300">
+                                    <th className="px-2 py-1 text-left text-xs font-semibold text-slate-600 uppercase border-r border-slate-300">Descripción</th>
+                                    <th className="px-2 py-1 text-right text-xs font-semibold text-slate-600 uppercase w-24">Monto</th>
+                                    <th className="w-8 print:hidden"></th>
+                                </tr>
+                             </thead>
+                             <tbody className="divide-y divide-slate-100 print:divide-slate-200">
+                                 {expenses.map((exp, index) => (
+                                     <tr key={exp.id} className="group hover:bg-slate-50 print:hover:bg-transparent">
+                                         <td className="border-r border-slate-100 print:border-slate-300 h-8">
+                                             <TextInput 
+                                                value={exp.description}
+                                                onChange={(v) => updateExpense(exp.id, 'description', v)}
+                                                placeholder="Descripción del gasto"
+                                                className="text-sm text-slate-700"
+                                             />
+                                         </td>
+                                         <td className="h-8 bg-rose-50/30 print:bg-transparent">
+                                             <NumericInput 
+                                                value={exp.amount}
+                                                onChange={(v) => updateExpense(exp.id, 'amount', v)}
+                                                className="text-right text-sm font-mono text-rose-600 font-medium"
+                                                isCurrency
+                                             />
+                                         </td>
+                                         <td className="print:hidden text-center">
+                                             <button onClick={() => removeExpense(exp.id)} className="text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100">
+                                                 <Trash2 size={12} />
+                                             </button>
+                                         </td>
+                                     </tr>
+                                 ))}
+                                 {expenses.length === 0 && (
+                                     <tr>
+                                         <td colSpan={2} className="px-2 py-4 text-center text-slate-400 text-xs italic">No hay gastos registrados</td>
+                                         <td className="print:hidden"></td>
+                                     </tr>
+                                 )}
+                             </tbody>
+                             <tfoot className="border-t border-slate-300 bg-slate-50 print:bg-slate-100">
+                                 <tr>
+                                     <td className="px-2 py-1 text-right text-xs font-bold text-slate-600 border-r border-slate-300">TOTAL GASTOS</td>
+                                     <td className="px-2 py-1 text-right text-xs font-bold text-rose-600 font-mono">{formatCurrency(totalExpenses)}</td>
+                                     <td className="print:hidden"></td>
+                                 </tr>
+                             </tfoot>
+                        </table>
+                    </div>
+                </div>
+
+                {/* Totals Summary (Print Optimized) */}
+                <div className="w-full md:w-64 print:w-72">
+                    <div className="bg-slate-50 border border-slate-300 rounded overflow-hidden print:border-slate-400">
+                        <div className="bg-slate-200 px-3 py-2 border-b border-slate-300">
+                            <h3 className="text-xs font-bold text-slate-700 uppercase text-center">Resumen General</h3>
+                        </div>
+                        <div className="flex justify-between items-center p-2 border-b border-slate-300 bg-white">
+                             <span className="text-xs font-bold text-slate-600 uppercase">Total Kg Entreg.</span>
+                             <span className="text-sm font-bold font-mono text-slate-800">{formatDecimal(totalWeight)} kg</span>
+                        </div>
+                        <div className="flex justify-between items-center p-2 border-b border-slate-300 bg-white">
+                             <span className="text-xs font-bold text-slate-600 uppercase">Total Vendido</span>
+                             <span className="text-sm font-bold font-mono text-slate-800">{formatCurrency(totalSold)}</span>
+                        </div>
+                        <div className="flex justify-between items-center p-2 border-b border-slate-300 bg-emerald-50">
+                             <span className="text-xs font-bold text-emerald-700 uppercase">Total Entregado</span>
+                             <span className="text-sm font-bold font-mono text-emerald-700">{formatCurrency(totalPayment)}</span>
+                        </div>
+                        <div className="flex justify-between items-center p-2 border-b border-slate-300 bg-rose-50">
+                             <span className="text-xs font-bold text-rose-600 uppercase">Total Gastos</span>
+                             <span className="text-sm font-bold font-mono text-rose-600">-{formatCurrency(totalExpenses)}</span>
+                        </div>
+                         <div className="flex justify-between items-center p-3 bg-indigo-50 border-t-2 border-slate-300">
+                             <span className="text-sm font-extrabold text-indigo-700 uppercase">EFECTIVO</span>
+                             <span className="text-lg font-bold font-mono text-indigo-700">{formatCurrency(cashBalance)}</span>
+                        </div>
+                    </div>
+                    
+                    {/* Signatures Area */}
+                    <div className="hidden print:flex mt-12 justify-between gap-4">
+                        <div className="flex-1 border-t border-slate-400 pt-1">
+                            <p className="text-[10px] text-center text-slate-500 uppercase">Firma Responsable</p>
+                        </div>
+                        <div className="flex-1 border-t border-slate-400 pt-1">
+                            <p className="text-[10px] text-center text-slate-500 uppercase">Firma Control</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+          </div>
+      </div>
+
+      {/* History Modal */}
+      {showHistoryModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
+              <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[80vh]">
+                  <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                      <h3 className="font-bold text-slate-700 flex items-center gap-2">
+                          <History size={18} /> Historial de Cambios
+                      </h3>
+                      <button onClick={() => setShowHistoryModal(false)} className="p-1 hover:bg-slate-200 rounded text-slate-500">
+                          <X size={20} />
+                      </button>
+                  </div>
+                  <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+                      {history.length === 0 ? (
+                          <p className="text-center text-slate-400 italic text-sm">No hay registros recientes.</p>
+                      ) : (
+                          <div className="space-y-3">
+                              {history.map(log => (
+                                  <div key={log.id} className="text-sm border-l-2 border-slate-300 pl-3 py-1">
+                                      <div className="flex items-center gap-2 text-xs text-slate-400 mb-1">
+                                          <Clock size={10} />
+                                          {new Date(log.timestamp).toLocaleString('es-AR')}
+                                      </div>
+                                      <p className="text-slate-700">{log.description}</p>
+                                  </div>
+                              ))}
+                          </div>
+                      )}
+                  </div>
+              </div>
+          </div>
+      )}
 
     </div>
   );
