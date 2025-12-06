@@ -545,22 +545,22 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                 background-color: white !important;
             }
             tr {
-                height: 12px !important; /* Extremely compact rows */
+                height: 16px !important; /* Increased from 12px for better readability */
             }
             th, td {
                 border: 1px solid #000 !important;
-                padding: 0px 1px !important; /* Minimal padding */
+                padding: 0px 1px !important;
                 background-color: white !important;
                 color: black !important;
-                font-size: 9px !important; /* Small font */
-                line-height: 1 !important;
-                height: 12px !important;
+                font-size: 11px !important; /* Increased from 9px */
+                line-height: 1.1 !important;
+                height: 16px !important;
             }
             thead th {
                 background-color: white !important;
                 color: #000 !important;
                 font-weight: bold !important;
-                font-size: 8px !important;
+                font-size: 10px !important; /* Increased from 8px */
             }
         }
       `}</style>
@@ -655,13 +655,13 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                          <h1 className="text-lg font-bold text-black uppercase tracking-tight leading-none">Planilla de Reparto</h1>
                          <div className="flex items-center gap-4 mt-1">
                              <div className="flex items-center gap-1">
-                                 <span className="font-bold text-black text-[10px]">ZONA:</span>
-                                 <span className="text-sm font-bold text-black uppercase leading-none">{zoneName}</span>
+                                 <span className="font-bold text-black text-xs">ZONA:</span>
+                                 <span className="text-base font-bold text-black uppercase leading-none">{zoneName}</span>
                              </div>
                              <div className="w-px h-3 bg-black"></div>
                              <div className="flex items-center gap-1">
-                                 <span className="font-bold text-black text-[10px]">FECHA:</span>
-                                 <span className="text-sm font-bold text-black leading-none">
+                                 <span className="font-bold text-black text-xs">FECHA:</span>
+                                 <span className="text-base font-bold text-black leading-none">
                                      {(() => {
                                         const [y, m, d] = currentDate.split('-').map(Number);
                                         const dateObj = new Date(y, m - 1, d);
@@ -672,12 +672,12 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                          </div>
                      </div>
                      <div className="text-right">
-                         <div className="text-[10px] font-bold text-black uppercase">Avícola Alpina</div>
+                         <div className="text-xs font-bold text-black uppercase">Avícola Alpina</div>
                      </div>
                  </div>
                  
                  {/* Metadata Section (Compact) */}
-                 <div className="flex gap-4 mb-1 text-[10px]">
+                 <div className="flex gap-4 mb-2 text-xs">
                      <div className="flex items-center gap-1">
                          <span className="font-bold text-black uppercase">Cargado:</span>
                          <span className="font-mono font-bold text-black">{formatDecimal(metadata.loadedChicken)} kg</span>
@@ -730,14 +730,14 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-slate-50 border-b border-slate-200 print:bg-white print:border-black">
-                                <th className="px-2 py-1 text-left text-sm print:text-[8px] print:py-0 font-bold text-slate-600 print:text-black uppercase tracking-wider border-r border-slate-200 print:border-black">Cliente</th>
-                                <th className="px-2 py-1 text-left text-sm print:text-[8px] print:py-0 font-bold text-slate-600 print:text-black uppercase tracking-wider w-36 print:w-24 border-r border-slate-200 print:border-black">Articulo</th>
-                                <th className="px-2 py-1 text-right text-sm print:text-[8px] print:py-0 font-bold text-slate-600 print:text-black uppercase tracking-wider w-20 print:w-12 border-r border-slate-200 print:border-black">Kg</th>
-                                <th className="px-2 py-1 text-right text-sm print:text-[8px] print:py-0 font-bold text-slate-600 print:text-black uppercase tracking-wider w-24 print:w-14 border-r border-slate-200 print:border-black">Precio</th>
-                                <th className="px-2 py-1 text-right text-sm print:text-[8px] print:py-0 font-bold text-slate-600 print:text-black uppercase tracking-wider w-28 print:w-16 border-r border-slate-200 print:border-black">Subtotal</th>
-                                <th className="px-2 py-1 text-right text-sm print:text-[8px] print:py-0 font-bold text-slate-600 print:text-black uppercase tracking-wider w-28 print:w-16 border-r border-slate-200 print:border-black whitespace-nowrap">Saldo Ant</th>
-                                <th className="px-2 py-1 text-right text-sm print:text-[8px] print:py-0 font-bold text-emerald-600 print:text-black uppercase tracking-wider w-28 print:w-16 border-r border-slate-200 print:border-black">Entrega</th>
-                                <th className="px-2 py-1 text-right text-sm print:text-[8px] print:py-0 font-bold text-slate-600 print:text-black uppercase tracking-wider w-28 print:w-16">Saldo</th>
+                                <th className="px-2 py-1 text-left text-sm print:text-[10px] print:py-0 font-bold text-slate-600 print:text-black uppercase tracking-wider border-r border-slate-200 print:border-black">Cliente</th>
+                                <th className="px-2 py-1 text-left text-sm print:text-[10px] print:py-0 font-bold text-slate-600 print:text-black uppercase tracking-wider w-36 print:w-24 border-r border-slate-200 print:border-black">Articulo</th>
+                                <th className="px-2 py-1 text-right text-sm print:text-[10px] print:py-0 font-bold text-slate-600 print:text-black uppercase tracking-wider w-20 print:w-12 border-r border-slate-200 print:border-black">Kg</th>
+                                <th className="px-2 py-1 text-right text-sm print:text-[10px] print:py-0 font-bold text-slate-600 print:text-black uppercase tracking-wider w-24 print:w-14 border-r border-slate-200 print:border-black">Precio</th>
+                                <th className="px-2 py-1 text-right text-sm print:text-[10px] print:py-0 font-bold text-slate-600 print:text-black uppercase tracking-wider w-28 print:w-16 border-r border-slate-200 print:border-black">Subtotal</th>
+                                <th className="px-2 py-1 text-right text-sm print:text-[10px] print:py-0 font-bold text-slate-600 print:text-black uppercase tracking-wider w-28 print:w-16 border-r border-slate-200 print:border-black whitespace-nowrap">Saldo Ant</th>
+                                <th className="px-2 py-1 text-right text-sm print:text-[10px] print:py-0 font-bold text-emerald-600 print:text-black uppercase tracking-wider w-28 print:w-16 border-r border-slate-200 print:border-black">Entrega</th>
+                                <th className="px-2 py-1 text-right text-sm print:text-[10px] print:py-0 font-bold text-slate-600 print:text-black uppercase tracking-wider w-28 print:w-16">Saldo</th>
                                 <th className="px-2 py-1 w-10 print:hidden"></th>
                             </tr>
                         </thead>
@@ -749,58 +749,58 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                                 
                                 return (
                                     <tr key={row.id} className={`hover:bg-slate-50 print:hover:bg-transparent group ${isAlternate ? 'print:bg-transparent' : ''}`}>
-                                        <td className="border-r border-slate-100 print:border-black h-8 print:h-[12px]">
+                                        <td className="border-r border-slate-100 print:border-black h-8 print:h-[16px]">
                                             <TextInput 
                                                 value={row.client} 
                                                 onChange={(v) => handleRowChange(row.id, 'client', v)} 
-                                                className="font-bold text-slate-800 text-sm print:text-[9px] print:leading-none"
+                                                className="font-bold text-slate-800 text-sm print:text-[11px] print:leading-none"
                                             />
                                         </td>
-                                        <td className="border-r border-slate-100 print:border-black h-8 print:h-[12px]">
+                                        <td className="border-r border-slate-100 print:border-black h-8 print:h-[16px]">
                                             <ProductSelect 
                                                 value={row.product} 
                                                 onChange={(v) => handleRowChange(row.id, 'product', v)} 
-                                                className="text-sm text-slate-700 font-medium print:text-[9px] print:leading-none"
+                                                className="text-sm text-slate-700 font-medium print:text-[11px] print:leading-none"
                                             />
                                         </td>
-                                        <td className="border-r border-slate-100 print:border-black h-8 print:h-[12px]">
+                                        <td className="border-r border-slate-100 print:border-black h-8 print:h-[16px]">
                                             <NumericInput 
                                                 value={row.weight} 
                                                 onChange={(v) => handleRowChange(row.id, 'weight', v)} 
-                                                className="text-slate-700 text-right font-mono text-sm font-medium print:text-[9px] print:leading-none"
+                                                className="text-slate-700 text-right font-mono text-sm font-medium print:text-[11px] print:leading-none"
                                             />
                                         </td>
-                                        <td className="border-r border-slate-100 print:border-black h-8 print:h-[12px]">
+                                        <td className="border-r border-slate-100 print:border-black h-8 print:h-[16px]">
                                             <NumericInput 
                                                 value={row.price} 
                                                 onChange={(v) => handleRowChange(row.id, 'price', v)} 
-                                                className="text-slate-700 text-right font-mono text-sm font-medium print:text-[9px] print:leading-none"
+                                                className="text-slate-700 text-right font-mono text-sm font-medium print:text-[11px] print:leading-none"
                                                 isCurrency
                                             />
                                         </td>
-                                        <td className="border-r border-slate-100 print:border-black h-8 print:h-[12px] px-2 text-right">
-                                            <span className="text-sm font-mono text-slate-600 print:text-[9px] print:text-black print:leading-none">
+                                        <td className="border-r border-slate-100 print:border-black h-8 print:h-[16px] px-2 text-right">
+                                            <span className="text-sm font-mono text-slate-600 print:text-[11px] print:text-black print:leading-none">
                                                 {subtotal > 0 ? formatCurrency(subtotal) : '-'}
                                             </span>
                                         </td>
-                                        <td className="border-r border-slate-100 print:border-black h-8 print:h-[12px]">
+                                        <td className="border-r border-slate-100 print:border-black h-8 print:h-[16px]">
                                              <NumericInput 
                                                 value={row.prevBalance} 
                                                 onChange={(v) => handleRowChange(row.id, 'prevBalance', v)} 
-                                                className="text-slate-600 text-right font-mono text-sm font-medium print:text-[9px] print:leading-none"
+                                                className="text-slate-600 text-right font-mono text-sm font-medium print:text-[11px] print:leading-none"
                                                 isCurrency
                                             />
                                         </td>
-                                        <td className="border-r border-slate-100 print:border-black h-8 print:h-[12px] bg-emerald-50/30 print:bg-transparent">
+                                        <td className="border-r border-slate-100 print:border-black h-8 print:h-[16px] bg-emerald-50/30 print:bg-transparent">
                                              <NumericInput 
                                                 value={row.payment} 
                                                 onChange={(v) => handleRowChange(row.id, 'payment', v)} 
-                                                className="text-emerald-700 print:text-black font-bold text-right font-mono text-sm print:text-[9px] print:leading-none"
+                                                className="text-emerald-700 print:text-black font-bold text-right font-mono text-sm print:text-[11px] print:leading-none"
                                                 isCurrency
                                             />
                                         </td>
-                                        <td className="h-8 print:h-[12px] px-2 text-right print:border print:border-black">
-                                            <span className={`text-sm font-mono font-bold print:text-[9px] print:leading-none ${balance > 0 ? 'text-rose-600 print:text-black' : 'text-slate-500'}`}>
+                                        <td className="h-8 print:h-[16px] px-2 text-right print:border print:border-black">
+                                            <span className={`text-sm font-mono font-bold print:text-[11px] print:leading-none ${balance > 0 ? 'text-rose-600 print:text-black' : 'text-slate-500'}`}>
                                                 {balance !== 0 ? formatCurrency(balance) : '-'}
                                             </span>
                                         </td>
@@ -818,11 +818,11 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                             
                             {/* Footer Totals Row */}
                             <tr className="border-t-2 border-slate-400 print:border-black">
-                                <td colSpan={4} className="px-2 py-2 print:py-[1px] text-right font-bold text-slate-700 border-r border-slate-300 bg-slate-100 print:bg-white uppercase tracking-wider text-xs print:text-[9px] print:border-black">TOTALES</td>
-                                <td className="px-2 py-2 print:py-[1px] text-right font-bold text-slate-800 border-r border-slate-300 bg-slate-50 print:bg-white text-sm print:text-[9px] print:border-black">{formatCurrency(totalSold)}</td>
-                                <td className="px-2 py-2 print:py-[1px] text-right font-bold text-slate-800 border-r border-slate-300 bg-slate-50 print:bg-white text-sm print:text-[9px] print:border-black">-</td>
-                                <td className="px-2 py-2 print:py-[1px] text-right font-bold text-emerald-700 print:text-black border-r border-slate-300 bg-emerald-50 print:bg-white text-sm print:text-[9px] print:border-black">{formatCurrency(totalPayment)}</td>
-                                <td className="px-2 py-2 print:py-[1px] text-right font-bold text-slate-900 bg-slate-50 print:bg-white text-sm print:text-[9px] print:border-black">{formatCurrency(finalBalance)}</td>
+                                <td colSpan={4} className="px-2 py-2 print:py-[1px] text-right font-bold text-slate-700 border-r border-slate-300 bg-slate-100 print:bg-white uppercase tracking-wider text-xs print:text-[10px] print:border-black">TOTALES</td>
+                                <td className="px-2 py-2 print:py-[1px] text-right font-bold text-slate-800 border-r border-slate-300 bg-slate-50 print:bg-white text-sm print:text-[10px] print:border-black">{formatCurrency(totalSold)}</td>
+                                <td className="px-2 py-2 print:py-[1px] text-right font-bold text-slate-800 border-r border-slate-300 bg-slate-50 print:bg-white text-sm print:text-[10px] print:border-black">-</td>
+                                <td className="px-2 py-2 print:py-[1px] text-right font-bold text-emerald-700 print:text-black border-r border-slate-300 bg-emerald-50 print:bg-white text-sm print:text-[10px] print:border-black">{formatCurrency(totalPayment)}</td>
+                                <td className="px-2 py-2 print:py-[1px] text-right font-bold text-slate-900 bg-slate-50 print:bg-white text-sm print:text-[10px] print:border-black">{formatCurrency(finalBalance)}</td>
                                 <td className="print:hidden"></td>
                             </tr>
                         </tbody>
@@ -908,7 +908,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                 </div>
 
                 {/* Print-only Footer: Expenses & Summary */}
-                <div className="hidden print:flex flex-row gap-4 w-full text-[10px]">
+                <div className="hidden print:flex flex-row gap-4 w-full text-[11px]">
                     {/* Expenses Table */}
                     <div className="flex-1">
                         <div className="font-bold mb-1">GASTOS</div>
