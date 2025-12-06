@@ -596,7 +596,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
         )}
 
         {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 bg-slate-900 p-4 rounded-xl border border-slate-800 shadow-md print:bg-transparent print:border-none print:shadow-none print:mb-2 print:p-0 relative z-30">
+        <div className="flex-none flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4 bg-slate-900 p-4 rounded-xl border border-slate-800 shadow-md print:bg-transparent print:border-none print:shadow-none print:mb-2 print:p-0 relative z-30">
             <div className="flex items-center gap-3">
                 <div className="p-3 bg-emerald-900/30 border border-emerald-500/30 rounded-lg print:hidden">
                     <MapPin className="text-emerald-400" size={24} />
@@ -661,11 +661,11 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
             </div>
         </div>
 
-        {/* Table Container */}
-        <div className="flex-1 bg-white rounded-xl border border-slate-300 shadow-xl overflow-hidden flex flex-col print:shadow-none print:border-none print:rounded-none z-0">
+        {/* Main Table Container (Flexible Height) */}
+        <div className="flex-1 min-h-0 bg-white rounded-xl border border-slate-300 shadow-xl overflow-hidden flex flex-col print:shadow-none print:border-none print:rounded-none z-0">
             <div className="overflow-auto custom-scrollbar flex-1 relative bg-slate-50 print:bg-white print:overflow-visible">
                 <table className="w-full border-collapse min-w-[1000px] print:min-w-0">
-                    <thead className="sticky top-0 z-10 bg-slate-100 text-xs font-bold text-slate-600 uppercase tracking-wider shadow-sm print:static print:shadow-none print:bg-white print:text-black print:border-b-2 print:border-black">
+                    <thead className="sticky top-0 z-20 bg-slate-100 text-xs font-bold text-slate-600 uppercase tracking-wider shadow-sm print:static print:shadow-none print:bg-white print:text-black print:border-b-2 print:border-black">
                         <tr>
                             <th className="p-3 border-b border-r border-slate-300 text-left w-48 print:border-black print:text-black">Cliente</th>
                             <th className="p-3 border-b border-r border-slate-300 text-left w-48 print:border-black print:text-black">Artículo</th>
@@ -769,16 +769,16 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
             </div>
         </div>
 
-        {/* Summaries Container */}
-        <div className="mt-6 flex flex-col md:flex-row gap-6 print:flex-row items-start mb-6">
+        {/* Summaries & Expenses Grid Container */}
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 shrink-0 auto-rows-start">
             
-            {/* Category Summary */}
-            <div className="bg-white rounded-xl border border-slate-300 shadow-md overflow-hidden flex-1 max-w-lg print:shadow-none print:border-black print:border print:rounded-none">
+            {/* 1. Category Summary */}
+            <div className="bg-white rounded-xl border border-slate-300 shadow-md overflow-hidden w-full print:shadow-none print:border-black print:border print:rounded-none">
                 <table className="w-full border-collapse">
                     <thead className="bg-slate-100 text-xs font-bold text-slate-600 uppercase tracking-wider print:bg-white print:text-black print:border-b print:border-black">
                         <tr>
                             <th className="p-3 text-left border-r border-slate-300 print:border-black">Categoría</th>
-                            <th className="p-3 text-center border-r border-slate-300 print:border-black">Cantidad Kg</th>
+                            <th className="p-3 text-center border-r border-slate-300 print:border-black">Kg</th>
                             <th className="p-3 text-center border-r border-slate-300 print:border-black">P.P.P.</th>
                             <th className="p-3 text-right print:border-black">Subtotal</th>
                         </tr>
@@ -795,7 +795,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                     </tbody>
                     <tfoot className="font-bold text-slate-800 bg-white print:text-black border-t-2 border-slate-300 print:border-black">
                         <tr className="text-sm">
-                            <td className="p-3 border-r border-slate-200 print:border-black">Total de Pollo</td>
+                            <td className="p-3 border-r border-slate-200 print:border-black">Total Pollo</td>
                             <td className="p-3 text-center border-r border-slate-200 print:border-black font-mono">{formatDecimal(totalSummaryWeight)}</td>
                             <td className="p-3 border-r border-slate-200 print:border-black text-right">Precio</td>
                             <td className="p-3 text-right print:border-black font-mono">{formatCurrency(totalSummaryPPP)}</td>
@@ -804,8 +804,8 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                 </table>
             </div>
 
-            {/* Shrinkage Control Table */}
-            <div className="bg-white rounded-xl border border-slate-300 shadow-md overflow-hidden flex-1 max-w-sm print:shadow-none print:border-black print:border print:rounded-none">
+            {/* 2. Shrinkage Control Table */}
+            <div className="bg-white rounded-xl border border-slate-300 shadow-md overflow-hidden w-full print:shadow-none print:border-black print:border print:rounded-none">
                 <table className="w-full border-collapse">
                     <thead className="bg-slate-100 text-xs font-bold text-slate-600 uppercase tracking-wider print:bg-white print:text-black print:border-b print:border-black">
                         <tr>
@@ -849,68 +849,68 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                 </table>
             </div>
 
-        </div>
-
-         {/* Expenses Table (Cuadro de Gastos) */}
-        <div className="bg-white rounded-xl border border-slate-300 shadow-md overflow-hidden max-w-lg print:shadow-none print:border-black print:border print:rounded-none">
-            <div className="p-3 bg-slate-100 border-b border-slate-300 flex justify-between items-center print:bg-white print:border-black">
-                 <h3 className="text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center gap-2 print:text-black">
-                    <Receipt size={16} className="print:hidden"/> Cuadro de Gastos
-                 </h3>
-                 <button onClick={handleAddExpense} className="p-1 hover:bg-slate-200 rounded text-slate-500 hover:text-indigo-600 transition-colors print:hidden">
-                    <Plus size={16} />
-                 </button>
+            {/* 3. Expenses Table (Cuadro de Gastos) */}
+            <div className="bg-white rounded-xl border border-slate-300 shadow-md overflow-hidden w-full print:shadow-none print:border-black print:border print:rounded-none">
+                <div className="p-3 bg-slate-100 border-b border-slate-300 flex justify-between items-center print:bg-white print:border-black">
+                    <h3 className="text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center gap-2 print:text-black">
+                        <Receipt size={16} className="print:hidden"/> Cuadro de Gastos
+                    </h3>
+                    <button onClick={handleAddExpense} className="p-1 hover:bg-slate-200 rounded text-slate-500 hover:text-indigo-600 transition-colors print:hidden">
+                        <Plus size={16} />
+                    </button>
+                </div>
+                <table className="w-full border-collapse">
+                    <thead className="bg-slate-50 text-xs font-bold text-slate-500 uppercase tracking-wider print:bg-white print:text-black print:border-b print:border-black">
+                        <tr>
+                            <th className="p-3 text-left border-r border-slate-200 print:border-black">Descripción</th>
+                            <th className="p-3 text-right w-32 border-r border-slate-200 print:border-black">Monto</th>
+                            <th className="p-3 w-10 print:hidden"></th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200 print:divide-black text-sm">
+                        {expenses.length === 0 ? (
+                            <tr><td colSpan={3} className="p-4 text-center text-slate-400 italic">Sin gastos registrados.</td></tr>
+                        ) : (
+                            expenses.map(expense => (
+                                <tr key={expense.id} className="group hover:bg-slate-50 print:hover:bg-transparent">
+                                    <td className="p-0 border-r border-slate-200 h-10 print:border-black">
+                                        <TextInput 
+                                            value={expense.description}
+                                            onChange={(v) => handleUpdateExpense(expense.id, 'description', v)}
+                                            placeholder="Descripción del gasto"
+                                            className="text-slate-700 print:text-black"
+                                        />
+                                    </td>
+                                    <td className="p-0 border-r border-slate-200 h-10 print:border-black">
+                                        <NumericInput 
+                                            value={expense.amount}
+                                            onChange={(v) => handleUpdateExpense(expense.id, 'amount', v)}
+                                            className="text-slate-800 font-mono text-right print:text-black"
+                                            isCurrency
+                                        />
+                                    </td>
+                                    <td className="p-0 text-center print:hidden">
+                                        <button 
+                                            onClick={() => handleDeleteExpense(expense.id)}
+                                            className="p-2 text-slate-300 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100"
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                    <tfoot className="bg-slate-100 text-xs font-bold uppercase border-t border-slate-300 print:bg-white print:border-black">
+                        <tr>
+                            <td className="p-3 text-right border-r border-slate-300 text-slate-600 print:border-black print:text-black">Total Gastos</td>
+                            <td className="p-3 text-right font-mono text-rose-600 border-r border-slate-300 print:border-black print:text-black">{formatCurrency(totalExpenses)}</td>
+                            <td className="print:hidden"></td>
+                        </tr>
+                    </tfoot>
+                </table>
             </div>
-            <table className="w-full border-collapse">
-                <thead className="bg-slate-50 text-xs font-bold text-slate-500 uppercase tracking-wider print:bg-white print:text-black print:border-b print:border-black">
-                    <tr>
-                        <th className="p-3 text-left border-r border-slate-200 print:border-black">Descripción</th>
-                        <th className="p-3 text-right w-32 border-r border-slate-200 print:border-black">Monto</th>
-                        <th className="p-3 w-10 print:hidden"></th>
-                    </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200 print:divide-black text-sm">
-                    {expenses.length === 0 ? (
-                        <tr><td colSpan={3} className="p-4 text-center text-slate-400 italic">Sin gastos registrados.</td></tr>
-                    ) : (
-                        expenses.map(expense => (
-                            <tr key={expense.id} className="group hover:bg-slate-50 print:hover:bg-transparent">
-                                <td className="p-0 border-r border-slate-200 h-10 print:border-black">
-                                    <TextInput 
-                                        value={expense.description}
-                                        onChange={(v) => handleUpdateExpense(expense.id, 'description', v)}
-                                        placeholder="Descripción del gasto"
-                                        className="text-slate-700 print:text-black"
-                                    />
-                                </td>
-                                <td className="p-0 border-r border-slate-200 h-10 print:border-black">
-                                    <NumericInput 
-                                        value={expense.amount}
-                                        onChange={(v) => handleUpdateExpense(expense.id, 'amount', v)}
-                                        className="text-slate-800 font-mono text-right print:text-black"
-                                        isCurrency
-                                    />
-                                </td>
-                                <td className="p-0 text-center print:hidden">
-                                     <button 
-                                        onClick={() => handleDeleteExpense(expense.id)}
-                                        className="p-2 text-slate-300 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100"
-                                    >
-                                        <Trash2 size={14} />
-                                    </button>
-                                </td>
-                            </tr>
-                        ))
-                    )}
-                </tbody>
-                <tfoot className="bg-slate-100 text-xs font-bold uppercase border-t border-slate-300 print:bg-white print:border-black">
-                    <tr>
-                        <td className="p-3 text-right border-r border-slate-300 text-slate-600 print:border-black print:text-black">Total Gastos</td>
-                        <td className="p-3 text-right font-mono text-rose-600 border-r border-slate-300 print:border-black print:text-black">{formatCurrency(totalExpenses)}</td>
-                        <td className="print:hidden"></td>
-                    </tr>
-                </tfoot>
-            </table>
+
         </div>
 
     </div>
