@@ -650,17 +650,18 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                 background-color: white !important;
             }
             tr {
-                height: 22px !important; 
+                height: 16px !important; 
             }
             th, td {
                 border: 1px solid #000 !important;
-                padding: 1px 2px !important;
+                padding: 0px 2px !important;
                 /* Default white background */
                 background-color: white !important;
                 color: black !important;
-                font-size: 14px !important; 
-                line-height: 1.1 !important;
+                font-size: 11px !important; 
+                line-height: 1.0 !important;
                 font-family: Arial, sans-serif !important;
+                height: 16px !important; 
             }
             
             /* -- AGGRESSIVE SHADING FOR EMPTY ROWS -- */
@@ -680,7 +681,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
             /* Force text black */
             th *, td *, div, span, p, h1, h2, h3, h4, input, select {
                 color: #000000 !important;
-                font-size: 14px !important;
+                font-size: 11px !important;
                 font-family: Arial, sans-serif !important;
             }
             
@@ -688,22 +689,22 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                 background-color: white !important;
                 color: #000000 !important;
                 font-weight: bold !important;
-                font-size: 14px !important; 
+                font-size: 11px !important; 
                 font-family: Arial, sans-serif !important;
             }
 
             /* Override tailwind utility classes for print */
             .print\:text-\[9px\] {
-                font-size: 14px !important;
+                font-size: 11px !important;
             }
             .print\:text-\[8px\] {
-                font-size: 14px !important;
+                font-size: 11px !important;
             }
             .print\:h-\[17px\] {
-                height: 22px !important;
+                height: 16px !important;
             }
             .print\:leading-none {
-                line-height: 1.2 !important;
+                line-height: 1.0 !important;
             }
         }
       `}</style>
