@@ -805,46 +805,49 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                 </div>
             </div>
 
-            {/* Print Header (Visible only in print) - Text Only */}
-            <div className="hidden print:block mb-2">
-                 <div className="flex justify-between items-end pb-2 mb-2">
-                     <div>
-                         <h1 className="text-xl font-bold text-black uppercase tracking-tight leading-none">Planilla de Reparto</h1>
-                         <div className="flex items-center gap-4 mt-2">
-                             <div className="flex items-center gap-2">
-                                 <span className="font-bold text-black text-xs">ZONA:</span>
-                                 <span className="text-base font-bold text-black uppercase leading-none">{zoneName}</span>
-                             </div>
-                             <div className="flex items-center gap-2">
-                                 <span className="font-bold text-black text-xs">FECHA:</span>
-                                 <span className="text-base font-bold text-black leading-none">
-                                     {(() => {
-                                        const [y, m, d] = currentDate.split('-').map(Number);
-                                        const dateObj = new Date(y, m - 1, d);
-                                        return dateObj.toLocaleDateString('es-AR');
-                                    })()}
-                                 </span>
-                             </div>
+            {/* Print Header (Visible only in print) - Restored Style */}
+            <div className="hidden print:block mb-4">
+                 <div className="flex justify-between items-center pb-4 border-b-2 border-slate-800">
+                     <div className="flex items-center gap-4">
+                         <div className="flex flex-col">
+                             <h1 className="text-2xl font-bold text-slate-900 uppercase tracking-tight">Planilla de Reparto</h1>
+                             <span className="text-sm text-slate-500 font-bold uppercase tracking-widest">Avícola Alpina</span>
                          </div>
                      </div>
-                     <div className="text-right">
-                         <div className="text-sm font-bold text-black uppercase tracking-widest">Avícola Alpina</div>
+                     
+                     <div className="flex gap-4">
+                         <div className="flex items-center gap-2 bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-lg">
+                             <MapPin size={18} className="text-slate-800" />
+                             <span className="text-lg font-bold text-slate-900 uppercase">{zoneName}</span>
+                         </div>
+                         <div className="flex items-center gap-2 bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-lg">
+                             <Calendar size={18} className="text-slate-800" />
+                             <span className="text-lg font-bold text-slate-900">
+                                 {(() => {
+                                    const [y, m, d] = currentDate.split('-').map(Number);
+                                    const dateObj = new Date(y, m - 1, d);
+                                    return dateObj.toLocaleDateString('es-AR');
+                                })()}
+                             </span>
+                         </div>
                      </div>
                  </div>
                  
-                 {/* Metadata Section (Compact & Black Text for Print) */}
-                 <div className="flex gap-4 mb-3 text-xs">
-                     <div className="flex items-center gap-2 bg-transparent border border-black px-2 py-1 rounded">
-                         <span className="font-bold text-black uppercase">Cargado:</span>
-                         <span className="font-mono font-bold text-black">{formatDecimal(metadata.loadedChicken)} kg</span>
+                 {/* Metadata Section */}
+                 <div className="flex gap-6 mt-4 text-sm">
+                     <div className="flex items-center gap-2">
+                         <span className="font-bold text-slate-500 uppercase">Cargado:</span>
+                         <span className="font-mono font-bold text-slate-900 bg-slate-100 px-2 rounded border border-slate-200">{formatDecimal(metadata.loadedChicken)} kg</span>
                      </div>
-                     <div className="flex items-center gap-2 bg-transparent border border-black px-2 py-1 rounded">
-                         <span className="font-bold text-black uppercase">Devolución:</span>
-                         <span className="font-mono font-bold text-black">{formatDecimal(metadata.returnedChicken)} kg</span>
+                     <div className="flex items-center gap-2">
+                         <span className="font-bold text-slate-500 uppercase">Devolución:</span>
+                         <span className="font-mono font-bold text-slate-900 bg-slate-100 px-2 rounded border border-slate-200">{formatDecimal(metadata.returnedChicken)} kg</span>
                      </div>
-                     <div className="flex items-center gap-2 bg-transparent border border-black px-2 py-1 rounded">
-                         <span className="font-bold text-black uppercase">Merma:</span>
-                         <span className="font-mono font-bold text-black">{formatDecimal(shrinkage)} kg</span>
+                     <div className="flex items-center gap-2">
+                         <span className="font-bold text-slate-500 uppercase">Merma:</span>
+                         <span className={`font-mono font-bold px-2 rounded border ${shrinkage > 0 ? 'bg-rose-50 text-rose-600 border-rose-200' : 'bg-emerald-50 text-emerald-600 border-emerald-200'}`}>
+                            {formatDecimal(shrinkage)} kg
+                         </span>
                      </div>
                  </div>
             </div>
@@ -1013,7 +1016,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
             </div>
 
             {/* Expenses Section & Print Summary */}
-            <div className="mt-8 print:mt-1 flex flex-col md:flex-row gap-8 print:gap-4 break-inside-avoid">
+            <div className="mt-8 print:mt-6 flex flex-col md:flex-row gap-8 print:gap-4 break-inside-avoid">
                 
                 {/* Expenses Table (Screen & Print adapted) */}
                 <div className="flex-1">
@@ -1080,11 +1083,11 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                 </div>
 
                 {/* Final Summary Table (Printed version of the top cards) */}
-                <div className="w-full md:w-64 print:w-48 break-inside-avoid flex flex-col justify-end">
-                    <div className="bg-slate-50 border border-slate-300 print:border-black rounded print:rounded-none overflow-hidden mb-2">
-                         <div className="flex justify-between items-center p-3 bg-indigo-50 print:bg-transparent border-t-2 border-slate-300 print:border-black">
-                             <span className="text-sm font-extrabold text-indigo-700 print:text-black uppercase">EFECTIVO</span>
-                             <span className="text-lg font-bold font-mono text-indigo-700 print:text-black">{formatCurrency(cashBalance)}</span>
+                <div className="w-full md:w-64 print:w-56 break-inside-avoid flex flex-col justify-start print:items-end">
+                    <div className="bg-slate-50 border-2 border-slate-300 print:border-slate-800 rounded print:rounded-xl overflow-hidden mb-2 w-full">
+                         <div className="flex print:flex-col justify-between items-center p-3 bg-indigo-50 print:bg-slate-100 border-t-2 border-slate-300 print:border-slate-800">
+                             <span className="text-sm font-extrabold text-indigo-700 print:text-slate-600 uppercase print:tracking-widest">Saldo Efectivo</span>
+                             <span className="text-lg font-bold font-mono text-indigo-700 print:text-slate-900 print:text-2xl print:font-black">{formatCurrency(cashBalance)}</span>
                         </div>
                     </div>
                 </div>
