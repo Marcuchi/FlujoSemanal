@@ -311,11 +311,22 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
   const [showDatePicker, setShowDatePicker] = React.useState(false);
   const [showHistoryModal, setShowHistoryModal] = React.useState(false);
 
-  // Compact Mode Logic for Garbino and Flores
+  // Layout Logic
+  // Screen: Use larger comfortable sizes.
+  // Print: Use compact sizes to fit on one page.
   const isCompact = ['garbino', 'flores'].includes(zoneName.toLowerCase());
-  const rowHeight = isCompact ? 'h-8' : 'h-11';
-  const fontSize = isCompact ? 'text-sm' : 'text-base';
-  const headerFontSize = isCompact ? 'text-xs sm:text-sm' : 'text-base';
+  
+  // Height: Taller on screen (h-12), compact on print (h-9 or h-6 for compact zones)
+  const rowHeight = isCompact ? 'h-8 print:h-6' : 'h-12 print:h-9';
+  
+  // Font: Larger on screen (text-lg), readable but smaller on print (text-sm or text-xs)
+  const fontSize = isCompact ? 'text-sm print:text-xs' : 'text-lg print:text-base';
+  
+  // Header: Adaptive
+  const headerFontSize = isCompact ? 'text-xs sm:text-sm print:text-[10px]' : 'text-base print:text-sm';
+  
+  // Padding:
+  const cellPadding = isCompact ? 'px-1 print:px-0.5' : 'px-2 print:px-1';
 
   React.useEffect(() => {
     if (isRestricted) {
@@ -639,6 +650,24 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
 
   return (
     <div className="h-full flex flex-col bg-slate-100 overflow-hidden print:overflow-visible print:h-auto print:bg-white">
+      {/* Estilos de Impresión Optimizados para una sola hoja */}
+      <style>{`
+        @media print {
+          @page {
+            margin: 5mm;
+            size: auto;
+          }
+          body {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          /* Ocultar scrollbars */
+          ::-webkit-scrollbar {
+            display: none;
+          }
+        }
+      `}</style>
+
       {/* Top Bar - Controls */}
       <div className="flex-none bg-white border-b border-slate-200 p-4 flex flex-col md:flex-row items-center justify-between gap-4 print:hidden z-10">
          <div className="flex items-center gap-4">
@@ -723,23 +752,23 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
             </div>
 
             {/* Print Header (Visible only in print) - Restored Style */}
-            <div className="hidden print:block mb-4">
-                 <div className="flex justify-between items-center pb-4 border-b-2 border-slate-900">
+            <div className="hidden print:block mb-2">
+                 <div className="flex justify-between items-center pb-2 border-b-2 border-slate-900">
                      <div className="flex items-center gap-4">
                          <div className="flex flex-col">
-                             <h1 className="text-2xl font-bold text-slate-900 uppercase tracking-tight">Planilla de Reparto</h1>
-                             <span className="text-sm text-slate-500 font-bold uppercase tracking-widest">Avícola Alpina</span>
+                             <h1 className="text-xl font-bold text-slate-900 uppercase tracking-tight">Planilla de Reparto</h1>
+                             <span className="text-xs text-slate-500 font-bold uppercase tracking-widest">Avícola Alpina</span>
                          </div>
                      </div>
                      
                      <div className="flex gap-4">
-                         <div className="flex items-center gap-2 bg-slate-100 border border-slate-300 px-3 py-1.5 rounded-lg">
-                             <MapPin size={18} className="text-slate-900" />
-                             <span className="text-lg font-bold text-slate-900 uppercase">{zoneName}</span>
+                         <div className="flex items-center gap-2 bg-slate-100 border border-slate-300 px-3 py-1 rounded-lg">
+                             <MapPin size={16} className="text-slate-900" />
+                             <span className="text-base font-bold text-slate-900 uppercase">{zoneName}</span>
                          </div>
-                         <div className="flex items-center gap-2 bg-slate-100 border border-slate-300 px-3 py-1.5 rounded-lg">
-                             <Calendar size={18} className="text-slate-900" />
-                             <span className="text-lg font-bold text-slate-900">
+                         <div className="flex items-center gap-2 bg-slate-100 border border-slate-300 px-3 py-1 rounded-lg">
+                             <Calendar size={16} className="text-slate-900" />
+                             <span className="text-base font-bold text-slate-900">
                                  {(() => {
                                     const [y, m, d] = currentDate.split('-').map(Number);
                                     const dateObj = new Date(y, m - 1, d);
@@ -751,7 +780,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                  </div>
                  
                  {/* Metadata Section */}
-                 <div className="flex gap-6 mt-4 text-sm">
+                 <div className="flex gap-6 mt-2 text-xs">
                      <div className="flex items-center gap-2">
                          <span className="font-bold text-slate-600 uppercase">Cargado:</span>
                          <span className="font-mono font-bold text-slate-900 bg-slate-100 px-2 rounded border border-slate-300">{formatDecimal(metadata.loadedChicken)} kg</span>
@@ -801,23 +830,23 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
             </div>
 
             {/* Main Table */}
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                <div className="overflow-x-auto">
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden print:border-none print:shadow-none">
+                <div className="overflow-x-auto print:overflow-visible">
                     <table className="w-full text-left border-collapse">
                         <thead>
-                            <tr className="bg-slate-50 border-b border-slate-200">
-                                <th className={`px-2 py-1 text-left ${headerFontSize} font-bold text-slate-600 uppercase tracking-wider border-r border-slate-200`}>Cliente</th>
-                                <th className={`px-2 py-1 text-left ${headerFontSize} font-bold text-slate-600 uppercase tracking-wider w-36 border-r border-slate-200`}>Articulo</th>
-                                <th className={`px-2 py-1 text-right ${headerFontSize} font-bold text-slate-600 uppercase tracking-wider w-20 border-r border-slate-200`}>Kg</th>
-                                <th className={`px-2 py-1 text-right ${headerFontSize} font-bold text-slate-600 uppercase tracking-wider w-24 border-r border-slate-200`}>Precio</th>
-                                <th className={`px-2 py-1 text-right ${headerFontSize} font-bold text-slate-600 uppercase tracking-wider w-28 border-r border-slate-200`}>Subtotal</th>
-                                <th className={`px-2 py-1 text-right ${headerFontSize} font-bold text-slate-600 uppercase tracking-wider w-28 border-r border-slate-200 whitespace-nowrap`}>Saldo Ant</th>
-                                <th className={`px-2 py-1 text-right ${headerFontSize} font-bold text-emerald-600 uppercase tracking-wider w-28 border-r border-slate-200`}>Entrega</th>
-                                <th className={`px-2 py-1 text-right ${headerFontSize} font-bold text-slate-600 uppercase tracking-wider w-28`}>Saldo</th>
+                            <tr className="bg-slate-50 border-b border-slate-200 print:border-slate-300">
+                                <th className={`${cellPadding} py-1 text-left ${headerFontSize} font-bold text-slate-600 uppercase tracking-wider border-r border-slate-200`}>Cliente</th>
+                                <th className={`${cellPadding} py-1 text-left ${headerFontSize} font-bold text-slate-600 uppercase tracking-wider w-36 border-r border-slate-200`}>Articulo</th>
+                                <th className={`${cellPadding} py-1 text-right ${headerFontSize} font-bold text-slate-600 uppercase tracking-wider w-20 border-r border-slate-200`}>Kg</th>
+                                <th className={`${cellPadding} py-1 text-right ${headerFontSize} font-bold text-slate-600 uppercase tracking-wider w-24 border-r border-slate-200`}>Precio</th>
+                                <th className={`${cellPadding} py-1 text-right ${headerFontSize} font-bold text-slate-600 uppercase tracking-wider w-28 border-r border-slate-200`}>Subtotal</th>
+                                <th className={`${cellPadding} py-1 text-right ${headerFontSize} font-bold text-slate-600 uppercase tracking-wider w-28 border-r border-slate-200 whitespace-nowrap`}>Saldo Ant</th>
+                                <th className={`${cellPadding} py-1 text-right ${headerFontSize} font-bold text-emerald-600 uppercase tracking-wider w-28 border-r border-slate-200`}>Entrega</th>
+                                <th className={`${cellPadding} py-1 text-right ${headerFontSize} font-bold text-slate-600 uppercase tracking-wider w-28`}>Saldo</th>
                                 <th className="px-2 py-1 w-10 print:hidden"></th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100">
+                        <tbody className="divide-y divide-slate-100 print:divide-slate-200">
                             {rows.map((row, index) => {
                                 const subtotal = (row.weight || 0) * (row.price || 0);
                                 const balance = subtotal + (row.prevBalance || 0) - (row.payment || 0);
@@ -827,31 +856,31 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                                 return (
                                     <tr 
                                         key={row.id} 
-                                        className={`hover:bg-slate-50 group ${isAlternate ? 'bg-slate-50/50' : ''} ${isMissingProduct ? 'print:bg-gray-300' : ''}`}
+                                        className={`hover:bg-slate-50 group ${isAlternate ? 'bg-slate-50/50' : ''} ${isMissingProduct ? 'print:bg-gray-100' : ''}`}
                                         style={{ printColorAdjust: 'exact', WebkitPrintColorAdjust: 'exact' }}
                                     >
-                                        <td className={`border-r border-slate-100 ${rowHeight}`}>
+                                        <td className={`border-r border-slate-100 print:border-slate-200 ${rowHeight}`}>
                                             <TextInput 
                                                 value={row.client} 
                                                 onChange={(v) => handleRowChange(row.id, 'client', v)} 
                                                 className={`font-bold text-slate-800 ${fontSize}`}
                                             />
                                         </td>
-                                        <td className={`border-r border-slate-100 ${rowHeight}`}>
+                                        <td className={`border-r border-slate-100 print:border-slate-200 ${rowHeight}`}>
                                             <ProductSelect 
                                                 value={row.product} 
                                                 onChange={(v) => handleRowChange(row.id, 'product', v)} 
                                                 className={`${fontSize} text-slate-700 font-medium`}
                                             />
                                         </td>
-                                        <td className={`border-r border-slate-100 ${rowHeight}`}>
+                                        <td className={`border-r border-slate-100 print:border-slate-200 ${rowHeight}`}>
                                             <NumericInput 
                                                 value={row.weight} 
                                                 onChange={(v) => handleRowChange(row.id, 'weight', v)} 
                                                 className={`text-slate-700 text-right font-mono ${fontSize} font-medium`}
                                             />
                                         </td>
-                                        <td className={`border-r border-slate-100 ${rowHeight}`}>
+                                        <td className={`border-r border-slate-100 print:border-slate-200 ${rowHeight}`}>
                                             <NumericInput 
                                                 value={row.price} 
                                                 onChange={(v) => handleRowChange(row.id, 'price', v)} 
@@ -859,12 +888,12 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                                                 isCurrency
                                             />
                                         </td>
-                                        <td className={`border-r border-slate-100 ${rowHeight} px-2 text-right`}>
+                                        <td className={`border-r border-slate-100 print:border-slate-200 ${rowHeight} ${cellPadding} text-right`}>
                                             <span className={`${fontSize} font-mono text-slate-600`}>
                                                 {subtotal > 0 ? formatCurrency(subtotal) : '-'}
                                             </span>
                                         </td>
-                                        <td className={`border-r border-slate-100 ${rowHeight}`}>
+                                        <td className={`border-r border-slate-100 print:border-slate-200 ${rowHeight}`}>
                                              <NumericInput 
                                                 value={row.prevBalance} 
                                                 onChange={(v) => handleRowChange(row.id, 'prevBalance', v)} 
@@ -872,7 +901,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                                                 isCurrency
                                             />
                                         </td>
-                                        <td className={`border-r border-slate-100 ${rowHeight} bg-emerald-50/30`}>
+                                        <td className={`border-r border-slate-100 print:border-slate-200 ${rowHeight} bg-emerald-50/30`}>
                                              <NumericInput 
                                                 value={row.payment} 
                                                 onChange={(v) => handleRowChange(row.id, 'payment', v)} 
@@ -880,7 +909,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                                                 isCurrency
                                             />
                                         </td>
-                                        <td className={`${rowHeight} px-2 text-right`}>
+                                        <td className={`${rowHeight} ${cellPadding} text-right`}>
                                             <span className={`${fontSize} font-mono font-bold ${balance > 0 ? 'text-rose-600' : 'text-slate-500'}`}>
                                                 {balance !== 0 ? formatCurrency(balance) : '-'}
                                             </span>
@@ -898,23 +927,23 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                             })}
                             
                             {/* Footer Totals Row */}
-                            <tr className="border-t-2 border-slate-400">
-                                <td colSpan={4} className={`px-2 py-2 text-right font-bold text-slate-700 border-r border-slate-300 bg-slate-100 uppercase tracking-wider ${headerFontSize}`}></td>
+                            <tr className="border-t-2 border-slate-400 print:border-slate-600">
+                                <td colSpan={4} className={`${cellPadding} py-2 text-right font-bold text-slate-700 border-r border-slate-300 bg-slate-100 uppercase tracking-wider ${headerFontSize}`}></td>
                                 
-                                <td className={`px-2 py-2 text-right font-bold text-slate-800 border-r border-slate-300 bg-slate-50 ${headerFontSize}`}>{formatCurrency(totalSold)}</td>
-                                <td className={`px-2 py-2 text-right font-bold text-slate-800 border-r border-slate-300 bg-slate-50 ${headerFontSize}`}>
+                                <td className={`${cellPadding} py-2 text-right font-bold text-slate-800 border-r border-slate-300 bg-slate-50 ${headerFontSize}`}>{formatCurrency(totalSold)}</td>
+                                <td className={`${cellPadding} py-2 text-right font-bold text-slate-800 border-r border-slate-300 bg-slate-50 ${headerFontSize}`}>
                                     <div className="flex items-center justify-end gap-1">
                                         <span className="text-[8px] font-normal text-slate-500 uppercase hidden print:block whitespace-nowrap">Σ Ant</span>
                                         <span>{formatCurrency(totalPrevBalance)}</span>
                                     </div>
                                 </td>
-                                <td className={`px-2 py-2 text-right font-bold text-emerald-700 border-r border-slate-300 bg-emerald-50 ${headerFontSize}`}>
+                                <td className={`${cellPadding} py-2 text-right font-bold text-emerald-700 border-r border-slate-300 bg-emerald-50 ${headerFontSize}`}>
                                     <div className="flex items-center justify-end gap-1">
                                         <span className="text-[8px] font-normal text-slate-500 uppercase hidden print:block whitespace-nowrap">Σ Ent</span>
                                         <span>{formatCurrency(totalPayment)}</span>
                                     </div>
                                 </td>
-                                <td className={`px-2 py-2 text-right font-bold text-slate-900 bg-slate-50 ${headerFontSize}`}>
+                                <td className={`${cellPadding} py-2 text-right font-bold text-slate-900 bg-slate-50 ${headerFontSize}`}>
                                     <div className="flex items-center justify-end gap-1">
                                         <span className="text-[8px] font-normal text-slate-500 uppercase hidden print:block whitespace-nowrap">Σ Saldo</span>
                                         <span>{formatCurrency(finalBalance)}</span>
@@ -938,7 +967,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
             </div>
 
             {/* Expenses Section & Print Summary - REDESIGNED */}
-            <div className="mt-8 print:mt-6 flex flex-col md:flex-row print:flex-row gap-8 print:gap-8 items-start justify-between break-inside-avoid">
+            <div className="mt-8 print:mt-4 flex flex-col md:flex-row print:flex-row gap-8 print:gap-4 items-start justify-between break-inside-avoid">
                 
                 {/* Expenses Table Card */}
                 <div className="flex-1 w-full max-w-2xl bg-white rounded-lg border border-slate-200 print:border-black overflow-hidden shadow-sm print:shadow-none">
