@@ -940,79 +940,83 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
             {/* Expenses Section & Print Summary - REDESIGNED */}
             <div className="mt-8 print:mt-6 flex flex-col md:flex-row print:flex-row gap-8 print:gap-8 items-start justify-between break-inside-avoid">
                 
-                {/* Expenses Table */}
-                <div className="flex-1 w-full max-w-2xl">
-                    <div className="flex justify-between items-center mb-3 border-b-2 border-slate-200 print:border-black pb-2">
+                {/* Expenses Table Card */}
+                <div className="flex-1 w-full max-w-2xl bg-white rounded-lg border border-slate-200 print:border-black overflow-hidden shadow-sm print:shadow-none">
+                    {/* Card Header */}
+                    <div className="flex justify-between items-center px-4 py-2 bg-slate-50 print:bg-gray-100 border-b border-slate-200 print:border-black">
                          <h3 className="text-sm font-black text-slate-700 print:text-black uppercase tracking-wider flex items-center gap-2">
                             <Receipt size={16} className="print:hidden" /> Gastos
                          </h3>
-                         <button onClick={addExpense} className="text-xs flex items-center gap-1 bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded border border-slate-300 transition-colors text-black print:hidden">
+                         <button onClick={addExpense} className="text-xs flex items-center gap-1 bg-white hover:bg-slate-100 px-2 py-1 rounded border border-slate-300 transition-colors text-black print:hidden">
                              <Plus size={12} /> Agregar
                          </button>
                     </div>
                     
-                    <div className="bg-white rounded-lg border border-slate-200 print:border-black overflow-hidden">
-                        <table className="w-full text-left border-collapse">
-                             <thead>
-                                <tr className="bg-slate-50 print:bg-gray-100 border-b border-slate-300 print:border-black">
-                                    <th className="px-3 py-2 text-left text-xs font-bold text-slate-600 print:text-black uppercase border-r border-slate-300 print:border-black">Descripción</th>
-                                    <th className="px-3 py-2 text-right text-xs font-bold text-slate-600 print:text-black uppercase w-28">Monto</th>
-                                    <th className="w-8 print:hidden"></th>
-                                </tr>
-                             </thead>
-                             <tbody className="divide-y divide-slate-100 print:divide-black/20">
-                                 {expenses.map((exp, index) => (
-                                     <tr key={exp.id} className="group hover:bg-slate-50">
-                                         <td className="border-r border-slate-100 print:border-black/20 h-9">
-                                             <TextInput 
-                                                value={exp.description}
-                                                onChange={(v) => updateExpense(exp.id, 'description', v)}
-                                                placeholder="Descripción..."
-                                                className="text-sm text-slate-800 font-medium"
-                                             />
-                                         </td>
-                                         <td className="h-9 bg-rose-50/30 print:bg-transparent">
-                                             <NumericInput 
-                                                value={exp.amount}
-                                                onChange={(v) => updateExpense(exp.id, 'amount', v)}
-                                                className="text-right text-sm font-mono text-rose-700 print:text-black font-bold"
-                                                isCurrency
-                                             />
-                                         </td>
-                                         <td className="text-center print:hidden">
-                                             <button onClick={() => removeExpense(exp.id)} className="text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100">
-                                                 <Trash2 size={12} />
-                                             </button>
-                                         </td>
-                                     </tr>
-                                 ))}
-                                 {expenses.length === 0 && (
-                                     <tr>
-                                         <td colSpan={2} className="px-3 py-6 text-center text-slate-400 print:text-black text-xs italic">Sin gastos registrados</td>
-                                         <td className="print:hidden"></td>
-                                     </tr>
-                                 )}
-                             </tbody>
-                             <tfoot className="border-t border-slate-300 print:border-black bg-slate-50 print:bg-gray-100">
+                    {/* Table */}
+                    <table className="w-full text-left border-collapse">
+                         <thead>
+                            <tr className="border-b border-slate-200 print:border-black">
+                                <th className="px-3 py-2 text-left text-xs font-bold text-slate-600 print:text-black uppercase border-r border-slate-200 print:border-black">Descripción</th>
+                                <th className="px-3 py-2 text-right text-xs font-bold text-slate-600 print:text-black uppercase w-28">Monto</th>
+                                <th className="w-8 print:hidden"></th>
+                            </tr>
+                         </thead>
+                         <tbody className="divide-y divide-slate-100 print:divide-black/20">
+                             {expenses.map((exp, index) => (
+                                 <tr key={exp.id} className="group hover:bg-slate-50">
+                                     <td className="border-r border-slate-200 print:border-black/20 h-9">
+                                         <TextInput 
+                                            value={exp.description}
+                                            onChange={(v) => updateExpense(exp.id, 'description', v)}
+                                            placeholder="Descripción..."
+                                            className="text-sm text-slate-800 font-medium"
+                                         />
+                                     </td>
+                                     <td className="h-9 bg-rose-50/30 print:bg-transparent">
+                                         <NumericInput 
+                                            value={exp.amount}
+                                            onChange={(v) => updateExpense(exp.id, 'amount', v)}
+                                            className="text-right text-sm font-mono text-rose-700 print:text-black font-bold"
+                                            isCurrency
+                                         />
+                                     </td>
+                                     <td className="text-center print:hidden">
+                                         <button onClick={() => removeExpense(exp.id)} className="text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100">
+                                             <Trash2 size={12} />
+                                         </button>
+                                     </td>
+                                 </tr>
+                             ))}
+                             {expenses.length === 0 && (
                                  <tr>
-                                     <td className="px-3 py-2 text-right text-xs font-bold text-slate-600 print:text-black border-r border-slate-300 print:border-black uppercase">Total Gastos</td>
-                                     <td className="px-3 py-2 text-right text-sm font-black text-rose-600 print:text-black font-mono">{formatCurrency(totalExpenses)}</td>
+                                     <td colSpan={2} className="px-3 py-6 text-center text-slate-400 print:text-black text-xs italic">Sin gastos registrados</td>
                                      <td className="print:hidden"></td>
                                  </tr>
-                             </tfoot>
-                        </table>
-                    </div>
+                             )}
+                         </tbody>
+                         <tfoot className="border-t border-slate-200 print:border-black bg-slate-50 print:bg-gray-100">
+                             <tr>
+                                 <td className="px-3 py-2 text-right text-xs font-bold text-slate-600 print:text-black border-r border-slate-200 print:border-black uppercase">Total Gastos</td>
+                                 <td className="px-3 py-2 text-right text-sm font-black text-rose-600 print:text-black font-mono">{formatCurrency(totalExpenses)}</td>
+                                 <td className="print:hidden"></td>
+                             </tr>
+                         </tfoot>
+                    </table>
                 </div>
 
-                {/* Final Summary Table (Printed version) */}
+                {/* Final Summary Card */}
                 <div className="w-full md:w-auto print:w-auto flex-none break-inside-avoid">
-                    <div className="border-2 border-slate-200 print:border-2 print:border-black rounded-xl print:rounded-lg p-6 print:p-4 flex flex-col gap-2 bg-white text-center shadow-sm print:shadow-none min-w-[200px]">
-                         <span className="text-xs font-bold text-slate-500 print:text-black uppercase tracking-widest border-b border-slate-100 print:border-black pb-2 mb-1">
-                            Saldo Efectivo
-                         </span>
-                         <span className="text-3xl font-black font-mono text-indigo-600 print:text-black">
-                            {formatCurrency(cashBalance)}
-                         </span>
+                    <div className="border border-slate-200 print:border-black rounded-lg overflow-hidden bg-white shadow-sm print:shadow-none min-w-[200px]">
+                         <div className="bg-slate-50 print:bg-gray-100 px-4 py-2 border-b border-slate-200 print:border-black text-center">
+                             <span className="text-sm font-black text-slate-700 print:text-black uppercase tracking-wider">
+                                Saldo Efectivo
+                             </span>
+                         </div>
+                         <div className="p-4 flex items-center justify-center">
+                             <span className="text-3xl font-black font-mono text-indigo-600 print:text-black">
+                                {formatCurrency(cashBalance)}
+                             </span>
+                         </div>
                     </div>
                 </div>
 
