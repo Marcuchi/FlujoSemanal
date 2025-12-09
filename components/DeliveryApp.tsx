@@ -13,16 +13,15 @@ interface DeliveryAppProps {
 }
 
 const MALVINAS_CLIENTS = [
-  "Agustin Malvinas", "Ale Malvinas", "Arriola", "Marcos Castro", "Baldo", 
-  "Carlos Patria", "Pedro Cochabamba", "Carnes Walter", "Carolina Anacreonte", 
-  "Cecilia V. Retiro", "Centro Comunitario", "Chavez", "Dominguez", "Doña Chocha", 
-  "El Indio", "Fabrica de Pastas", "Nestor", "Fany", "Carnes Cordoba", 
-  "Gabriel Cofico", "Gabriel Nuevo", "Baldo", "Inspector Vaca", "Lorena Gaboto", 
-  "Polleria El Angel", "Macarena", "Marcela", "Marcos Suipacha", "Matias Chino", 
-  "Matias Lopez", "Sol", "La Boqueria", "Oviedo", "Polaco", "Polleria Serapio", 
-  "Pablo Sahar", "Ric Cervantes", "Colon B", "Colon Federico", "Eric Colon", 
-  "Carlos Eco", "Baigorri 133", "Carnes Emanuel", "La Rivieri", "Cipruz", 
-  "Jorge Salcedo", "Ruta 20", "Ochetti Paola", "Don segundo", "El Dani"
+  "Carnes Cordoba",
+  "Macarena",
+  "Oviedo",
+  "Pablo Sahar",
+  "Colon Federico",
+  "Eric Colon",
+  "La Rivieri",
+  "Cipruz",
+  "Ochetti Paola"
 ];
 
 const RODOLFO_CLIENTS = [
