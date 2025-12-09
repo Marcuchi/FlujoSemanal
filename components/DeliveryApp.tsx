@@ -805,7 +805,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                 </div>
             </div>
 
-            {/* Print Header (Visible only in print) */}
+            {/* Print Header (Visible only in print) - Text Only */}
             <div className="hidden print:block mb-2">
                  <div className="flex justify-between items-end pb-2 mb-2">
                      <div>
@@ -1080,27 +1080,11 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                 </div>
 
                 {/* Final Summary Table (Printed version of the top cards) */}
-                <div className="w-full md:w-64 print:w-48 break-inside-avoid">
-                    <div className="bg-slate-50 border border-slate-300 rounded overflow-hidden mb-2">
-                         <div className="flex justify-between items-center p-3 bg-indigo-50 border-t-2 border-slate-300">
-                             <span className="text-sm font-extrabold text-indigo-700 uppercase">EFECTIVO</span>
-                             <span className="text-lg font-bold font-mono text-indigo-700">{formatCurrency(cashBalance)}</span>
-                        </div>
-                    </div>
-                    
-                    {/* Extra Print Summary Table for clarity */}
-                    <div className="hidden print:block border border-black rounded bg-transparent text-[10px]">
-                        <div className="p-1 border-b border-black flex justify-between">
-                            <span className="font-bold text-black">Vendido:</span>
-                            <span className="font-bold text-black">{formatCurrency(totalSold)}</span>
-                        </div>
-                        <div className="p-1 border-b border-black flex justify-between">
-                            <span className="font-bold text-black">Entrega:</span>
-                            <span className="font-bold text-black">{formatCurrency(totalPayment)}</span>
-                        </div>
-                        <div className="p-1 flex justify-between">
-                            <span className="font-bold text-black">Gastos:</span>
-                            <span className="font-bold text-black">{formatCurrency(totalExpenses)}</span>
+                <div className="w-full md:w-64 print:w-48 break-inside-avoid flex flex-col justify-end">
+                    <div className="bg-slate-50 border border-slate-300 print:border-black rounded print:rounded-none overflow-hidden mb-2">
+                         <div className="flex justify-between items-center p-3 bg-indigo-50 print:bg-transparent border-t-2 border-slate-300 print:border-black">
+                             <span className="text-sm font-extrabold text-indigo-700 print:text-black uppercase">EFECTIVO</span>
+                             <span className="text-lg font-bold font-mono text-indigo-700 print:text-black">{formatCurrency(cashBalance)}</span>
                         </div>
                     </div>
                 </div>
