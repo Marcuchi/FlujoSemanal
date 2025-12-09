@@ -597,6 +597,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
   const totalWeight = rows.reduce((acc, row) => acc + (row.weight || 0), 0);
   const totalPayment = rows.reduce((acc, row) => acc + (row.payment || 0), 0);
   const totalSold = rows.reduce((acc, row) => acc + ((row.weight || 0) * (row.price || 0)), 0);
+  const totalPrevBalance = rows.reduce((acc, row) => acc + (row.prevBalance || 0), 0);
   const totalExpenses = expenses.reduce((acc, exp) => acc + (exp.amount || 0), 0);
   
   const finalBalance = rows.reduce((acc, row) => {
@@ -968,9 +969,24 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                             <tr className="border-t-2 border-slate-400 print:border-black">
                                 <td colSpan={4} className="px-2 py-2 print:py-[1px] text-right font-bold text-slate-700 border-r border-slate-300 bg-slate-100 print:bg-white uppercase tracking-wider text-base print:text-[9px] print:text-black print:border-black">TOTALES</td>
                                 <td className="px-2 py-2 print:py-[1px] text-right font-bold text-slate-800 border-r border-slate-300 bg-slate-50 print:bg-white text-base print:text-[9px] print:text-black print:border-black">{formatCurrency(totalSold)}</td>
-                                <td className="px-2 py-2 print:py-[1px] text-right font-bold text-slate-800 border-r border-slate-300 bg-slate-50 print:bg-white text-base print:text-[9px] print:text-black print:border-black">-</td>
-                                <td className="px-2 py-2 print:py-[1px] text-right font-bold text-emerald-700 print:text-black border-r border-slate-300 bg-emerald-50 print:bg-white text-base print:text-[9px] print:border-black">{formatCurrency(totalPayment)}</td>
-                                <td className="px-2 py-2 print:py-[1px] text-right font-bold text-slate-900 bg-slate-50 print:bg-white text-base print:text-[9px] print:text-black print:border-black">{formatCurrency(finalBalance)}</td>
+                                <td className="px-2 py-2 print:py-[1px] text-right font-bold text-slate-800 border-r border-slate-300 bg-slate-50 print:bg-white text-base print:text-[9px] print:text-black print:border-black">
+                                    <div className="flex flex-col items-end leading-none">
+                                        <span className="text-[8px] font-normal text-slate-500 print:text-black uppercase hidden print:block">Σ Saldo Ant</span>
+                                        <span>{formatCurrency(totalPrevBalance)}</span>
+                                    </div>
+                                </td>
+                                <td className="px-2 py-2 print:py-[1px] text-right font-bold text-emerald-700 print:text-black border-r border-slate-300 bg-emerald-50 print:bg-white text-base print:text-[9px] print:border-black">
+                                    <div className="flex flex-col items-end leading-none">
+                                        <span className="text-[8px] font-normal text-slate-500 print:text-black uppercase hidden print:block">Σ Entrega</span>
+                                        <span>{formatCurrency(totalPayment)}</span>
+                                    </div>
+                                </td>
+                                <td className="px-2 py-2 print:py-[1px] text-right font-bold text-slate-900 bg-slate-50 print:bg-white text-base print:text-[9px] print:text-black print:border-black">
+                                    <div className="flex flex-col items-end leading-none">
+                                        <span className="text-[8px] font-normal text-slate-500 print:text-black uppercase hidden print:block">Σ Saldo</span>
+                                        <span>{formatCurrency(finalBalance)}</span>
+                                    </div>
+                                </td>
                                 <td className="print:hidden"></td>
                             </tr>
                         </tbody>
