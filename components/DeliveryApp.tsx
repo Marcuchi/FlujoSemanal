@@ -623,7 +623,8 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
         @media print {
             @page {
                 size: A4;
-                margin: 5mm;
+                /* INCREASED LEFT MARGIN TO 25mm FOR HOLE PUNCHING */
+                margin: 5mm 5mm 5mm 25mm;
             }
             body, #root, .bg-slate-950, .bg-slate-100, .bg-white {
                 background-color: white !important;
@@ -651,7 +652,8 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                 background-color: white !important;
             }
             tr {
-                height: 16px !important; 
+                /* INCREASED ROW HEIGHT FOR BIGGER TEXT */
+                height: 22px !important; 
             }
             th, td {
                 border: 1px solid #000 !important;
@@ -659,10 +661,11 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                 /* Default white background */
                 background-color: white !important;
                 color: black !important;
-                font-size: 11px !important; 
+                /* INCREASED FONT SIZE */
+                font-size: 13px !important; 
                 line-height: 1.0 !important;
                 font-family: Arial, sans-serif !important;
-                height: 16px !important; 
+                height: 22px !important; 
             }
             
             /* -- AGGRESSIVE SHADING FOR EMPTY ROWS -- */
@@ -679,10 +682,10 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                 border-color: #000 !important;
             }
 
-            /* Force text black */
+            /* Force text black and bigger */
             th *, td *, div, span, p, h1, h2, h3, h4, input, select {
                 color: #000000 !important;
-                font-size: 11px !important;
+                font-size: 13px !important;
                 font-family: Arial, sans-serif !important;
             }
             
@@ -690,22 +693,27 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                 background-color: white !important;
                 color: #000000 !important;
                 font-weight: bold !important;
-                font-size: 11px !important; 
+                font-size: 14px !important; 
                 font-family: Arial, sans-serif !important;
             }
 
             /* Override tailwind utility classes for print */
             .print\:text-\[9px\] {
-                font-size: 11px !important;
+                font-size: 13px !important;
             }
             .print\:text-\[8px\] {
-                font-size: 11px !important;
+                font-size: 13px !important;
             }
             .print\:h-\[17px\] {
-                height: 16px !important;
+                height: 22px !important;
             }
             .print\:leading-none {
                 line-height: 1.0 !important;
+            }
+            /* Constrain Width for Client Column */
+            .print\:w-\[110px\] {
+                width: 110px !important;
+                max-width: 110px !important;
             }
         }
       `}</style>
@@ -875,7 +883,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-slate-50 border-b border-slate-200 print:bg-white print:border-black">
-                                <th className="px-2 py-1 text-left text-base print:text-[8px] print:py-0 font-bold text-slate-600 print:text-black uppercase tracking-wider border-r border-slate-200 print:border-black">Cliente</th>
+                                <th className="px-2 py-1 text-left text-base print:text-[8px] print:py-0 font-bold text-slate-600 print:text-black uppercase tracking-wider border-r border-slate-200 print:border-black print:w-[110px]">Cliente</th>
                                 <th className="px-2 py-1 text-left text-base print:text-[8px] print:py-0 font-bold text-slate-600 print:text-black uppercase tracking-wider w-36 print:w-24 border-r border-slate-200 print:border-black">Articulo</th>
                                 <th className="px-2 py-1 text-right text-base print:text-[8px] print:py-0 font-bold text-slate-600 print:text-black uppercase tracking-wider w-20 print:w-12 border-r border-slate-200 print:border-black">Kg</th>
                                 <th className="px-2 py-1 text-right text-base print:text-[8px] print:py-0 font-bold text-slate-600 print:text-black uppercase tracking-wider w-24 print:w-14 border-r border-slate-200 print:border-black">Precio</th>
