@@ -912,10 +912,10 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
             </div>
 
             {/* Expenses Section & Print Summary - REDESIGNED */}
-            <div className="mt-8 print:mt-6 flex flex-col md:flex-row gap-8 print:gap-12 items-start break-inside-avoid">
+            <div className="mt-8 print:mt-6 flex flex-col md:flex-row print:flex-row gap-8 print:gap-8 items-start justify-between break-inside-avoid">
                 
                 {/* Expenses Table */}
-                <div className="flex-1 w-full">
+                <div className="flex-1 w-full max-w-2xl">
                     <div className="flex justify-between items-center mb-3 border-b-2 border-slate-200 print:border-black pb-2">
                          <h3 className="text-sm font-black text-slate-700 print:text-black uppercase tracking-wider flex items-center gap-2">
                             <Receipt size={16} className="print:hidden" /> Gastos
@@ -979,8 +979,8 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                 </div>
 
                 {/* Final Summary Table (Printed version) */}
-                <div className="w-full md:w-auto print:w-64 flex-none break-inside-avoid">
-                    <div className="border-4 border-slate-200 print:border-black rounded-xl print:rounded-none p-6 flex flex-col gap-2 bg-white text-center shadow-sm print:shadow-none">
+                <div className="w-full md:w-auto print:w-auto flex-none break-inside-avoid">
+                    <div className="border-2 border-slate-200 print:border-2 print:border-black rounded-xl print:rounded-lg p-6 print:p-4 flex flex-col gap-2 bg-white text-center shadow-sm print:shadow-none min-w-[200px]">
                          <span className="text-xs font-bold text-slate-500 print:text-black uppercase tracking-widest border-b border-slate-100 print:border-black pb-2 mb-1">
                             Saldo Efectivo
                          </span>
