@@ -623,126 +623,102 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
             @page {
                 size: A4;
                 /* LEFT MARGIN 25mm FOR HOLE PUNCHING, 10mm others */
-                margin: 10mm 10mm 10mm 25mm;
+                margin: 5mm 5mm 5mm 25mm;
             }
-            body, #root, .bg-slate-950, .bg-slate-100, .bg-white {
+            body {
                 background-color: white !important;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-                font-family: Arial, sans-serif !important;
-            }
-            .no-print {
-                display: none !important;
-            }
-            /* HIDE ALL BUTTONS IN PRINT */
-            button {
-                display: none !important;
-            }
-            
-            /* Reset general backgrounds */
-            [class*="bg-"] {
-                background-color: white !important;
-            }
-            * {
-                box-shadow: none !important;
-                text-shadow: none !important;
-                overflow: visible !important;
-                font-family: Arial, sans-serif !important;
-            }
-            /* Table Styling */
-            table {
-                border-collapse: collapse !important;
-                width: 100% !important;
-                table-layout: fixed !important; /* CRITICAL FOR NOT CUTTING OFF */
-                background-color: white !important;
-            }
-            tr {
-                height: 19px !important; /* Compact height */
-            }
-            th, td {
-                border: 1px solid #000 !important;
-                padding: 0px 2px !important;
-                background-color: white !important;
-                color: black !important;
-                font-size: 10px !important; /* Smaller font to fit */
-                line-height: 1.1 !important;
-                font-family: Arial, sans-serif !important;
-                height: 19px !important;
-                white-space: nowrap !important;
-                overflow: hidden !important;
-                text-overflow: ellipsis !important;
-            }
-            
-            /* -- AGGRESSIVE SHADING FOR EMPTY ROWS -- */
-            tr.print-shaded,
-            tr.print-shaded > td,
-            tr.print-shaded > td > div,
-            tr.print-shaded > td > input {
-                background-color: #e5e7eb !important; /* gray-200 */
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
             }
-            tr.print-shaded > td {
-                border-color: #000 !important;
-            }
-
-            /* Define Specific Column Widths via nth-child to ensure fit */
-            /* 1.Client, 2.Art, 3.Kg, 4.Price, 5.Sub, 6.Ant, 7.Ent, 8.Saldo, 9.Action(Hidden) */
-            th:nth-child(1) { width: 24% !important; } 
-            th:nth-child(2) { width: 14% !important; }
-            th:nth-child(3) { width: 9% !important; }
-            th:nth-child(4) { width: 10% !important; }
-            th:nth-child(5) { width: 11% !important; }
-            th:nth-child(6) { width: 11% !important; }
-            th:nth-child(7) { width: 11% !important; }
-            th:nth-child(8) { width: 10% !important; }
-            th:nth-child(9) { display: none !important; } /* Hide trash icon column */
-            td:nth-child(9) { display: none !important; }
-
-            /* Force text black and FLATTEN inputs */
-            th *, td *, div, span, p, h1, h2, h3, h4, input, select {
-                color: #000000 !important;
-                font-family: Arial, sans-serif !important;
+            /* Hide UI Elements */
+            .no-print, button, header, .z-50, .print\\:hidden {
+                display: none !important;
             }
             
-            /* Flatten Inputs/Selects for Print to look like text */
+            /* Expand Containers for Print */
+            #root, .h-full, .overflow-y-auto, .overflow-x-auto, .flex-col {
+                height: auto !important;
+                overflow: visible !important;
+                display: block !important;
+            }
+
+            /* Scale content to fit A4 width without cutting */
+            .max-w-7xl {
+                max-width: none !important;
+                width: 100% !important;
+                transform: scale(0.95); /* Slight shrink to be safe */
+                transform-origin: top left;
+            }
+
+            /* --- PRESERVE SCREEN COLORS --- */
+            /* Ensure background colors print */
+            [class*="bg-"] {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            /* Text Colors */
+            [class*="text-"] {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            /* Table Layout */
+            table {
+                width: 100% !important;
+                table-layout: fixed !important;
+                border-collapse: collapse !important;
+            }
+            
+            /* Table Cells: Keep borders but make sure they are visible */
+            th, td {
+                padding: 1px 2px !important;
+                /* Use a slightly darker border for print clarity, or keep original if preferred */
+                border-color: #cbd5e1 !important; /* slate-300 */
+                font-size: 10px !important;
+                white-space: nowrap !important;
+                overflow: hidden !important;
+            }
+
+            /* Row heights */
+            tr {
+                height: 18px !important;
+                page-break-inside: avoid;
+            }
+
+            /* Specific Column Widths (Percentages for A4) */
+            th:nth-child(1) { width: 22% !important; } /* Cliente */
+            th:nth-child(2) { width: 14% !important; } /* Articulo */
+            th:nth-child(3) { width: 9% !important; }  /* Kg */
+            th:nth-child(4) { width: 10% !important; } /* Precio */
+            th:nth-child(5) { width: 11% !important; } /* Sub */
+            th:nth-child(6) { width: 11% !important; } /* Ant */
+            th:nth-child(7) { width: 11% !important; } /* Ent */
+            th:nth-child(8) { width: 10% !important; } /* Saldo */
+            th:nth-child(9) { display: none !important; } /* Action */
+            td:nth-child(9) { display: none !important; }
+
+            /* Flatten Inputs visually but keep values */
             input, select {
                 border: none !important;
                 background: transparent !important;
-                box-shadow: none !important;
-                appearance: none !important;
-                -webkit-appearance: none !important;
                 padding: 0 !important;
                 margin: 0 !important;
+                box-shadow: none !important;
                 width: 100% !important;
-                text-align: inherit;
+                font-size: inherit !important;
+                font-family: inherit !important;
+                color: inherit !important;
+                -webkit-appearance: none !important;
+                appearance: none !important;
             }
-            /* Hide placeholders in print */
+            /* Hide placeholders */
             ::placeholder {
                 color: transparent !important;
             }
-            
-            thead th {
-                background-color: white !important;
-                color: #000000 !important;
-                font-weight: bold !important;
-                font-size: 11px !important; 
+            /* Hide select arrow */
+            select {
+                background-image: none !important;
             }
-
-            /* Override tailwind utility classes for print */
-            .print\:text-\[9px\] { font-size: 10px !important; }
-            .print\:text-\[8px\] { font-size: 10px !important; }
-            .print\:h-\[17px\] { height: 19px !important; }
-            .print\:leading-none { line-height: 1.1 !important; }
-            
-            /* Remove old fixed widths from JSX classes */
-            .print\:w-\[110px\] { width: auto !important; max-width: none !important; }
-            .print\:w-24 { width: auto !important; }
-            .print\:w-20 { width: auto !important; }
-            .print\:w-28 { width: auto !important; }
-            .print\:w-12 { width: auto !important; }
-            .print\:w-14 { width: auto !important; }
-            .print\:w-16 { width: auto !important; }
         }
       `}</style>
 
@@ -830,19 +806,18 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
             </div>
 
             {/* Print Header (Visible only in print) */}
-            <div className="hidden print:block mb-1">
-                 <div className="flex justify-between items-end pb-1 mb-1 border-b border-black">
+            <div className="hidden print:block mb-2">
+                 <div className="flex justify-between items-end pb-2 mb-2 border-b-2 border-slate-800">
                      <div>
-                         <h1 className="text-lg font-bold text-black uppercase tracking-tight leading-none">Planilla de Reparto</h1>
-                         <div className="flex items-center gap-4 mt-1">
-                             <div className="flex items-center gap-1">
-                                 <span className="font-bold text-black text-xs">ZONA:</span>
-                                 <span className="text-base font-bold text-black uppercase leading-none">{zoneName}</span>
+                         <h1 className="text-xl font-bold text-slate-800 uppercase tracking-tight leading-none">Planilla de Reparto</h1>
+                         <div className="flex items-center gap-4 mt-2">
+                             <div className="flex items-center gap-2 bg-slate-100 px-2 py-1 rounded">
+                                 <span className="font-bold text-slate-500 text-xs">ZONA:</span>
+                                 <span className="text-base font-bold text-slate-800 uppercase leading-none">{zoneName}</span>
                              </div>
-                             <div className="w-px h-3 bg-black"></div>
-                             <div className="flex items-center gap-1">
-                                 <span className="font-bold text-black text-xs">FECHA:</span>
-                                 <span className="text-base font-bold text-black leading-none">
+                             <div className="flex items-center gap-2 bg-slate-100 px-2 py-1 rounded">
+                                 <span className="font-bold text-slate-500 text-xs">FECHA:</span>
+                                 <span className="text-base font-bold text-slate-800 leading-none">
                                      {(() => {
                                         const [y, m, d] = currentDate.split('-').map(Number);
                                         const dateObj = new Date(y, m - 1, d);
@@ -853,23 +828,23 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                          </div>
                      </div>
                      <div className="text-right">
-                         <div className="text-xs font-bold text-black uppercase">Avícola Alpina</div>
+                         <div className="text-sm font-bold text-slate-400 uppercase tracking-widest">Avícola Alpina</div>
                      </div>
                  </div>
                  
-                 {/* Metadata Section (Compact) */}
-                 <div className="flex gap-4 mb-2 text-xs">
-                     <div className="flex items-center gap-1">
-                         <span className="font-bold text-black uppercase">Cargado:</span>
-                         <span className="font-mono font-bold text-black">{formatDecimal(metadata.loadedChicken)} kg</span>
+                 {/* Metadata Section (Compact & Colored like Screen) */}
+                 <div className="flex gap-4 mb-3 text-xs">
+                     <div className="flex items-center gap-2 bg-white border border-slate-200 px-2 py-1 rounded">
+                         <span className="font-bold text-slate-500 uppercase">Cargado:</span>
+                         <span className="font-mono font-bold text-slate-700">{formatDecimal(metadata.loadedChicken)} kg</span>
                      </div>
-                     <div className="flex items-center gap-1">
-                         <span className="font-bold text-black uppercase">Devolución:</span>
-                         <span className="font-mono font-bold text-black">{formatDecimal(metadata.returnedChicken)} kg</span>
+                     <div className="flex items-center gap-2 bg-white border border-slate-200 px-2 py-1 rounded">
+                         <span className="font-bold text-slate-500 uppercase">Devolución:</span>
+                         <span className="font-mono font-bold text-slate-700">{formatDecimal(metadata.returnedChicken)} kg</span>
                      </div>
-                     <div className="flex items-center gap-1">
-                         <span className="font-bold text-black uppercase">Merma:</span>
-                         <span className="font-mono font-bold text-black">{formatDecimal(shrinkage)} kg</span>
+                     <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-2 py-1 rounded">
+                         <span className="font-bold text-slate-500 uppercase">Merma:</span>
+                         <span className={`font-mono font-bold ${shrinkage > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>{formatDecimal(shrinkage)} kg</span>
                      </div>
                  </div>
             </div>
@@ -906,86 +881,82 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
             </div>
 
             {/* Main Table */}
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden print:shadow-none print:border-none print:rounded-none print:overflow-visible">
-                <div className="overflow-x-auto print:overflow-visible">
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
-                            <tr className="bg-slate-50 border-b border-slate-200 print:bg-white print:border-black">
-                                <th className="px-2 py-1 text-left text-base print:text-[8px] print:py-0 font-bold text-slate-600 print:text-black uppercase tracking-wider border-r border-slate-200 print:border-black">Cliente</th>
-                                <th className="px-2 py-1 text-left text-base print:text-[8px] print:py-0 font-bold text-slate-600 print:text-black uppercase tracking-wider w-36 print:w-24 border-r border-slate-200 print:border-black">Articulo</th>
-                                <th className="px-2 py-1 text-right text-base print:text-[8px] print:py-0 font-bold text-slate-600 print:text-black uppercase tracking-wider w-20 print:w-12 border-r border-slate-200 print:border-black">Kg</th>
-                                <th className="px-2 py-1 text-right text-base print:text-[8px] print:py-0 font-bold text-slate-600 print:text-black uppercase tracking-wider w-24 print:w-14 border-r border-slate-200 print:border-black">Precio</th>
-                                <th className="px-2 py-1 text-right text-base print:text-[8px] print:py-0 font-bold text-slate-600 print:text-black uppercase tracking-wider w-28 print:w-16 border-r border-slate-200 print:border-black">Subtotal</th>
-                                <th className="px-2 py-1 text-right text-base print:text-[8px] print:py-0 font-bold text-slate-600 print:text-black uppercase tracking-wider w-28 print:w-16 border-r border-slate-200 print:border-black whitespace-nowrap">Saldo Ant</th>
-                                <th className="px-2 py-1 text-right text-base print:text-[8px] print:py-0 font-bold text-emerald-600 print:text-black uppercase tracking-wider w-28 print:w-16 border-r border-slate-200 print:border-black">Entrega</th>
-                                <th className="px-2 py-1 text-right text-base print:text-[8px] print:py-0 font-bold text-slate-600 print:text-black uppercase tracking-wider w-28 print:w-16">Saldo</th>
+                            <tr className="bg-slate-50 border-b border-slate-200">
+                                <th className="px-2 py-1 text-left text-base font-bold text-slate-600 uppercase tracking-wider border-r border-slate-200">Cliente</th>
+                                <th className="px-2 py-1 text-left text-base font-bold text-slate-600 uppercase tracking-wider w-36 border-r border-slate-200">Articulo</th>
+                                <th className="px-2 py-1 text-right text-base font-bold text-slate-600 uppercase tracking-wider w-20 border-r border-slate-200">Kg</th>
+                                <th className="px-2 py-1 text-right text-base font-bold text-slate-600 uppercase tracking-wider w-24 border-r border-slate-200">Precio</th>
+                                <th className="px-2 py-1 text-right text-base font-bold text-slate-600 uppercase tracking-wider w-28 border-r border-slate-200">Subtotal</th>
+                                <th className="px-2 py-1 text-right text-base font-bold text-slate-600 uppercase tracking-wider w-28 border-r border-slate-200 whitespace-nowrap">Saldo Ant</th>
+                                <th className="px-2 py-1 text-right text-base font-bold text-emerald-600 uppercase tracking-wider w-28 border-r border-slate-200">Entrega</th>
+                                <th className="px-2 py-1 text-right text-base font-bold text-slate-600 uppercase tracking-wider w-28">Saldo</th>
                                 <th className="px-2 py-1 w-10 print:hidden"></th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100 print:divide-slate-300">
+                        <tbody className="divide-y divide-slate-100">
                             {rows.map((row, index) => {
                                 const subtotal = (row.weight || 0) * (row.price || 0);
                                 const balance = subtotal + (row.prevBalance || 0) - (row.payment || 0);
                                 const isAlternate = index % 2 === 1;
                                 
-                                // Transaction is empty if NO numeric/product data is present.
-                                // Client name presence does NOT count as transaction data for shading purposes.
-                                const isTransactionEmpty = !row.product && (!row.weight || row.weight === 0) && (!row.price || row.price === 0) && (!row.prevBalance || row.prevBalance === 0) && (!row.payment || row.payment === 0);
-
                                 return (
-                                    <tr key={row.id} className={`hover:bg-slate-50 print:hover:bg-transparent group ${isAlternate ? 'print:bg-transparent' : ''} ${isTransactionEmpty ? 'print-shaded' : ''}`}>
-                                        <td className="border-r border-slate-100 print:border-black h-11 print:h-[17px]">
+                                    <tr key={row.id} className={`hover:bg-slate-50 group ${isAlternate ? 'bg-slate-50/50' : ''}`}>
+                                        <td className="border-r border-slate-100 h-11">
                                             <TextInput 
                                                 value={row.client} 
                                                 onChange={(v) => handleRowChange(row.id, 'client', v)} 
-                                                className="font-bold text-slate-800 text-base print:text-[9px] print:text-black print:leading-none"
+                                                className="font-bold text-slate-800 text-base"
                                             />
                                         </td>
-                                        <td className="border-r border-slate-100 print:border-black h-11 print:h-[17px]">
+                                        <td className="border-r border-slate-100 h-11">
                                             <ProductSelect 
                                                 value={row.product} 
                                                 onChange={(v) => handleRowChange(row.id, 'product', v)} 
-                                                className="text-base text-slate-700 font-medium print:text-[9px] print:text-black print:leading-none"
+                                                className="text-base text-slate-700 font-medium"
                                             />
                                         </td>
-                                        <td className="border-r border-slate-100 print:border-black h-11 print:h-[17px]">
+                                        <td className="border-r border-slate-100 h-11">
                                             <NumericInput 
                                                 value={row.weight} 
                                                 onChange={(v) => handleRowChange(row.id, 'weight', v)} 
-                                                className="text-slate-700 text-right font-mono text-base font-medium print:text-[9px] print:text-black print:leading-none"
+                                                className="text-slate-700 text-right font-mono text-base font-medium"
                                             />
                                         </td>
-                                        <td className="border-r border-slate-100 print:border-black h-11 print:h-[17px]">
+                                        <td className="border-r border-slate-100 h-11">
                                             <NumericInput 
                                                 value={row.price} 
                                                 onChange={(v) => handleRowChange(row.id, 'price', v)} 
-                                                className="text-slate-700 text-right font-mono text-base font-medium print:text-[9px] print:text-black print:leading-none"
+                                                className="text-slate-700 text-right font-mono text-base font-medium"
                                                 isCurrency
                                             />
                                         </td>
-                                        <td className="border-r border-slate-100 print:border-black h-11 print:h-[17px] px-2 text-right">
-                                            <span className="text-base font-mono text-slate-600 print:text-[9px] print:text-black print:leading-none">
+                                        <td className="border-r border-slate-100 h-11 px-2 text-right">
+                                            <span className="text-base font-mono text-slate-600">
                                                 {subtotal > 0 ? formatCurrency(subtotal) : '-'}
                                             </span>
                                         </td>
-                                        <td className="border-r border-slate-100 print:border-black h-11 print:h-[17px]">
+                                        <td className="border-r border-slate-100 h-11">
                                              <NumericInput 
                                                 value={row.prevBalance} 
                                                 onChange={(v) => handleRowChange(row.id, 'prevBalance', v)} 
-                                                className="text-slate-600 text-right font-mono text-base font-medium print:text-[9px] print:text-black print:leading-none"
+                                                className="text-slate-600 text-right font-mono text-base font-medium"
                                                 isCurrency
                                             />
                                         </td>
-                                        <td className="border-r border-slate-100 print:border-black h-11 print:h-[17px] bg-emerald-50/30 print:bg-transparent">
+                                        <td className="border-r border-slate-100 h-11 bg-emerald-50/30">
                                              <NumericInput 
                                                 value={row.payment} 
                                                 onChange={(v) => handleRowChange(row.id, 'payment', v)} 
-                                                className="text-emerald-700 print:text-black font-bold text-right font-mono text-base print:text-[9px] print:leading-none"
+                                                className="text-emerald-700 font-bold text-right font-mono text-base"
                                                 isCurrency
                                             />
                                         </td>
-                                        <td className="h-11 print:h-[17px] px-2 text-right print:border print:border-black">
-                                            <span className={`text-base font-mono font-bold print:text-[9px] print:text-black print:leading-none ${balance > 0 ? 'text-rose-600 print:text-black' : 'text-slate-500'}`}>
+                                        <td className="h-11 px-2 text-right">
+                                            <span className={`text-base font-mono font-bold ${balance > 0 ? 'text-rose-600' : 'text-slate-500'}`}>
                                                 {balance !== 0 ? formatCurrency(balance) : '-'}
                                             </span>
                                         </td>
@@ -1002,26 +973,25 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                             })}
                             
                             {/* Footer Totals Row */}
-                            <tr className="border-t-2 border-slate-400 print:border-black">
-                                {/* REMOVED "TOTALES" TEXT */}
-                                <td colSpan={4} className="px-2 py-2 print:py-[1px] text-right font-bold text-slate-700 border-r border-slate-300 bg-slate-100 print:bg-white uppercase tracking-wider text-base print:text-[9px] print:text-black print:border-black"></td>
+                            <tr className="border-t-2 border-slate-400">
+                                <td colSpan={4} className="px-2 py-2 text-right font-bold text-slate-700 border-r border-slate-300 bg-slate-100 uppercase tracking-wider text-base"></td>
                                 
-                                <td className="px-2 py-2 print:py-[1px] text-right font-bold text-slate-800 border-r border-slate-300 bg-slate-50 print:bg-white text-base print:text-[9px] print:text-black print:border-black">{formatCurrency(totalSold)}</td>
-                                <td className="px-2 py-2 print:py-[1px] text-right font-bold text-slate-800 border-r border-slate-300 bg-slate-50 print:bg-white text-base print:text-[9px] print:text-black print:border-black">
+                                <td className="px-2 py-2 text-right font-bold text-slate-800 border-r border-slate-300 bg-slate-50 text-base">{formatCurrency(totalSold)}</td>
+                                <td className="px-2 py-2 text-right font-bold text-slate-800 border-r border-slate-300 bg-slate-50 text-base">
                                     <div className="flex items-center justify-end gap-1">
-                                        <span className="text-[8px] font-normal text-slate-500 print:text-black uppercase hidden print:block whitespace-nowrap">Σ Ant</span>
+                                        <span className="text-[8px] font-normal text-slate-500 uppercase hidden print:block whitespace-nowrap">Σ Ant</span>
                                         <span>{formatCurrency(totalPrevBalance)}</span>
                                     </div>
                                 </td>
-                                <td className="px-2 py-2 print:py-[1px] text-right font-bold text-emerald-700 print:text-black border-r border-slate-300 bg-emerald-50 print:bg-white text-base print:text-[9px] print:border-black">
+                                <td className="px-2 py-2 text-right font-bold text-emerald-700 border-r border-slate-300 bg-emerald-50 text-base">
                                     <div className="flex items-center justify-end gap-1">
-                                        <span className="text-[8px] font-normal text-slate-500 print:text-black uppercase hidden print:block whitespace-nowrap">Σ Ent</span>
+                                        <span className="text-[8px] font-normal text-slate-500 uppercase hidden print:block whitespace-nowrap">Σ Ent</span>
                                         <span>{formatCurrency(totalPayment)}</span>
                                     </div>
                                 </td>
-                                <td className="px-2 py-2 print:py-[1px] text-right font-bold text-slate-900 bg-slate-50 print:bg-white text-base print:text-[9px] print:text-black print:border-black">
+                                <td className="px-2 py-2 text-right font-bold text-slate-900 bg-slate-50 text-base">
                                     <div className="flex items-center justify-end gap-1">
-                                        <span className="text-[8px] font-normal text-slate-500 print:text-black uppercase hidden print:block whitespace-nowrap">Σ Saldo</span>
+                                        <span className="text-[8px] font-normal text-slate-500 uppercase hidden print:block whitespace-nowrap">Σ Saldo</span>
                                         <span>{formatCurrency(finalBalance)}</span>
                                     </div>
                                 </td>
@@ -1046,12 +1016,12 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
             <div className="mt-8 print:mt-1 flex flex-col md:flex-row gap-8 print:gap-4 break-inside-avoid">
                 
                 {/* Expenses Table (Screen & Print adapted) */}
-                <div className="flex-1 print:hidden">
+                <div className="flex-1">
                     <div className="flex justify-between items-center mb-2">
                          <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
                             <Receipt size={16} /> Gastos
                          </h3>
-                         <button onClick={addExpense} className="text-xs flex items-center gap-1 bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded border border-slate-300 transition-colors text-black">
+                         <button onClick={addExpense} className="text-xs flex items-center gap-1 bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded border border-slate-300 transition-colors text-black print:hidden">
                              <Plus size={12} /> Agregar
                          </button>
                     </div>
@@ -1062,7 +1032,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                                 <tr className="bg-slate-100 border-b border-slate-300">
                                     <th className="px-2 py-1 text-left text-sm font-semibold text-slate-600 uppercase border-r border-slate-300">Descripción</th>
                                     <th className="px-2 py-1 text-right text-sm font-semibold text-slate-600 uppercase w-24">Monto</th>
-                                    <th className="w-8"></th>
+                                    <th className="w-8 print:hidden"></th>
                                 </tr>
                              </thead>
                              <tbody className="divide-y divide-slate-100">
@@ -1084,7 +1054,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                                                 isCurrency
                                              />
                                          </td>
-                                         <td className="text-center">
+                                         <td className="text-center print:hidden">
                                              <button onClick={() => removeExpense(exp.id)} className="text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100">
                                                  <Trash2 size={12} />
                                              </button>
@@ -1094,7 +1064,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                                  {expenses.length === 0 && (
                                      <tr>
                                          <td colSpan={2} className="px-2 py-4 text-center text-slate-400 text-sm italic">Sin gastos</td>
-                                         <td></td>
+                                         <td className="print:hidden"></td>
                                      </tr>
                                  )}
                              </tbody>
@@ -1102,66 +1072,35 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                                  <tr>
                                      <td className="px-2 py-1 text-right text-sm font-bold text-slate-600 border-r border-slate-300">TOTAL</td>
                                      <td className="px-2 py-1 text-right text-sm font-bold text-rose-600 font-mono">{formatCurrency(totalExpenses)}</td>
-                                     <td></td>
+                                     <td className="print:hidden"></td>
                                  </tr>
                              </tfoot>
                         </table>
                     </div>
                 </div>
 
-                {/* Print-only Footer: Expenses & Summary */}
-                <div className="hidden print:flex flex-row gap-4 w-full text-[9px]">
-                    {/* Expenses Table */}
-                    <div className="flex-1">
-                        <div className="font-bold mb-1">GASTOS</div>
-                        <table className="w-full border-collapse border border-black">
-                            <tbody>
-                                {expenses.map(e => (
-                                    <tr key={e.id}>
-                                        <td className="border border-black px-1">{e.description}</td>
-                                        <td className="border border-black px-1 text-right w-16">{formatCurrency(e.amount)}</td>
-                                    </tr>
-                                ))}
-                                <tr>
-                                    <td className="border border-black px-1 font-bold text-right">TOTAL GASTOS</td>
-                                    <td className="border border-black px-1 font-bold text-right">{formatCurrency(totalExpenses)}</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    {/* Final Summary Table */}
-                    <div className="w-48">
-                        <div className="font-bold mb-1">RESUMEN</div>
-                        <table className="w-full border-collapse border border-black">
-                            <tbody>
-                                <tr>
-                                    <td className="border border-black px-1">Total Vendido</td>
-                                    <td className="border border-black px-1 text-right">{formatCurrency(totalSold)}</td>
-                                </tr>
-                                <tr>
-                                    <td className="border border-black px-1">Total Entrega</td>
-                                    <td className="border border-black px-1 text-right">{formatCurrency(totalPayment)}</td>
-                                </tr>
-                                <tr>
-                                    <td className="border border-black px-1">Total Gastos</td>
-                                    <td className="border border-black px-1 text-right">{formatCurrency(totalExpenses)}</td>
-                                </tr>
-                                <tr>
-                                    <td className="border border-black px-1 font-bold">EFECTIVO</td>
-                                    <td className="border border-black px-1 font-bold text-right">{formatCurrency(cashBalance)}</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                {/* Screen-only Summary Footer */}
-                <div className="w-full md:w-64 print:hidden">
-                    <div className="bg-slate-50 border border-slate-300 rounded overflow-hidden">
+                {/* Final Summary Table (Printed version of the top cards) */}
+                <div className="w-full md:w-64 print:w-48 break-inside-avoid">
+                    <div className="bg-slate-50 border border-slate-300 rounded overflow-hidden mb-2">
                          <div className="flex justify-between items-center p-3 bg-indigo-50 border-t-2 border-slate-300">
                              <span className="text-sm font-extrabold text-indigo-700 uppercase">EFECTIVO</span>
                              <span className="text-lg font-bold font-mono text-indigo-700">{formatCurrency(cashBalance)}</span>
+                        </div>
+                    </div>
+                    
+                    {/* Extra Print Summary Table for clarity */}
+                    <div className="hidden print:block border border-slate-300 rounded bg-white text-[10px]">
+                        <div className="p-1 border-b border-slate-200 flex justify-between">
+                            <span>Vendido:</span>
+                            <span className="font-bold">{formatCurrency(totalSold)}</span>
+                        </div>
+                        <div className="p-1 border-b border-slate-200 flex justify-between">
+                            <span>Entrega:</span>
+                            <span className="font-bold text-emerald-600">{formatCurrency(totalPayment)}</span>
+                        </div>
+                        <div className="p-1 flex justify-between">
+                            <span>Gastos:</span>
+                            <span className="font-bold text-rose-600">{formatCurrency(totalExpenses)}</span>
                         </div>
                     </div>
                 </div>
