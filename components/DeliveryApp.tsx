@@ -634,6 +634,11 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
             .no-print {
                 display: none !important;
             }
+            /* HIDE ALL BUTTONS IN PRINT */
+            button {
+                display: none !important;
+            }
+            
             /* Reset general backgrounds */
             [class*="bg-"] {
                 background-color: white !important;
@@ -694,10 +699,27 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
             th:nth-child(9) { display: none !important; } /* Hide trash icon column */
             td:nth-child(9) { display: none !important; }
 
-            /* Force text black */
+            /* Force text black and FLATTEN inputs */
             th *, td *, div, span, p, h1, h2, h3, h4, input, select {
                 color: #000000 !important;
                 font-family: Arial, sans-serif !important;
+            }
+            
+            /* Flatten Inputs/Selects for Print to look like text */
+            input, select {
+                border: none !important;
+                background: transparent !important;
+                box-shadow: none !important;
+                appearance: none !important;
+                -webkit-appearance: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                width: 100% !important;
+                text-align: inherit;
+            }
+            /* Hide placeholders in print */
+            ::placeholder {
+                color: transparent !important;
             }
             
             thead th {
