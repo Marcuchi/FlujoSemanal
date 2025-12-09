@@ -628,7 +628,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                 background-color: white !important;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
-                font-family: sans-serif;
+                font-family: Arial, sans-serif !important;
             }
             .no-print {
                 display: none !important;
@@ -641,6 +641,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                 box-shadow: none !important;
                 text-shadow: none !important;
                 overflow: visible !important;
+                font-family: Arial, sans-serif !important;
             }
             /* Table Styling */
             table {
@@ -649,17 +650,17 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                 background-color: white !important;
             }
             tr {
-                height: 17px !important; 
+                height: 22px !important; 
             }
             th, td {
                 border: 1px solid #000 !important;
-                padding: 0px 2px !important;
+                padding: 1px 2px !important;
                 /* Default white background */
                 background-color: white !important;
                 color: black !important;
-                font-size: 9px !important; 
+                font-size: 14px !important; 
                 line-height: 1.1 !important;
-                height: 17px !important; 
+                font-family: Arial, sans-serif !important;
             }
             
             /* -- AGGRESSIVE SHADING FOR EMPTY ROWS -- */
@@ -679,12 +680,30 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
             /* Force text black */
             th *, td *, div, span, p, h1, h2, h3, h4, input, select {
                 color: #000000 !important;
+                font-size: 14px !important;
+                font-family: Arial, sans-serif !important;
             }
+            
             thead th {
                 background-color: white !important;
                 color: #000000 !important;
                 font-weight: bold !important;
-                font-size: 8px !important; 
+                font-size: 14px !important; 
+                font-family: Arial, sans-serif !important;
+            }
+
+            /* Override tailwind utility classes for print */
+            .print\:text-\[9px\] {
+                font-size: 14px !important;
+            }
+            .print\:text-\[8px\] {
+                font-size: 14px !important;
+            }
+            .print\:h-\[17px\] {
+                height: 22px !important;
+            }
+            .print\:leading-none {
+                line-height: 1.2 !important;
             }
         }
       `}</style>
