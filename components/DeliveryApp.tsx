@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Database, ref, onValue, set } from 'firebase/database';
+import { Database, ref, onValue, set, get } from 'firebase/database';
 import { Calendar, Plus, Trash2, MapPin, Calculator, Printer, ChevronDown, History, X, Clock, Receipt, Wallet, Coins, AlertCircle } from 'lucide-react';
 import { DeliveryRow, DeliveryHistoryLog, DeliveryExpense } from '../types';
 import { generateId } from '../utils';
@@ -40,24 +40,37 @@ const RODOLFO_CLIENTS = [
 ];
 
 const GARBINO_CLIENTS = [
-  "Fazzio", "Alejandro", "Andres Nueva", "Machuca", "Bar Ricota", "Bar Torroija", 
-  "Bonina", "Ciacci", "El Pollo Verdulero", "Mafalda", "Luisa", "Gluttony", 
-  "Gonzalo", "Hermanas Dominicas", "Hiper Granja Centro", "Jorge Av. Roca", 
-  "Fede Garbino", "La Aldea", "La Granja", "La Piaina", "La Tradicion", 
-  "Mandarina", "Mariano Cnel Olmedo", "Mario Tozzini", "Martha", "Mauri II Carmelo", 
-  "Mercadito Poeta", "Mirian", "Nahuel Bohedo", "NIC", "Ocaña", "Olmos", 
-  "Pavelaneda", "Pablo Sahar", "Pablo Sol de Mayo", "Paola Rio Segundo", "Petty", 
-  "Quality", "Rodeo", "Salta Bar", "Visionari", "Carmen Cochabamba", "Carmelo", 
-  "H Granja Pech", "Garbino Polleria", "Romina", "San Agustin", "Club de la Carne", 
-  "Vaca Polleria", "Vaca Carniceria", "Nicolas Trejo"
+  "Fazzio",
+  "Machuca",
+  "Fede Garbino",
+  "Mauri- II Carelo",
+  "NIC",
+  "San Agustin",
+  "HG Centro",
+  "Vaca Polleria",
+  "Vaca Carniceria",
+  "Olmos",
+  "Luisa"
 ];
 
 const FLORES_CLIENTS = [
-  "Diego Malagueño", "Lammoglia", "Matias Anizacate", "Antolufe", "Susana", 
-  "Luz", "Ceci Anizacate", "Los Hermanos", "Ricardo", "Melina", 
-  "Omar", "Popollo", "Vale", "Carnes Dante", "Natural Mystic", 
-  "Fernando", "Marcela", "S Roque", "Seba Geiser", "Leo", 
-  "De Todo", "La Boutique"
+  "Diego Malagueño",
+  "Lammoglia",
+  "Antolufe",
+  "Susana",
+  "Los Hermanos",
+  "Ricardo",
+  "Natural Mystic",
+  "Fernando",
+  "Marcela",
+  "Seba Geiser",
+  "Leo",
+  "De Todo",
+  "La Boutique",
+  "Melina",
+  "Vale",
+  "Omar",
+  "Carnes Dante"
 ];
 
 const PRODUCT_CATEGORIES = ['Pollo', 'Pechuga y Muslo'];
@@ -281,6 +294,13 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
       return `${year}-${month}-${day}`;
   };
 
+  const getPreviousDateString = (dateStr: string) => {
+      const [y, m, d] = dateStr.split('-').map(Number);
+      const date = new Date(y, m - 1, d);
+      date.setDate(date.getDate() - 1);
+      return getLocalDateString(date);
+  };
+
   const [currentDate, setCurrentDate] = React.useState(getLocalDateString(new Date()));
   const [rows, setRows] = React.useState<DeliveryRow[]>([]);
   const [expenses, setExpenses] = React.useState<DeliveryExpense[]>([]);
@@ -306,6 +326,86 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
              (!r.payment || r.payment === 0);
   };
 
+  const getDefaultClients = (zone: string) => {
+      const z = zone.toLowerCase();
+      if (z === 'malvinas') return MALVINAS_CLIENTS;
+      if (z === 'rodolfo') return RODOLFO_CLIENTS;
+      if (z === 'garbino') return GARBINO_CLIENTS;
+      if (z === 'flores') return FLORES_CLIENTS;
+      return [];
+  };
+
+  // Helper to init rows (merging defaults with previous day's balances)
+  const initializeRowsWithPreviousData = async (zone: string, currentDayStr: string) => {
+      const defaultNames = getDefaultClients(zone);
+      const prevDateStr = getPreviousDateString(currentDayStr);
+      
+      // Map to store final rows by client name (normalized)
+      const rowsMap = new Map<string, DeliveryRow>();
+
+      // 1. Initialize with Defaults
+      defaultNames.forEach(name => {
+          const normName = name.trim().toLowerCase();
+          rowsMap.set(normName, {
+              id: generateId() + Math.random().toString(36).substring(7),
+              client: name,
+              product: '',
+              weight: 0,
+              price: 0,
+              prevBalance: 0,
+              payment: 0
+          });
+      });
+
+      // 2. Fetch Previous Day Data
+      let prevRows: DeliveryRow[] = [];
+      
+      if (db) {
+          try {
+              const snapshot = await get(ref(db, `deliveries/${zone}/${prevDateStr}`));
+              if (snapshot.exists()) {
+                  prevRows = snapshot.val() as DeliveryRow[];
+              }
+          } catch (e) {
+              console.error("Error fetching prev data", e);
+          }
+      } else {
+          const saved = localStorage.getItem(`deliveries/${zone}/${prevDateStr}`);
+          if (saved) {
+              try { prevRows = JSON.parse(saved); } catch (e) {}
+          }
+      }
+
+      // 3. Process Previous Data for Carry Over
+      if (prevRows.length > 0) {
+          prevRows.forEach(prev => {
+              const prevEndBalance = (prev.weight * prev.price) + prev.prevBalance - prev.payment;
+              const normName = prev.client.trim().toLowerCase();
+
+              // If client exists in default list, update prevBalance
+              if (rowsMap.has(normName)) {
+                  const existing = rowsMap.get(normName)!;
+                  existing.prevBalance = prevEndBalance; // Carry over balance
+              } else {
+                  // If NOT in default list (manually added), ONLY add if they have debt
+                  if (Math.abs(prevEndBalance) > 0.1) { // Tolerance for floats
+                      rowsMap.set(normName, {
+                          id: generateId() + Math.random().toString(36).substring(7),
+                          client: prev.client, // Use Name from prev day
+                          product: '',
+                          weight: 0,
+                          price: 0,
+                          prevBalance: prevEndBalance,
+                          payment: 0
+                      });
+                  }
+              }
+          });
+      }
+
+      return Array.from(rowsMap.values());
+  };
+
   // Load Data
   React.useEffect(() => {
     const dataKey = `deliveries/${zoneName}/${currentDate}`;
@@ -315,76 +415,25 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
     
     setLoading(true);
 
-    const isMalvinas = zoneName.toLowerCase() === 'malvinas';
-    const isRodolfo = zoneName.toLowerCase() === 'rodolfo';
-    const isGarbino = zoneName.toLowerCase() === 'garbino';
-    const isFlores = zoneName.toLowerCase() === 'flores';
-
     if (db) {
       // 1. Data Listener
       const deliveryRef = ref(db, dataKey);
-      const unsubscribeData = onValue(deliveryRef, (snapshot) => {
+      const unsubscribeData = onValue(deliveryRef, async (snapshot) => {
         const val = snapshot.val();
         if (val) {
+           // Data exists for today
            const loadedRows = val as DeliveryRow[];
-           // Filter "ghost" empty rows if not Malvinas, Rodolfo, Garbino or Flores
-           if (!isMalvinas && !isRodolfo && !isGarbino && !isFlores) {
+           const defaults = getDefaultClients(zoneName);
+           // Filter empty rows only if manual input mode (not strict list)
+           if (defaults.length === 0) {
                setRows(loadedRows.filter(r => !isEmptyRow(r)));
            } else {
                setRows(loadedRows);
            }
         } else {
-           if (isMalvinas) {
-               // Init Malvinas
-               const initRows = MALVINAS_CLIENTS.map(name => ({
-                   id: generateId() + Math.random().toString(36).substring(7),
-                   client: name,
-                   product: '',
-                   weight: 0,
-                   price: 0,
-                   prevBalance: 0,
-                   payment: 0
-               }));
-               setRows(initRows);
-           } else if (isRodolfo) {
-               // Init Rodolfo
-               const initRows = RODOLFO_CLIENTS.map(name => ({
-                   id: generateId() + Math.random().toString(36).substring(7),
-                   client: name,
-                   product: '',
-                   weight: 0,
-                   price: 0,
-                   prevBalance: 0,
-                   payment: 0
-               }));
-               setRows(initRows);
-           } else if (isGarbino) {
-               // Init Garbino
-               const initRows = GARBINO_CLIENTS.map(name => ({
-                   id: generateId() + Math.random().toString(36).substring(7),
-                   client: name,
-                   product: '',
-                   weight: 0,
-                   price: 0,
-                   prevBalance: 0,
-                   payment: 0
-               }));
-               setRows(initRows);
-           } else if (isFlores) {
-               // Init Flores
-               const initRows = FLORES_CLIENTS.map(name => ({
-                   id: generateId() + Math.random().toString(36).substring(7),
-                   client: name,
-                   product: '',
-                   weight: 0,
-                   price: 0,
-                   prevBalance: 0,
-                   payment: 0
-               }));
-               setRows(initRows);
-           } else {
-               setRows([]);
-           }
+           // No data for today -> Initialize based on Defaults + Previous Day
+           const initRows = await initializeRowsWithPreviousData(zoneName, currentDate);
+           setRows(initRows);
         }
       });
 
@@ -425,75 +474,33 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
       const loadedHistory = localStorage.getItem(historyKey);
       const loadedMeta = localStorage.getItem(metaKey);
       
-      if (loadedRows) {
-          const parsed = JSON.parse(loadedRows);
-          if (!isMalvinas && !isRodolfo && !isGarbino && !isFlores) {
-               setRows(parsed.filter((r: DeliveryRow) => !isEmptyRow(r)));
-           } else {
-               setRows(parsed);
-           }
-      }
-      else if (isMalvinas) {
-           const initRows = MALVINAS_CLIENTS.map(name => ({
-               id: generateId() + Math.random().toString(36).substring(7),
-               client: name,
-               product: '',
-               weight: 0,
-               price: 0,
-               prevBalance: 0,
-               payment: 0
-           }));
-           setRows(initRows);
-      }
-      else if (isRodolfo) {
-           const initRows = RODOLFO_CLIENTS.map(name => ({
-               id: generateId() + Math.random().toString(36).substring(7),
-               client: name,
-               product: '',
-               weight: 0,
-               price: 0,
-               prevBalance: 0,
-               payment: 0
-           }));
-           setRows(initRows);
-      } 
-      else if (isGarbino) {
-           const initRows = GARBINO_CLIENTS.map(name => ({
-               id: generateId() + Math.random().toString(36).substring(7),
-               client: name,
-               product: '',
-               weight: 0,
-               price: 0,
-               prevBalance: 0,
-               payment: 0
-           }));
-           setRows(initRows);
-      }
-      else if (isFlores) {
-           const initRows = FLORES_CLIENTS.map(name => ({
-               id: generateId() + Math.random().toString(36).substring(7),
-               client: name,
-               product: '',
-               weight: 0,
-               price: 0,
-               prevBalance: 0,
-               payment: 0
-           }));
-           setRows(initRows);
-      } else {
-          setRows([]);
-      }
+      const loadLocal = async () => {
+          if (loadedRows) {
+              const parsed = JSON.parse(loadedRows);
+              const defaults = getDefaultClients(zoneName);
+              if (defaults.length === 0) {
+                   setRows(parsed.filter((r: DeliveryRow) => !isEmptyRow(r)));
+               } else {
+                   setRows(parsed);
+               }
+          } else {
+               // Init Local with Previous Data Logic
+               const initRows = await initializeRowsWithPreviousData(zoneName, currentDate);
+               setRows(initRows);
+          }
 
-      if (loadedExpenses) setExpenses(JSON.parse(loadedExpenses));
-      else setExpenses([]);
+          if (loadedExpenses) setExpenses(JSON.parse(loadedExpenses));
+          else setExpenses([]);
 
-      if (loadedHistory) setHistory(JSON.parse(loadedHistory));
-      else setHistory([]);
-      
-      if (loadedMeta) setMetadata(JSON.parse(loadedMeta));
-      else setMetadata({ loadedChicken: 0, returnedChicken: 0 });
+          if (loadedHistory) setHistory(JSON.parse(loadedHistory));
+          else setHistory([]);
+          
+          if (loadedMeta) setMetadata(JSON.parse(loadedMeta));
+          else setMetadata({ loadedChicken: 0, returnedChicken: 0 });
 
-      setLoading(false);
+          setLoading(false);
+      };
+      loadLocal();
     }
   }, [db, zoneName, currentDate]);
 
