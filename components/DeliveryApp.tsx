@@ -15,15 +15,42 @@ interface DeliveryAppProps {
 const MALVINAS_CLIENTS = [
   "Agustin Malvinas", "Ale Malvinas", "Arriola", "Marcos Castro", "Baldo", 
   "Carlos Patria", "Pedro Cochabamba", "Carnes Walter", "Carolina Anacreonte", 
-  "Cecilia V. Retiro", "Centro Comunitario", "Chavez", "Claudia Yapeyu", 
-  "Dominguez", "Doña Chocha", "El Indio", "Fabrica de Pastas", "Nestor", 
-  "Fany", "Carnes Cordoba", "Gabriel Cofico", "Gabriel Nuevo", "Baldo", 
-  "Inspector Vaca", "Lorena Gaboto", "Polleria El Angel", "Macarena", 
-  "Marcela", "Marcos Suipacha", "Matias Chino", "Matias Lopez", "Sol", 
-  "La Boqueria", "Oviedo", "Polaco", "Polleria Serapio", "Pablo Sahar", 
-  "Ric Cervantes", "Colon B", "Colon Federico", "Eric Colon", "Carlos Eco", 
-  "Baigorri 133", "Carnes Emanuel", "La Rivieri", "Cipruz", "Jorge Salcedo", 
-  "Ruta 20", "Ochetti Paola", "Don segundo", "El Dani"
+  "Cecilia V. Retiro", "Centro Comunitario", "Chavez", "Dominguez", "Doña Chocha", 
+  "El Indio", "Fabrica de Pastas", "Nestor", "Fany", "Carnes Cordoba", 
+  "Gabriel Cofico", "Gabriel Nuevo", "Baldo", "Inspector Vaca", "Lorena Gaboto", 
+  "Polleria El Angel", "Macarena", "Marcela", "Marcos Suipacha", "Matias Chino", 
+  "Matias Lopez", "Sol", "La Boqueria", "Oviedo", "Polaco", "Polleria Serapio", 
+  "Pablo Sahar", "Ric Cervantes", "Colon B", "Colon Federico", "Eric Colon", 
+  "Carlos Eco", "Baigorri 133", "Carnes Emanuel", "La Rivieri", "Cipruz", 
+  "Jorge Salcedo", "Ruta 20", "Ochetti Paola", "Don segundo", "El Dani"
+];
+
+const RODOLFO_CLIENTS = [
+  "La Vida", "Fratelli", "Bodereau", "Greco", "Zoe", "Policiales", 
+  "Polleria Quilpo", "Giacon", "Panadero", "Kevin", "Tomas", "Ale", 
+  "Zipoli", "Bustos", "H Granja JB Justo", "Jaquelin", "Mafequin", 
+  "Medrano", "Nilda", "Fragueiro"
+];
+
+const GARBINO_CLIENTS = [
+  "Fazzio", "Alejandro", "Andres Nueva", "Machuca", "Bar Ricota", "Bar Torroija", 
+  "Bonina", "Ciacci", "El Pollo Verdulero", "Mafalda", "Luisa", "Gluttony", 
+  "Gonzalo", "Hermanas Dominicas", "Hiper Granja Centro", "Jorge Av. Roca", 
+  "Fede Garbino", "La Aldea", "La Granja", "La Piaina", "La Tradicion", 
+  "Mandarina", "Mariano Cnel Olmedo", "Mario Tozzini", "Martha", "Mauri II Carmelo", 
+  "Mercadito Poeta", "Mirian", "Nahuel Bohedo", "NIC", "Ocaña", "Olmos", 
+  "Pavelaneda", "Pablo Sahar", "Pablo Sol de Mayo", "Paola Rio Segundo", "Petty", 
+  "Quality", "Rodeo", "Salta Bar", "Visionari", "Carmen Cochabamba", "Carmelo", 
+  "H Granja Pech", "Garbino Polleria", "Romina", "San Agustin", "Club de la Carne", 
+  "Vaca Polleria", "Vaca Carniceria", "Nicolas Trejo"
+];
+
+const FLORES_CLIENTS = [
+  "Diego Malagueño", "Lammoglia", "Matias Anizacate", "Antolufe", "Susana", 
+  "Luz", "Ceci Anizacate", "Los Hermanos", "Ricardo", "Melina", 
+  "Omar", "Popollo", "Vale", "Carnes Dante", "Natural Mystic", 
+  "Fernando", "Marcela", "S Roque", "Seba Geiser", "Leo", 
+  "De Todo", "La Boutique"
 ];
 
 const PRODUCT_CATEGORIES = ['Pollo', 'Pechuga y Muslo'];
@@ -281,6 +308,11 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
     
     setLoading(true);
 
+    const isMalvinas = zoneName.toLowerCase() === 'malvinas';
+    const isRodolfo = zoneName.toLowerCase() === 'rodolfo';
+    const isGarbino = zoneName.toLowerCase() === 'garbino';
+    const isFlores = zoneName.toLowerCase() === 'flores';
+
     if (db) {
       // 1. Data Listener
       const deliveryRef = ref(db, dataKey);
@@ -288,16 +320,52 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
         const val = snapshot.val();
         if (val) {
            const loadedRows = val as DeliveryRow[];
-           // Filter "ghost" empty rows if not Malvinas
-           if (zoneName.toLowerCase() !== 'malvinas') {
+           // Filter "ghost" empty rows if not Malvinas, Rodolfo, Garbino or Flores
+           if (!isMalvinas && !isRodolfo && !isGarbino && !isFlores) {
                setRows(loadedRows.filter(r => !isEmptyRow(r)));
            } else {
                setRows(loadedRows);
            }
         } else {
-           if (zoneName.toLowerCase() === 'malvinas') {
-               // Only actual clients, no extra empty rows
+           if (isMalvinas) {
+               // Init Malvinas
                const initRows = MALVINAS_CLIENTS.map(name => ({
+                   id: generateId() + Math.random().toString(36).substring(7),
+                   client: name,
+                   product: '',
+                   weight: 0,
+                   price: 0,
+                   prevBalance: 0,
+                   payment: 0
+               }));
+               setRows(initRows);
+           } else if (isRodolfo) {
+               // Init Rodolfo
+               const initRows = RODOLFO_CLIENTS.map(name => ({
+                   id: generateId() + Math.random().toString(36).substring(7),
+                   client: name,
+                   product: '',
+                   weight: 0,
+                   price: 0,
+                   prevBalance: 0,
+                   payment: 0
+               }));
+               setRows(initRows);
+           } else if (isGarbino) {
+               // Init Garbino
+               const initRows = GARBINO_CLIENTS.map(name => ({
+                   id: generateId() + Math.random().toString(36).substring(7),
+                   client: name,
+                   product: '',
+                   weight: 0,
+                   price: 0,
+                   prevBalance: 0,
+                   payment: 0
+               }));
+               setRows(initRows);
+           } else if (isFlores) {
+               // Init Flores
+               const initRows = FLORES_CLIENTS.map(name => ({
                    id: generateId() + Math.random().toString(36).substring(7),
                    client: name,
                    product: '',
@@ -352,14 +420,50 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
       
       if (loadedRows) {
           const parsed = JSON.parse(loadedRows);
-          if (zoneName.toLowerCase() !== 'malvinas') {
+          if (!isMalvinas && !isRodolfo && !isGarbino && !isFlores) {
                setRows(parsed.filter((r: DeliveryRow) => !isEmptyRow(r)));
            } else {
                setRows(parsed);
            }
       }
-      else if (zoneName.toLowerCase() === 'malvinas') {
+      else if (isMalvinas) {
            const initRows = MALVINAS_CLIENTS.map(name => ({
+               id: generateId() + Math.random().toString(36).substring(7),
+               client: name,
+               product: '',
+               weight: 0,
+               price: 0,
+               prevBalance: 0,
+               payment: 0
+           }));
+           setRows(initRows);
+      }
+      else if (isRodolfo) {
+           const initRows = RODOLFO_CLIENTS.map(name => ({
+               id: generateId() + Math.random().toString(36).substring(7),
+               client: name,
+               product: '',
+               weight: 0,
+               price: 0,
+               prevBalance: 0,
+               payment: 0
+           }));
+           setRows(initRows);
+      } 
+      else if (isGarbino) {
+           const initRows = GARBINO_CLIENTS.map(name => ({
+               id: generateId() + Math.random().toString(36).substring(7),
+               client: name,
+               product: '',
+               weight: 0,
+               price: 0,
+               prevBalance: 0,
+               payment: 0
+           }));
+           setRows(initRows);
+      }
+      else if (isFlores) {
+           const initRows = FLORES_CLIENTS.map(name => ({
                id: generateId() + Math.random().toString(36).substring(7),
                client: name,
                product: '',
@@ -545,7 +649,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                 background-color: white !important;
             }
             tr {
-                height: 18px !important; 
+                height: 17px !important; 
             }
             th, td {
                 border: 1px solid #000 !important;
@@ -553,9 +657,9 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                 /* Default white background */
                 background-color: white !important;
                 color: black !important;
-                font-size: 10px !important; 
+                font-size: 9px !important; 
                 line-height: 1.1 !important;
-                height: 18px !important; 
+                height: 17px !important; 
             }
             
             /* -- AGGRESSIVE SHADING FOR EMPTY ROWS -- */
@@ -580,7 +684,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                 background-color: white !important;
                 color: #000000 !important;
                 font-weight: bold !important;
-                font-size: 9px !important; 
+                font-size: 8px !important; 
             }
         }
       `}</style>
@@ -750,14 +854,14 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-slate-50 border-b border-slate-200 print:bg-white print:border-black">
-                                <th className="px-2 py-1 text-left text-base print:text-[9px] print:py-0 font-bold text-slate-600 print:text-black uppercase tracking-wider border-r border-slate-200 print:border-black">Cliente</th>
-                                <th className="px-2 py-1 text-left text-base print:text-[9px] print:py-0 font-bold text-slate-600 print:text-black uppercase tracking-wider w-36 print:w-24 border-r border-slate-200 print:border-black">Articulo</th>
-                                <th className="px-2 py-1 text-right text-base print:text-[9px] print:py-0 font-bold text-slate-600 print:text-black uppercase tracking-wider w-20 print:w-12 border-r border-slate-200 print:border-black">Kg</th>
-                                <th className="px-2 py-1 text-right text-base print:text-[9px] print:py-0 font-bold text-slate-600 print:text-black uppercase tracking-wider w-24 print:w-14 border-r border-slate-200 print:border-black">Precio</th>
-                                <th className="px-2 py-1 text-right text-base print:text-[9px] print:py-0 font-bold text-slate-600 print:text-black uppercase tracking-wider w-28 print:w-16 border-r border-slate-200 print:border-black">Subtotal</th>
-                                <th className="px-2 py-1 text-right text-base print:text-[9px] print:py-0 font-bold text-slate-600 print:text-black uppercase tracking-wider w-28 print:w-16 border-r border-slate-200 print:border-black whitespace-nowrap">Saldo Ant</th>
-                                <th className="px-2 py-1 text-right text-base print:text-[9px] print:py-0 font-bold text-emerald-600 print:text-black uppercase tracking-wider w-28 print:w-16 border-r border-slate-200 print:border-black">Entrega</th>
-                                <th className="px-2 py-1 text-right text-base print:text-[9px] print:py-0 font-bold text-slate-600 print:text-black uppercase tracking-wider w-28 print:w-16">Saldo</th>
+                                <th className="px-2 py-1 text-left text-base print:text-[8px] print:py-0 font-bold text-slate-600 print:text-black uppercase tracking-wider border-r border-slate-200 print:border-black">Cliente</th>
+                                <th className="px-2 py-1 text-left text-base print:text-[8px] print:py-0 font-bold text-slate-600 print:text-black uppercase tracking-wider w-36 print:w-24 border-r border-slate-200 print:border-black">Articulo</th>
+                                <th className="px-2 py-1 text-right text-base print:text-[8px] print:py-0 font-bold text-slate-600 print:text-black uppercase tracking-wider w-20 print:w-12 border-r border-slate-200 print:border-black">Kg</th>
+                                <th className="px-2 py-1 text-right text-base print:text-[8px] print:py-0 font-bold text-slate-600 print:text-black uppercase tracking-wider w-24 print:w-14 border-r border-slate-200 print:border-black">Precio</th>
+                                <th className="px-2 py-1 text-right text-base print:text-[8px] print:py-0 font-bold text-slate-600 print:text-black uppercase tracking-wider w-28 print:w-16 border-r border-slate-200 print:border-black">Subtotal</th>
+                                <th className="px-2 py-1 text-right text-base print:text-[8px] print:py-0 font-bold text-slate-600 print:text-black uppercase tracking-wider w-28 print:w-16 border-r border-slate-200 print:border-black whitespace-nowrap">Saldo Ant</th>
+                                <th className="px-2 py-1 text-right text-base print:text-[8px] print:py-0 font-bold text-emerald-600 print:text-black uppercase tracking-wider w-28 print:w-16 border-r border-slate-200 print:border-black">Entrega</th>
+                                <th className="px-2 py-1 text-right text-base print:text-[8px] print:py-0 font-bold text-slate-600 print:text-black uppercase tracking-wider w-28 print:w-16">Saldo</th>
                                 <th className="px-2 py-1 w-10 print:hidden"></th>
                             </tr>
                         </thead>
@@ -773,58 +877,58 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
 
                                 return (
                                     <tr key={row.id} className={`hover:bg-slate-50 print:hover:bg-transparent group ${isAlternate ? 'print:bg-transparent' : ''} ${isTransactionEmpty ? 'print-shaded' : ''}`}>
-                                        <td className="border-r border-slate-100 print:border-black h-11 print:h-[18px]">
+                                        <td className="border-r border-slate-100 print:border-black h-11 print:h-[17px]">
                                             <TextInput 
                                                 value={row.client} 
                                                 onChange={(v) => handleRowChange(row.id, 'client', v)} 
-                                                className="font-bold text-slate-800 text-base print:text-[10px] print:text-black print:leading-none"
+                                                className="font-bold text-slate-800 text-base print:text-[9px] print:text-black print:leading-none"
                                             />
                                         </td>
-                                        <td className="border-r border-slate-100 print:border-black h-11 print:h-[18px]">
+                                        <td className="border-r border-slate-100 print:border-black h-11 print:h-[17px]">
                                             <ProductSelect 
                                                 value={row.product} 
                                                 onChange={(v) => handleRowChange(row.id, 'product', v)} 
-                                                className="text-base text-slate-700 font-medium print:text-[10px] print:text-black print:leading-none"
+                                                className="text-base text-slate-700 font-medium print:text-[9px] print:text-black print:leading-none"
                                             />
                                         </td>
-                                        <td className="border-r border-slate-100 print:border-black h-11 print:h-[18px]">
+                                        <td className="border-r border-slate-100 print:border-black h-11 print:h-[17px]">
                                             <NumericInput 
                                                 value={row.weight} 
                                                 onChange={(v) => handleRowChange(row.id, 'weight', v)} 
-                                                className="text-slate-700 text-right font-mono text-base font-medium print:text-[10px] print:text-black print:leading-none"
+                                                className="text-slate-700 text-right font-mono text-base font-medium print:text-[9px] print:text-black print:leading-none"
                                             />
                                         </td>
-                                        <td className="border-r border-slate-100 print:border-black h-11 print:h-[18px]">
+                                        <td className="border-r border-slate-100 print:border-black h-11 print:h-[17px]">
                                             <NumericInput 
                                                 value={row.price} 
                                                 onChange={(v) => handleRowChange(row.id, 'price', v)} 
-                                                className="text-slate-700 text-right font-mono text-base font-medium print:text-[10px] print:text-black print:leading-none"
+                                                className="text-slate-700 text-right font-mono text-base font-medium print:text-[9px] print:text-black print:leading-none"
                                                 isCurrency
                                             />
                                         </td>
-                                        <td className="border-r border-slate-100 print:border-black h-11 print:h-[18px] px-2 text-right">
-                                            <span className="text-base font-mono text-slate-600 print:text-[10px] print:text-black print:leading-none">
+                                        <td className="border-r border-slate-100 print:border-black h-11 print:h-[17px] px-2 text-right">
+                                            <span className="text-base font-mono text-slate-600 print:text-[9px] print:text-black print:leading-none">
                                                 {subtotal > 0 ? formatCurrency(subtotal) : '-'}
                                             </span>
                                         </td>
-                                        <td className="border-r border-slate-100 print:border-black h-11 print:h-[18px]">
+                                        <td className="border-r border-slate-100 print:border-black h-11 print:h-[17px]">
                                              <NumericInput 
                                                 value={row.prevBalance} 
                                                 onChange={(v) => handleRowChange(row.id, 'prevBalance', v)} 
-                                                className="text-slate-600 text-right font-mono text-base font-medium print:text-[10px] print:text-black print:leading-none"
+                                                className="text-slate-600 text-right font-mono text-base font-medium print:text-[9px] print:text-black print:leading-none"
                                                 isCurrency
                                             />
                                         </td>
-                                        <td className="border-r border-slate-100 print:border-black h-11 print:h-[18px] bg-emerald-50/30 print:bg-transparent">
+                                        <td className="border-r border-slate-100 print:border-black h-11 print:h-[17px] bg-emerald-50/30 print:bg-transparent">
                                              <NumericInput 
                                                 value={row.payment} 
                                                 onChange={(v) => handleRowChange(row.id, 'payment', v)} 
-                                                className="text-emerald-700 print:text-black font-bold text-right font-mono text-base print:text-[10px] print:leading-none"
+                                                className="text-emerald-700 print:text-black font-bold text-right font-mono text-base print:text-[9px] print:leading-none"
                                                 isCurrency
                                             />
                                         </td>
-                                        <td className="h-11 print:h-[18px] px-2 text-right print:border print:border-black">
-                                            <span className={`text-base font-mono font-bold print:text-[10px] print:text-black print:leading-none ${balance > 0 ? 'text-rose-600 print:text-black' : 'text-slate-500'}`}>
+                                        <td className="h-11 print:h-[17px] px-2 text-right print:border print:border-black">
+                                            <span className={`text-base font-mono font-bold print:text-[9px] print:text-black print:leading-none ${balance > 0 ? 'text-rose-600 print:text-black' : 'text-slate-500'}`}>
                                                 {balance !== 0 ? formatCurrency(balance) : '-'}
                                             </span>
                                         </td>
@@ -842,11 +946,11 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                             
                             {/* Footer Totals Row */}
                             <tr className="border-t-2 border-slate-400 print:border-black">
-                                <td colSpan={4} className="px-2 py-2 print:py-[1px] text-right font-bold text-slate-700 border-r border-slate-300 bg-slate-100 print:bg-white uppercase tracking-wider text-base print:text-[10px] print:text-black print:border-black">TOTALES</td>
-                                <td className="px-2 py-2 print:py-[1px] text-right font-bold text-slate-800 border-r border-slate-300 bg-slate-50 print:bg-white text-base print:text-[10px] print:text-black print:border-black">{formatCurrency(totalSold)}</td>
-                                <td className="px-2 py-2 print:py-[1px] text-right font-bold text-slate-800 border-r border-slate-300 bg-slate-50 print:bg-white text-base print:text-[10px] print:text-black print:border-black">-</td>
-                                <td className="px-2 py-2 print:py-[1px] text-right font-bold text-emerald-700 print:text-black border-r border-slate-300 bg-emerald-50 print:bg-white text-base print:text-[10px] print:border-black">{formatCurrency(totalPayment)}</td>
-                                <td className="px-2 py-2 print:py-[1px] text-right font-bold text-slate-900 bg-slate-50 print:bg-white text-base print:text-[10px] print:text-black print:border-black">{formatCurrency(finalBalance)}</td>
+                                <td colSpan={4} className="px-2 py-2 print:py-[1px] text-right font-bold text-slate-700 border-r border-slate-300 bg-slate-100 print:bg-white uppercase tracking-wider text-base print:text-[9px] print:text-black print:border-black">TOTALES</td>
+                                <td className="px-2 py-2 print:py-[1px] text-right font-bold text-slate-800 border-r border-slate-300 bg-slate-50 print:bg-white text-base print:text-[9px] print:text-black print:border-black">{formatCurrency(totalSold)}</td>
+                                <td className="px-2 py-2 print:py-[1px] text-right font-bold text-slate-800 border-r border-slate-300 bg-slate-50 print:bg-white text-base print:text-[9px] print:text-black print:border-black">-</td>
+                                <td className="px-2 py-2 print:py-[1px] text-right font-bold text-emerald-700 print:text-black border-r border-slate-300 bg-emerald-50 print:bg-white text-base print:text-[9px] print:border-black">{formatCurrency(totalPayment)}</td>
+                                <td className="px-2 py-2 print:py-[1px] text-right font-bold text-slate-900 bg-slate-50 print:bg-white text-base print:text-[9px] print:text-black print:border-black">{formatCurrency(finalBalance)}</td>
                                 <td className="print:hidden"></td>
                             </tr>
                         </tbody>
@@ -932,7 +1036,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                 </div>
 
                 {/* Print-only Footer: Expenses & Summary */}
-                <div className="hidden print:flex flex-row gap-4 w-full text-[10px]">
+                <div className="hidden print:flex flex-row gap-4 w-full text-[9px]">
                     {/* Expenses Table */}
                     <div className="flex-1">
                         <div className="font-bold mb-1">GASTOS</div>
