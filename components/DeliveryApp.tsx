@@ -807,7 +807,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
 
             {/* Print Header (Visible only in print) - Restored Style */}
             <div className="hidden print:block mb-4">
-                 <div className="flex justify-between items-center pb-4 border-b-2 border-slate-800">
+                 <div className="flex justify-between items-center pb-4 border-b-2 border-slate-900">
                      <div className="flex items-center gap-4">
                          <div className="flex flex-col">
                              <h1 className="text-2xl font-bold text-slate-900 uppercase tracking-tight">Planilla de Reparto</h1>
@@ -816,12 +816,12 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                      </div>
                      
                      <div className="flex gap-4">
-                         <div className="flex items-center gap-2 bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-lg">
-                             <MapPin size={18} className="text-slate-800" />
+                         <div className="flex items-center gap-2 bg-slate-100 border border-slate-300 px-3 py-1.5 rounded-lg">
+                             <MapPin size={18} className="text-slate-900" />
                              <span className="text-lg font-bold text-slate-900 uppercase">{zoneName}</span>
                          </div>
-                         <div className="flex items-center gap-2 bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-lg">
-                             <Calendar size={18} className="text-slate-800" />
+                         <div className="flex items-center gap-2 bg-slate-100 border border-slate-300 px-3 py-1.5 rounded-lg">
+                             <Calendar size={18} className="text-slate-900" />
                              <span className="text-lg font-bold text-slate-900">
                                  {(() => {
                                     const [y, m, d] = currentDate.split('-').map(Number);
@@ -836,15 +836,15 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                  {/* Metadata Section */}
                  <div className="flex gap-6 mt-4 text-sm">
                      <div className="flex items-center gap-2">
-                         <span className="font-bold text-slate-500 uppercase">Cargado:</span>
-                         <span className="font-mono font-bold text-slate-900 bg-slate-100 px-2 rounded border border-slate-200">{formatDecimal(metadata.loadedChicken)} kg</span>
+                         <span className="font-bold text-slate-600 uppercase">Cargado:</span>
+                         <span className="font-mono font-bold text-slate-900 bg-slate-100 px-2 rounded border border-slate-300">{formatDecimal(metadata.loadedChicken)} kg</span>
                      </div>
                      <div className="flex items-center gap-2">
-                         <span className="font-bold text-slate-500 uppercase">Devolución:</span>
-                         <span className="font-mono font-bold text-slate-900 bg-slate-100 px-2 rounded border border-slate-200">{formatDecimal(metadata.returnedChicken)} kg</span>
+                         <span className="font-bold text-slate-600 uppercase">Devolución:</span>
+                         <span className="font-mono font-bold text-slate-900 bg-slate-100 px-2 rounded border border-slate-300">{formatDecimal(metadata.returnedChicken)} kg</span>
                      </div>
                      <div className="flex items-center gap-2">
-                         <span className="font-bold text-slate-500 uppercase">Merma:</span>
+                         <span className="font-bold text-slate-600 uppercase">Merma:</span>
                          <span className={`font-mono font-bold px-2 rounded border ${shrinkage > 0 ? 'bg-rose-50 text-rose-600 border-rose-200' : 'bg-emerald-50 text-emerald-600 border-emerald-200'}`}>
                             {formatDecimal(shrinkage)} kg
                          </span>
@@ -1015,45 +1015,45 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                 </button>
             </div>
 
-            {/* Expenses Section & Print Summary */}
-            <div className="mt-8 print:mt-6 flex flex-col md:flex-row gap-8 print:gap-4 break-inside-avoid">
+            {/* Expenses Section & Print Summary - REDESIGNED */}
+            <div className="mt-8 print:mt-6 flex flex-col md:flex-row gap-8 print:gap-12 items-start break-inside-avoid">
                 
-                {/* Expenses Table (Screen & Print adapted) */}
-                <div className="flex-1">
-                    <div className="flex justify-between items-center mb-2">
-                         <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
-                            <Receipt size={16} /> Gastos
+                {/* Expenses Table */}
+                <div className="flex-1 w-full">
+                    <div className="flex justify-between items-center mb-3 border-b-2 border-slate-200 print:border-black pb-2">
+                         <h3 className="text-sm font-black text-slate-700 print:text-black uppercase tracking-wider flex items-center gap-2">
+                            <Receipt size={16} className="print:hidden" /> Gastos
                          </h3>
                          <button onClick={addExpense} className="text-xs flex items-center gap-1 bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded border border-slate-300 transition-colors text-black print:hidden">
                              <Plus size={12} /> Agregar
                          </button>
                     </div>
                     
-                    <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+                    <div className="bg-white rounded-lg border border-slate-200 print:border-black overflow-hidden">
                         <table className="w-full text-left border-collapse">
                              <thead>
-                                <tr className="bg-slate-100 border-b border-slate-300">
-                                    <th className="px-2 py-1 text-left text-sm font-semibold text-slate-600 uppercase border-r border-slate-300">Descripción</th>
-                                    <th className="px-2 py-1 text-right text-sm font-semibold text-slate-600 uppercase w-24">Monto</th>
+                                <tr className="bg-slate-50 print:bg-gray-100 border-b border-slate-300 print:border-black">
+                                    <th className="px-3 py-2 text-left text-xs font-bold text-slate-600 print:text-black uppercase border-r border-slate-300 print:border-black">Descripción</th>
+                                    <th className="px-3 py-2 text-right text-xs font-bold text-slate-600 print:text-black uppercase w-28">Monto</th>
                                     <th className="w-8 print:hidden"></th>
                                 </tr>
                              </thead>
-                             <tbody className="divide-y divide-slate-100">
+                             <tbody className="divide-y divide-slate-100 print:divide-black/20">
                                  {expenses.map((exp, index) => (
                                      <tr key={exp.id} className="group hover:bg-slate-50">
-                                         <td className="border-r border-slate-100 h-10">
+                                         <td className="border-r border-slate-100 print:border-black/20 h-9">
                                              <TextInput 
                                                 value={exp.description}
                                                 onChange={(v) => updateExpense(exp.id, 'description', v)}
-                                                placeholder="Descripción del gasto"
-                                                className="text-base text-slate-700"
+                                                placeholder="Descripción..."
+                                                className="text-sm text-slate-800 font-medium"
                                              />
                                          </td>
-                                         <td className="h-10 bg-rose-50/30">
+                                         <td className="h-9 bg-rose-50/30 print:bg-transparent">
                                              <NumericInput 
                                                 value={exp.amount}
                                                 onChange={(v) => updateExpense(exp.id, 'amount', v)}
-                                                className="text-right text-base font-mono text-rose-600 font-medium"
+                                                className="text-right text-sm font-mono text-rose-700 print:text-black font-bold"
                                                 isCurrency
                                              />
                                          </td>
@@ -1066,15 +1066,15 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                                  ))}
                                  {expenses.length === 0 && (
                                      <tr>
-                                         <td colSpan={2} className="px-2 py-4 text-center text-slate-400 text-sm italic">Sin gastos</td>
+                                         <td colSpan={2} className="px-3 py-6 text-center text-slate-400 print:text-black text-xs italic">Sin gastos registrados</td>
                                          <td className="print:hidden"></td>
                                      </tr>
                                  )}
                              </tbody>
-                             <tfoot className="border-t border-slate-300 bg-slate-50">
+                             <tfoot className="border-t border-slate-300 print:border-black bg-slate-50 print:bg-gray-100">
                                  <tr>
-                                     <td className="px-2 py-1 text-right text-sm font-bold text-slate-600 border-r border-slate-300">TOTAL</td>
-                                     <td className="px-2 py-1 text-right text-sm font-bold text-rose-600 font-mono">{formatCurrency(totalExpenses)}</td>
+                                     <td className="px-3 py-2 text-right text-xs font-bold text-slate-600 print:text-black border-r border-slate-300 print:border-black uppercase">Total Gastos</td>
+                                     <td className="px-3 py-2 text-right text-sm font-black text-rose-600 print:text-black font-mono">{formatCurrency(totalExpenses)}</td>
                                      <td className="print:hidden"></td>
                                  </tr>
                              </tfoot>
@@ -1082,13 +1082,15 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                     </div>
                 </div>
 
-                {/* Final Summary Table (Printed version of the top cards) */}
-                <div className="w-full md:w-64 print:w-56 break-inside-avoid flex flex-col justify-start print:items-end">
-                    <div className="bg-slate-50 border-2 border-slate-300 print:border-slate-800 rounded print:rounded-xl overflow-hidden mb-2 w-full">
-                         <div className="flex print:flex-col justify-between items-center p-3 bg-indigo-50 print:bg-slate-100 border-t-2 border-slate-300 print:border-slate-800">
-                             <span className="text-sm font-extrabold text-indigo-700 print:text-slate-600 uppercase print:tracking-widest">Saldo Efectivo</span>
-                             <span className="text-lg font-bold font-mono text-indigo-700 print:text-slate-900 print:text-2xl print:font-black">{formatCurrency(cashBalance)}</span>
-                        </div>
+                {/* Final Summary Table (Printed version) */}
+                <div className="w-full md:w-auto print:w-64 flex-none break-inside-avoid">
+                    <div className="border-4 border-slate-200 print:border-black rounded-xl print:rounded-none p-6 flex flex-col gap-2 bg-white text-center shadow-sm print:shadow-none">
+                         <span className="text-xs font-bold text-slate-500 print:text-black uppercase tracking-widest border-b border-slate-100 print:border-black pb-2 mb-1">
+                            Saldo Efectivo
+                         </span>
+                         <span className="text-3xl font-black font-mono text-indigo-600 print:text-black">
+                            {formatCurrency(cashBalance)}
+                         </span>
                     </div>
                 </div>
 
