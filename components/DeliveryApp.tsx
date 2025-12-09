@@ -311,22 +311,12 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
   const [showDatePicker, setShowDatePicker] = React.useState(false);
   const [showHistoryModal, setShowHistoryModal] = React.useState(false);
 
-  // Layout Logic
-  // Screen: Use larger comfortable sizes.
-  // Print: Use compact sizes to fit on one page.
+  // Revert to Standard Layout Logic
   const isCompact = ['garbino', 'flores'].includes(zoneName.toLowerCase());
-  
-  // Height: Taller on screen (h-12), compact on print (h-9 or h-6 for compact zones)
-  const rowHeight = isCompact ? 'h-8 print:h-6' : 'h-12 print:h-9';
-  
-  // Font: Larger on screen (text-lg), readable but smaller on print (text-sm or text-xs)
-  const fontSize = isCompact ? 'text-sm print:text-xs' : 'text-lg print:text-base';
-  
-  // Header: Adaptive
-  const headerFontSize = isCompact ? 'text-xs sm:text-sm print:text-[10px]' : 'text-base print:text-sm';
-  
-  // Padding:
-  const cellPadding = isCompact ? 'px-1 print:px-0.5' : 'px-2 print:px-1';
+  const rowHeight = isCompact ? 'h-8' : 'h-10'; // Standard comfortable height
+  const fontSize = 'text-sm';
+  const headerFontSize = 'text-xs sm:text-sm';
+  const cellPadding = 'px-2';
 
   React.useEffect(() => {
     if (isRestricted) {
@@ -652,24 +642,6 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
 
   return (
     <div className="h-full flex flex-col bg-slate-100 overflow-hidden print:overflow-visible print:h-auto print:bg-white">
-      {/* Estilos de Impresión Optimizados para una sola hoja */}
-      <style>{`
-        @media print {
-          @page {
-            margin: 5mm;
-            size: auto;
-          }
-          body {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-          /* Ocultar scrollbars */
-          ::-webkit-scrollbar {
-            display: none;
-          }
-        }
-      `}</style>
-
       {/* Top Bar - Controls */}
       <div className="flex-none bg-white border-b border-slate-200 p-4 flex flex-col md:flex-row items-center justify-between gap-4 print:hidden z-10">
          <div className="flex items-center gap-4">
