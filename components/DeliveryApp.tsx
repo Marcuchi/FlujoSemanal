@@ -967,23 +967,25 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                             
                             {/* Footer Totals Row */}
                             <tr className="border-t-2 border-slate-400 print:border-black">
-                                <td colSpan={4} className="px-2 py-2 print:py-[1px] text-right font-bold text-slate-700 border-r border-slate-300 bg-slate-100 print:bg-white uppercase tracking-wider text-base print:text-[9px] print:text-black print:border-black">TOTALES</td>
+                                {/* REMOVED "TOTALES" TEXT */}
+                                <td colSpan={4} className="px-2 py-2 print:py-[1px] text-right font-bold text-slate-700 border-r border-slate-300 bg-slate-100 print:bg-white uppercase tracking-wider text-base print:text-[9px] print:text-black print:border-black"></td>
+                                
                                 <td className="px-2 py-2 print:py-[1px] text-right font-bold text-slate-800 border-r border-slate-300 bg-slate-50 print:bg-white text-base print:text-[9px] print:text-black print:border-black">{formatCurrency(totalSold)}</td>
                                 <td className="px-2 py-2 print:py-[1px] text-right font-bold text-slate-800 border-r border-slate-300 bg-slate-50 print:bg-white text-base print:text-[9px] print:text-black print:border-black">
-                                    <div className="flex flex-col items-end leading-none">
-                                        <span className="text-[8px] font-normal text-slate-500 print:text-black uppercase hidden print:block">Σ Saldo Ant</span>
+                                    <div className="flex items-center justify-end gap-1">
+                                        <span className="text-[8px] font-normal text-slate-500 print:text-black uppercase hidden print:block whitespace-nowrap">Σ Ant</span>
                                         <span>{formatCurrency(totalPrevBalance)}</span>
                                     </div>
                                 </td>
                                 <td className="px-2 py-2 print:py-[1px] text-right font-bold text-emerald-700 print:text-black border-r border-slate-300 bg-emerald-50 print:bg-white text-base print:text-[9px] print:border-black">
-                                    <div className="flex flex-col items-end leading-none">
-                                        <span className="text-[8px] font-normal text-slate-500 print:text-black uppercase hidden print:block">Σ Entrega</span>
+                                    <div className="flex items-center justify-end gap-1">
+                                        <span className="text-[8px] font-normal text-slate-500 print:text-black uppercase hidden print:block whitespace-nowrap">Σ Ent</span>
                                         <span>{formatCurrency(totalPayment)}</span>
                                     </div>
                                 </td>
                                 <td className="px-2 py-2 print:py-[1px] text-right font-bold text-slate-900 bg-slate-50 print:bg-white text-base print:text-[9px] print:text-black print:border-black">
-                                    <div className="flex flex-col items-end leading-none">
-                                        <span className="text-[8px] font-normal text-slate-500 print:text-black uppercase hidden print:block">Σ Saldo</span>
+                                    <div className="flex items-center justify-end gap-1">
+                                        <span className="text-[8px] font-normal text-slate-500 print:text-black uppercase hidden print:block whitespace-nowrap">Σ Saldo</span>
                                         <span>{formatCurrency(finalBalance)}</span>
                                     </div>
                                 </td>
