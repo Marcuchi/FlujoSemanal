@@ -542,10 +542,12 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
   };
 
   const logHistory = (description: string) => {
+    const userLabel = isRestricted ? 'Reparto' : 'General';
     const newLog: DeliveryHistoryLog = {
         id: generateId(),
         timestamp: new Date().toISOString(),
-        description
+        description,
+        user: userLabel
     };
     const newHistory = [newLog, ...history];
     const historyKey = `deliveries_history/${zoneName}/${currentDate}`;
@@ -1073,9 +1075,20 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                           <div className="space-y-3">
                               {history.map(log => (
                                   <div key={log.id} className="text-sm border-l-2 border-slate-300 pl-3 py-1">
-                                      <div className="flex items-center gap-2 text-xs text-slate-400 mb-1">
-                                          <Clock size={10} />
-                                          {new Date(log.timestamp).toLocaleString('es-AR')}
+                                      <div className="flex justify-between items-start mb-1">
+                                          <div className="flex items-center gap-2 text-xs text-slate-400">
+                                              <Clock size={10} />
+                                              {new Date(log.timestamp).toLocaleString('es-AR')}
+                                          </div>
+                                          {log.user && (
+                                              <span className={`text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded border ${
+                                                  log.user === 'General' 
+                                                  ? 'bg-indigo-50 text-indigo-600 border-indigo-200' 
+                                                  : 'bg-orange-50 text-orange-600 border-orange-200'
+                                              }`}>
+                                                  {log.user}
+                                              </span>
+                                          )}
                                       </div>
                                       <p className="text-slate-700">{log.description}</p>
                                   </div>

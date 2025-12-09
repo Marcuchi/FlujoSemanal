@@ -1,5 +1,4 @@
 
-
 export interface Transaction {
   id: string;
   title: string;
@@ -53,6 +52,7 @@ export interface DeliveryHistoryLog {
   id: string;
   timestamp: string;
   description: string;
+  user?: string; // 'General' | 'Reparto'
 }
 
 export type DeliveryDayData = Record<string, DeliveryRow[]>; // Key is date YYYY-MM-DD
