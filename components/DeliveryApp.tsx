@@ -25,10 +25,18 @@ const MALVINAS_CLIENTS = [
 ];
 
 const RODOLFO_CLIENTS = [
-  "La Vida", "Fratelli", "Bodereau", "Greco", "Zoe", "Policiales", 
-  "Polleria Quilpo", "Giacon", "Panadero", "Kevin", "Tomas", "Ale", 
-  "Zipoli", "Bustos", "H Granja JB Justo", "Jaquelin", "Mafequin", 
-  "Medrano", "Nilda", "Fragueiro"
+  "La Vida",
+  "Fratelli",
+  "Bodereau",
+  "Zoe",
+  "Kevin",
+  "Tomas",
+  "Ale",
+  "Zipoli",
+  "HP Juan B Justo",
+  "Mafequin",
+  "Medrano",
+  "Nilda"
 ];
 
 const GARBINO_CLIENTS = [
@@ -801,9 +809,14 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                                 const subtotal = (row.weight || 0) * (row.price || 0);
                                 const balance = subtotal + (row.prevBalance || 0) - (row.payment || 0);
                                 const isAlternate = index % 2 === 1;
+                                const isMissingProduct = !row.product || row.product === '';
                                 
                                 return (
-                                    <tr key={row.id} className={`hover:bg-slate-50 group ${isAlternate ? 'bg-slate-50/50' : ''}`}>
+                                    <tr 
+                                        key={row.id} 
+                                        className={`hover:bg-slate-50 group ${isAlternate ? 'bg-slate-50/50' : ''} ${isMissingProduct ? 'print:bg-gray-300' : ''}`}
+                                        style={{ printColorAdjust: 'exact', WebkitPrintColorAdjust: 'exact' }}
+                                    >
                                         <td className="border-r border-slate-100 h-11">
                                             <TextInput 
                                                 value={row.client} 
