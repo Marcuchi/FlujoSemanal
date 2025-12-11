@@ -151,7 +151,7 @@ const NumericInput = ({
 
     if (disabled) {
         return (
-            <div className={`w-full h-full flex items-center px-1 ${alignment} ${className} opacity-70 cursor-not-allowed`}>
+            <div className={`w-full h-full flex items-center px-1 ${alignment} ${className} opacity-70 cursor-not-allowed print:px-0`}>
                 {displayValue}
             </div>
         );
@@ -323,12 +323,12 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
   const [showHistoryModal, setShowHistoryModal] = React.useState(false);
   const [showWeeklyReport, setShowWeeklyReport] = React.useState(false);
 
-  // Revert to Standard Layout Logic
+  // Layout Logic - Adjusted for Print
   const isCompact = ['garbino', 'flores'].includes(zoneName.toLowerCase());
-  const rowHeight = isCompact ? 'h-8' : 'h-10'; // Standard comfortable height
-  const fontSize = 'text-sm';
-  const headerFontSize = 'text-xs sm:text-sm';
-  const cellPadding = 'px-2';
+  const rowHeight = isCompact ? 'h-8' : 'h-10'; 
+  const fontSize = 'text-sm print:text-xs';
+  const headerFontSize = 'text-xs sm:text-sm print:text-[10px]';
+  const cellPadding = 'px-2 print:px-0.5';
 
   React.useEffect(() => {
     if (isRestricted) {
@@ -680,6 +680,20 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
 
   return (
     <div className="h-full flex flex-col bg-slate-100 overflow-hidden print:overflow-visible print:h-auto print:bg-white">
+      {/* Print Styles Injection */}
+      <style>{`
+        @media print {
+          @page {
+            margin: 0.5cm;
+            size: auto;
+          }
+          body {
+            margin: 0;
+            padding: 0;
+          }
+        }
+      `}</style>
+
       {/* Top Bar - Controls */}
       <div className="flex-none bg-white border-b border-slate-200 p-4 flex flex-col md:flex-row items-center justify-between gap-4 print:hidden z-10">
          <div className="flex items-center gap-4">
@@ -866,13 +880,13 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                         <thead>
                             <tr className="bg-slate-50 border-b border-slate-200 print:border-slate-300">
                                 <th className={`${cellPadding} py-1 text-left ${headerFontSize} font-bold text-slate-600 uppercase tracking-wider border-r border-slate-200`}>Cliente</th>
-                                <th className={`${cellPadding} py-1 text-left ${headerFontSize} font-bold text-slate-600 uppercase tracking-wider w-36 border-r border-slate-200`}>Articulo</th>
-                                <th className={`${cellPadding} py-1 text-right ${headerFontSize} font-bold text-slate-600 uppercase tracking-wider w-20 border-r border-slate-200`}>Kg</th>
-                                <th className={`${cellPadding} py-1 text-right ${headerFontSize} font-bold text-slate-600 uppercase tracking-wider w-24 border-r border-slate-200`}>Precio</th>
-                                <th className={`${cellPadding} py-1 text-right ${headerFontSize} font-bold text-slate-600 uppercase tracking-wider w-28 border-r border-slate-200`}>Subtotal</th>
-                                <th className={`${cellPadding} py-1 text-right ${headerFontSize} font-bold text-slate-600 uppercase tracking-wider w-28 border-r border-slate-200 whitespace-nowrap`}>Saldo Ant</th>
-                                <th className={`${cellPadding} py-1 text-right ${headerFontSize} font-bold text-emerald-600 uppercase tracking-wider w-28 border-r border-slate-200`}>Entrega</th>
-                                <th className={`${cellPadding} py-1 text-right ${headerFontSize} font-bold text-slate-600 uppercase tracking-wider w-28`}>Saldo</th>
+                                <th className={`${cellPadding} py-1 text-left ${headerFontSize} font-bold text-slate-600 uppercase tracking-wider w-36 print:w-24 border-r border-slate-200`}>Articulo</th>
+                                <th className={`${cellPadding} py-1 text-right ${headerFontSize} font-bold text-slate-600 uppercase tracking-wider w-20 print:w-14 border-r border-slate-200`}>Kg</th>
+                                <th className={`${cellPadding} py-1 text-right ${headerFontSize} font-bold text-slate-600 uppercase tracking-wider w-24 print:w-16 border-r border-slate-200`}>Precio</th>
+                                <th className={`${cellPadding} py-1 text-right ${headerFontSize} font-bold text-slate-600 uppercase tracking-wider w-28 print:w-20 border-r border-slate-200`}>Subtotal</th>
+                                <th className={`${cellPadding} py-1 text-right ${headerFontSize} font-bold text-slate-600 uppercase tracking-wider w-28 print:w-20 border-r border-slate-200 whitespace-nowrap`}>Saldo Ant</th>
+                                <th className={`${cellPadding} py-1 text-right ${headerFontSize} font-bold text-emerald-600 uppercase tracking-wider w-28 print:w-20 border-r border-slate-200`}>Entrega</th>
+                                <th className={`${cellPadding} py-1 text-right ${headerFontSize} font-bold text-slate-600 uppercase tracking-wider w-28 print:w-20`}>Saldo</th>
                                 <th className="px-2 py-1 w-10 print:hidden"></th>
                             </tr>
                         </thead>
