@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Database, ref, onValue, set, get } from 'firebase/database';
+import { Database, ref, onValue, set, get, query, orderByKey, limitToLast, endAt } from 'firebase/database';
 import { Calendar, Plus, Trash2, MapPin, Calculator, Printer, ChevronDown, History, X, Clock, Receipt, Wallet, Coins, AlertCircle } from 'lucide-react';
 import { DeliveryRow, DeliveryHistoryLog, DeliveryExpense } from '../types';
 import { generateId } from '../utils';
@@ -304,13 +304,6 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
       return `${year}-${month}-${day}`;
   };
 
-  const getPreviousDateString = (dateStr: string) => {
-      const [y, m, d] = dateStr.split('-').map(Number);
-      const date = new Date(y, m - 1, d);
-      date.setDate(date.getDate() - 1);
-      return getLocalDateString(date);
-  };
-
   const [currentDate, setCurrentDate] = React.useState(getLocalDateString(new Date()));
   const [rows, setRows] = React.useState<DeliveryRow[]>([]);
   const [expenses, setExpenses] = React.useState<DeliveryExpense[]>([]);
@@ -355,7 +348,12 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
   // Helper to init rows (merging defaults with previous day's balances)
   const initializeRowsWithPreviousData = async (zone: string, currentDayStr: string) => {
       const defaultNames = getDefaultClients(zone);
-      const prevDateStr = getPreviousDateString(currentDayStr);
+      
+      // Calculate limit date (yesterday)
+      const [y, m, d] = currentDayStr.split('-').map(Number);
+      const date = new Date(y, m - 1, d);
+      date.setDate(date.getDate() - 1);
+      const yesterdayStr = getLocalDateString(date);
       
       // Map to store final rows by client name (normalized)
       const rowsMap = new Map<string, DeliveryRow>();
@@ -374,22 +372,52 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
           });
       });
 
-      // 2. Fetch Previous Day Data
+      // 2. Fetch Last Known Data (searching backwards from yesterday)
       let prevRows: DeliveryRow[] = [];
+      let lastDateFound = "";
       
       if (db) {
           try {
-              const snapshot = await get(ref(db, `deliveries/${zone}/${prevDateStr}`));
+              // Query: Order by key (date), end at yesterday, get last 1.
+              // This finds the most recent date <= yesterday.
+              const deliveriesRef = ref(db, `deliveries/${zone}`);
+              const q = query(deliveriesRef, orderByKey(), endAt(yesterdayStr), limitToLast(1));
+              
+              const snapshot = await get(q);
               if (snapshot.exists()) {
-                  prevRows = snapshot.val() as DeliveryRow[];
+                  const val = snapshot.val();
+                  // val is { "YYYY-MM-DD": [ ...rows... ] }
+                  lastDateFound = Object.keys(val)[0];
+                  prevRows = val[lastDateFound] as DeliveryRow[];
               }
           } catch (e) {
               console.error("Error fetching prev data", e);
           }
       } else {
-          const saved = localStorage.getItem(`deliveries/${zone}/${prevDateStr}`);
-          if (saved) {
-              try { prevRows = JSON.parse(saved); } catch (e) {}
+          // Local Storage Fallback
+          // We look for keys starting with `deliveries/${zone}/`
+          // We need to find the largest date key <= yesterdayStr
+          const prefix = `deliveries/${zone}/`;
+          let maxDate = "";
+          
+          for (let i = 0; i < localStorage.length; i++) {
+              const key = localStorage.key(i);
+              if (key && key.startsWith(prefix)) {
+                  const datePart = key.replace(prefix, "");
+                  // Simple string comparison works for ISO dates YYYY-MM-DD
+                  if (datePart <= yesterdayStr) {
+                      if (maxDate === "" || datePart > maxDate) {
+                          maxDate = datePart;
+                      }
+                  }
+              }
+          }
+          
+          if (maxDate) {
+              const saved = localStorage.getItem(`${prefix}${maxDate}`);
+              if (saved) {
+                  try { prevRows = JSON.parse(saved); } catch (e) {}
+              }
           }
       }
 
@@ -406,14 +434,16 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
               } else {
                   // If NOT in default list (manually added), ONLY add if they have debt
                   if (Math.abs(prevEndBalance) > 0.1) { // Tolerance for floats
+                      // Create new row for debt carry-over
                       rowsMap.set(normName, {
                           id: generateId() + Math.random().toString(36).substring(7),
-                          client: prev.client, // Use Name from prev day
+                          client: prev.client, 
                           product: '',
                           weight: 0,
                           price: 0,
                           prevBalance: prevEndBalance,
-                          payment: 0
+                          payment: 0,
+                          isNew: true // Mark as added from history (treat as new/manual row)
                       });
                   }
               }
@@ -448,7 +478,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                setRows(loadedRows);
            }
         } else {
-           // No data for today -> Initialize based on Defaults + Previous Day
+           // No data for today -> Initialize based on Defaults + Last Available Data (Global history)
            const initRows = await initializeRowsWithPreviousData(zoneName, currentDate);
            setRows(initRows);
         }
