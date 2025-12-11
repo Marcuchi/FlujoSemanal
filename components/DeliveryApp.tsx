@@ -151,7 +151,7 @@ const NumericInput = ({
 
     if (disabled) {
         return (
-            <div className={`w-full h-full flex items-center px-1 ${alignment} ${className}`}>
+            <div className={`w-full h-full flex items-center px-1 ${alignment} ${className} opacity-70 cursor-not-allowed`}>
                 {displayValue}
             </div>
         );
@@ -188,12 +188,14 @@ const TextInput = ({
     value, 
     onChange, 
     placeholder = "",
-    className = ""
+    className = "",
+    disabled = false
   }: { 
     value: string, 
     onChange: (val: string) => void,
     placeholder?: string,
-    className?: string
+    className?: string,
+    disabled?: boolean
   }) => {
     const [isEditing, setIsEditing] = React.useState(false);
     const [localValue, setLocalValue] = React.useState(value);
@@ -216,6 +218,14 @@ const TextInput = ({
             e.currentTarget.blur();
         }
     };
+
+    if (disabled) {
+        return (
+            <div className={`w-full h-full flex items-center px-2 ${className} opacity-80 cursor-not-allowed truncate print:px-0`}>
+                {value || <span className="text-slate-300 italic font-normal print:hidden">{placeholder}</span>}
+            </div>
+        );
+    }
 
     if (!isEditing) {
         return (
@@ -566,6 +576,23 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
     const oldRow = rows.find(r => r.id === id);
     if (!oldRow) return;
 
+    // Check if value actually changed before logging
+    if (oldRow[field] !== value) {
+        const fieldLabels: Record<string, string> = {
+            client: 'Cliente',
+            product: 'Articulo',
+            weight: 'Kg',
+            price: 'Precio',
+            prevBalance: 'Saldo Ant',
+            payment: 'Entrega'
+        };
+        const label = fieldLabels[field as string] || field;
+        const clientName = oldRow.client || 'Sin nombre';
+        
+        // Don't log initial empty state setup, only meaningful changes
+        logHistory(`Editado ${clientName}: ${label} de ${oldRow[field]} a ${value}`);
+    }
+
     const newRows = rows.map(row => {
       if (row.id === id) {
         const updated = { ...row, [field]: value };
@@ -586,6 +613,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
       prevBalance: 0,
       payment: 0
     };
+    logHistory("Agregada nueva fila de cliente");
     saveData([...rows, newRow]);
   };
 
@@ -604,16 +632,24 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
           description: '',
           amount: 0
       };
+      logHistory("Agregado nuevo gasto");
       saveExpenses([...expenses, newExp]);
   };
 
   const updateExpense = (id: string, field: keyof DeliveryExpense, value: any) => {
+      const oldExp = expenses.find(e => e.id === id);
+      if (oldExp && oldExp[field] !== value) {
+          const label = field === 'description' ? 'Descripción' : 'Monto';
+          logHistory(`Gasto modificado: ${label} de ${oldExp[field]} a ${value}`);
+      }
       const newExpenses = expenses.map(e => e.id === id ? { ...e, [field]: value } : e);
       saveExpenses(newExpenses);
   };
 
   const removeExpense = (id: string) => {
       if(window.confirm("¿Eliminar gasto?")) {
+          const expToDelete = expenses.find(e => e.id === id);
+          if (expToDelete) logHistory(`Eliminado gasto: ${expToDelete.description || 'Sin descripción'} (${formatCurrency(expToDelete.amount)})`);
           saveExpenses(expenses.filter(e => e.id !== id));
       }
   };
@@ -680,29 +716,36 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
          <div className="flex items-center gap-3">
              
              {!isRestricted && (
-                 <button 
-                    onClick={() => setShowWeeklyReport(true)}
-                    className="p-2 text-indigo-500 hover:bg-indigo-50 rounded-lg transition-colors border border-transparent hover:border-indigo-200"
-                    title="Informe Semanal (Histograma)"
-                 >
-                    <BarChart3 size={20} />
-                 </button>
-             )}
+                 <>
+                    <button 
+                        onClick={() => setShowWeeklyReport(true)}
+                        className="p-2 text-indigo-500 hover:bg-indigo-50 rounded-lg transition-colors border border-transparent hover:border-indigo-200"
+                        title="Informe Semanal (Histograma)"
+                    >
+                        <BarChart3 size={20} />
+                    </button>
 
-             <button 
-                onClick={() => setShowHistoryModal(true)}
-                className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors relative"
-                title="Historial de cambios"
-             >
-                <History size={20} />
-             </button>
-             <button 
-                onClick={handlePrint}
-                className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white hover:bg-slate-700 rounded-lg font-semibold transition-colors shadow-sm"
-             >
-                <Printer size={18} />
-                <span className="hidden sm:inline">Imprimir</span>
-             </button>
+                    <button 
+                        onClick={() => setShowHistoryModal(true)}
+                        className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors relative group"
+                        title="Historial de cambios"
+                    >
+                        <History size={20} />
+                        {history.length > 0 && (
+                            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white shadow-sm ring-2 ring-white group-hover:ring-slate-100 transition-all">
+                                {history.length > 99 ? '99+' : history.length}
+                            </span>
+                        )}
+                    </button>
+                    <button 
+                        onClick={handlePrint}
+                        className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white hover:bg-slate-700 rounded-lg font-semibold transition-colors shadow-sm"
+                    >
+                        <Printer size={18} />
+                        <span className="hidden sm:inline">Imprimir</span>
+                    </button>
+                 </>
+             )}
          </div>
       </div>
 
@@ -839,6 +882,8 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                                 const balance = subtotal + (row.prevBalance || 0) - (row.payment || 0);
                                 const isAlternate = index % 2 === 1;
                                 const isMissingProduct = !row.product || row.product === '';
+                                const defaultClients = getDefaultClients(zoneName);
+                                const isDefaultClient = defaultClients.some(name => name.toLowerCase() === row.client.trim().toLowerCase());
                                 
                                 return (
                                     <tr 
@@ -851,6 +896,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                                                 value={row.client} 
                                                 onChange={(v) => handleRowChange(row.id, 'client', v)} 
                                                 className={`font-bold text-slate-800 ${fontSize}`}
+                                                disabled={isRestricted && isDefaultClient}
                                             />
                                         </td>
                                         <td className={`border-r border-slate-100 print:border-slate-200 ${rowHeight}`}>
@@ -886,6 +932,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                                                 onChange={(v) => handleRowChange(row.id, 'prevBalance', v)} 
                                                 className={`text-slate-600 text-right font-mono ${fontSize} font-medium`}
                                                 isCurrency
+                                                disabled={isRestricted}
                                             />
                                         </td>
                                         <td className={`border-r border-slate-100 print:border-slate-200 ${rowHeight} bg-emerald-50/30`}>
@@ -902,12 +949,14 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                                             </span>
                                         </td>
                                         <td className="print:hidden px-1 text-center">
-                                            <button 
-                                                onClick={() => removeRow(row.id)}
-                                                className="text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all"
-                                            >
-                                                <Trash2 size={16} />
-                                            </button>
+                                            {!isRestricted && (
+                                                <button 
+                                                    onClick={() => removeRow(row.id)}
+                                                    className="text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            )}
                                         </td>
                                     </tr>
                                 );
