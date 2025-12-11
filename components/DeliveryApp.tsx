@@ -1,10 +1,11 @@
 
 import React from 'react';
 import { Database, ref, onValue, set, get, query, orderByKey, limitToLast, endAt } from 'firebase/database';
-import { Calendar, Plus, Trash2, MapPin, Calculator, Printer, ChevronDown, History, X, Clock, Receipt, Wallet, Coins, AlertCircle } from 'lucide-react';
+import { Calendar, Plus, Trash2, MapPin, Calculator, Printer, ChevronDown, History, X, Clock, Receipt, Wallet, Coins, AlertCircle, BarChart3 } from 'lucide-react';
 import { DeliveryRow, DeliveryHistoryLog, DeliveryExpense } from '../types';
 import { generateId } from '../utils';
 import { DayPickerModal } from './DayPickerModal';
+import { DeliveryWeeklyStatsModal } from './DeliveryWeeklyStatsModal';
 
 interface DeliveryAppProps {
   db: Database | null;
@@ -313,6 +314,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
   
   const [showDatePicker, setShowDatePicker] = React.useState(false);
   const [showHistoryModal, setShowHistoryModal] = React.useState(false);
+  const [showStatsModal, setShowStatsModal] = React.useState(false);
 
   // Revert to Standard Layout Logic
   const isCompact = ['garbino', 'flores'].includes(zoneName.toLowerCase());
@@ -683,6 +685,15 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
 
   return (
     <div className="h-full flex flex-col bg-slate-100 overflow-hidden print:overflow-visible print:h-auto print:bg-white">
+      
+      <DeliveryWeeklyStatsModal 
+        isOpen={showStatsModal}
+        onClose={() => setShowStatsModal(false)}
+        db={db}
+        zoneName={zoneName}
+        currentDate={currentDate}
+      />
+
       {/* Top Bar - Controls */}
       <div className="flex-none bg-white border-b border-slate-200 p-4 flex flex-col md:flex-row items-center justify-between gap-4 print:hidden z-10">
          <div className="flex items-center gap-4">
@@ -719,6 +730,14 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
          <div className="flex items-center gap-3">
              {!isRestricted && (
                  <>
+                    <button 
+                        onClick={() => setShowStatsModal(true)}
+                        className="flex items-center gap-2 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-semibold transition-colors border border-slate-200"
+                    >
+                        <BarChart3 size={18} className="text-indigo-600" />
+                        <span className="hidden sm:inline">Estadísticas</span>
+                    </button>
+
                     <button 
                         onClick={() => setShowHistoryModal(true)}
                         className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors relative"
