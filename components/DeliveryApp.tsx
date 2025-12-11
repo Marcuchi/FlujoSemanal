@@ -1,11 +1,10 @@
 
 import React from 'react';
 import { Database, ref, onValue, set, get } from 'firebase/database';
-import { Calendar, Plus, Trash2, MapPin, Calculator, Printer, ChevronDown, History, X, Clock, Receipt, Wallet, Coins, AlertCircle, BarChart3 } from 'lucide-react';
+import { Calendar, Plus, Trash2, MapPin, Calculator, Printer, ChevronDown, History, X, Clock, Receipt, Wallet, Coins, AlertCircle } from 'lucide-react';
 import { DeliveryRow, DeliveryHistoryLog, DeliveryExpense } from '../types';
 import { generateId } from '../utils';
 import { DayPickerModal } from './DayPickerModal';
-import { DeliveryWeeklyReportModal } from './DeliveryWeeklyReportModal';
 
 interface DeliveryAppProps {
   db: Database | null;
@@ -151,7 +150,7 @@ const NumericInput = ({
 
     if (disabled) {
         return (
-            <div className={`w-full h-full flex items-center px-1 ${alignment} ${className} opacity-70 cursor-not-allowed print:px-0`}>
+            <div className={`w-full h-full flex items-center px-1 ${alignment} ${className} opacity-80`}>
                 {displayValue}
             </div>
         );
@@ -220,8 +219,8 @@ const TextInput = ({
     };
 
     if (disabled) {
-        return (
-            <div className={`w-full h-full flex items-center px-2 ${className} opacity-80 cursor-not-allowed truncate print:px-0`}>
+         return (
+            <div className={`w-full h-full flex items-center px-2 ${className} opacity-80 truncate`}>
                 {value || <span className="text-slate-300 italic font-normal print:hidden">{placeholder}</span>}
             </div>
         );
@@ -321,14 +320,13 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
   
   const [showDatePicker, setShowDatePicker] = React.useState(false);
   const [showHistoryModal, setShowHistoryModal] = React.useState(false);
-  const [showWeeklyReport, setShowWeeklyReport] = React.useState(false);
 
-  // Layout Logic - Adjusted for Print
+  // Revert to Standard Layout Logic
   const isCompact = ['garbino', 'flores'].includes(zoneName.toLowerCase());
-  const rowHeight = isCompact ? 'h-8' : 'h-10'; 
-  const fontSize = 'text-sm print:text-xs';
-  const headerFontSize = 'text-xs sm:text-sm print:text-[10px]';
-  const cellPadding = 'px-2 print:px-0.5';
+  const rowHeight = isCompact ? 'h-8' : 'h-10'; // Standard comfortable height
+  const fontSize = 'text-sm';
+  const headerFontSize = 'text-xs sm:text-sm';
+  const cellPadding = 'px-2';
 
   React.useEffect(() => {
     if (isRestricted) {
@@ -576,23 +574,6 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
     const oldRow = rows.find(r => r.id === id);
     if (!oldRow) return;
 
-    // Check if value actually changed before logging
-    if (oldRow[field] !== value) {
-        const fieldLabels: Record<string, string> = {
-            client: 'Cliente',
-            product: 'Articulo',
-            weight: 'Kg',
-            price: 'Precio',
-            prevBalance: 'Saldo Ant',
-            payment: 'Entrega'
-        };
-        const label = fieldLabels[field as string] || field;
-        const clientName = oldRow.client || 'Sin nombre';
-        
-        // Don't log initial empty state setup, only meaningful changes
-        logHistory(`Editado ${clientName}: ${label} de ${oldRow[field]} a ${value}`);
-    }
-
     const newRows = rows.map(row => {
       if (row.id === id) {
         const updated = { ...row, [field]: value };
@@ -611,9 +592,9 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
       weight: 0,
       price: 0,
       prevBalance: 0,
-      payment: 0
+      payment: 0,
+      isNew: true // Mark as new so it can be edited in restricted mode if needed
     };
-    logHistory("Agregada nueva fila de cliente");
     saveData([...rows, newRow]);
   };
 
@@ -632,24 +613,16 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
           description: '',
           amount: 0
       };
-      logHistory("Agregado nuevo gasto");
       saveExpenses([...expenses, newExp]);
   };
 
   const updateExpense = (id: string, field: keyof DeliveryExpense, value: any) => {
-      const oldExp = expenses.find(e => e.id === id);
-      if (oldExp && oldExp[field] !== value) {
-          const label = field === 'description' ? 'Descripción' : 'Monto';
-          logHistory(`Gasto modificado: ${label} de ${oldExp[field]} a ${value}`);
-      }
       const newExpenses = expenses.map(e => e.id === id ? { ...e, [field]: value } : e);
       saveExpenses(newExpenses);
   };
 
   const removeExpense = (id: string) => {
       if(window.confirm("¿Eliminar gasto?")) {
-          const expToDelete = expenses.find(e => e.id === id);
-          if (expToDelete) logHistory(`Eliminado gasto: ${expToDelete.description || 'Sin descripción'} (${formatCurrency(expToDelete.amount)})`);
           saveExpenses(expenses.filter(e => e.id !== id));
       }
   };
@@ -680,20 +653,6 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
 
   return (
     <div className="h-full flex flex-col bg-slate-100 overflow-hidden print:overflow-visible print:h-auto print:bg-white">
-      {/* Print Styles Injection */}
-      <style>{`
-        @media print {
-          @page {
-            margin: 0.5cm;
-            size: auto;
-          }
-          body {
-            margin: 0;
-            padding: 0;
-          }
-        }
-      `}</style>
-
       {/* Top Bar - Controls */}
       <div className="flex-none bg-white border-b border-slate-200 p-4 flex flex-col md:flex-row items-center justify-between gap-4 print:hidden z-10">
          <div className="flex items-center gap-4">
@@ -728,28 +687,14 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
          </div>
 
          <div className="flex items-center gap-3">
-             
              {!isRestricted && (
                  <>
                     <button 
-                        onClick={() => setShowWeeklyReport(true)}
-                        className="p-2 text-indigo-500 hover:bg-indigo-50 rounded-lg transition-colors border border-transparent hover:border-indigo-200"
-                        title="Informe Semanal (Histograma)"
-                    >
-                        <BarChart3 size={20} />
-                    </button>
-
-                    <button 
                         onClick={() => setShowHistoryModal(true)}
-                        className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors relative group"
+                        className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors relative"
                         title="Historial de cambios"
                     >
                         <History size={20} />
-                        {history.length > 0 && (
-                            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white shadow-sm ring-2 ring-white group-hover:ring-slate-100 transition-all">
-                                {history.length > 99 ? '99+' : history.length}
-                            </span>
-                        )}
                     </button>
                     <button 
                         onClick={handlePrint}
@@ -880,13 +825,13 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                         <thead>
                             <tr className="bg-slate-50 border-b border-slate-200 print:border-slate-300">
                                 <th className={`${cellPadding} py-1 text-left ${headerFontSize} font-bold text-slate-600 uppercase tracking-wider border-r border-slate-200`}>Cliente</th>
-                                <th className={`${cellPadding} py-1 text-left ${headerFontSize} font-bold text-slate-600 uppercase tracking-wider w-36 print:w-24 border-r border-slate-200`}>Articulo</th>
-                                <th className={`${cellPadding} py-1 text-right ${headerFontSize} font-bold text-slate-600 uppercase tracking-wider w-20 print:w-14 border-r border-slate-200`}>Kg</th>
-                                <th className={`${cellPadding} py-1 text-right ${headerFontSize} font-bold text-slate-600 uppercase tracking-wider w-24 print:w-16 border-r border-slate-200`}>Precio</th>
-                                <th className={`${cellPadding} py-1 text-right ${headerFontSize} font-bold text-slate-600 uppercase tracking-wider w-28 print:w-20 border-r border-slate-200`}>Subtotal</th>
-                                <th className={`${cellPadding} py-1 text-right ${headerFontSize} font-bold text-slate-600 uppercase tracking-wider w-28 print:w-20 border-r border-slate-200 whitespace-nowrap`}>Saldo Ant</th>
-                                <th className={`${cellPadding} py-1 text-right ${headerFontSize} font-bold text-emerald-600 uppercase tracking-wider w-28 print:w-20 border-r border-slate-200`}>Entrega</th>
-                                <th className={`${cellPadding} py-1 text-right ${headerFontSize} font-bold text-slate-600 uppercase tracking-wider w-28 print:w-20`}>Saldo</th>
+                                <th className={`${cellPadding} py-1 text-left ${headerFontSize} font-bold text-slate-600 uppercase tracking-wider w-36 border-r border-slate-200`}>Articulo</th>
+                                <th className={`${cellPadding} py-1 text-right ${headerFontSize} font-bold text-slate-600 uppercase tracking-wider w-20 border-r border-slate-200`}>Kg</th>
+                                <th className={`${cellPadding} py-1 text-right ${headerFontSize} font-bold text-slate-600 uppercase tracking-wider w-24 border-r border-slate-200`}>Precio</th>
+                                <th className={`${cellPadding} py-1 text-right ${headerFontSize} font-bold text-slate-600 uppercase tracking-wider w-28 border-r border-slate-200`}>Subtotal</th>
+                                <th className={`${cellPadding} py-1 text-right ${headerFontSize} font-bold text-slate-600 uppercase tracking-wider w-28 border-r border-slate-200 whitespace-nowrap`}>Saldo Ant</th>
+                                <th className={`${cellPadding} py-1 text-right ${headerFontSize} font-bold text-emerald-600 uppercase tracking-wider w-28 border-r border-slate-200`}>Entrega</th>
+                                <th className={`${cellPadding} py-1 text-right ${headerFontSize} font-bold text-slate-600 uppercase tracking-wider w-28`}>Saldo</th>
                                 <th className="px-2 py-1 w-10 print:hidden"></th>
                             </tr>
                         </thead>
@@ -896,8 +841,6 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                                 const balance = subtotal + (row.prevBalance || 0) - (row.payment || 0);
                                 const isAlternate = index % 2 === 1;
                                 const isMissingProduct = !row.product || row.product === '';
-                                const defaultClients = getDefaultClients(zoneName);
-                                const isDefaultClient = defaultClients.some(name => name.toLowerCase() === row.client.trim().toLowerCase());
                                 
                                 return (
                                     <tr 
@@ -910,7 +853,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                                                 value={row.client} 
                                                 onChange={(v) => handleRowChange(row.id, 'client', v)} 
                                                 className={`font-bold text-slate-800 ${fontSize}`}
-                                                disabled={isRestricted && isDefaultClient}
+                                                disabled={isRestricted && !row.isNew}
                                             />
                                         </td>
                                         <td className={`border-r border-slate-100 print:border-slate-200 ${rowHeight}`}>
@@ -1060,9 +1003,11 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                                          />
                                      </td>
                                      <td className="text-center print:hidden">
-                                         <button onClick={() => removeExpense(exp.id)} className="text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100">
-                                             <Trash2 size={12} />
-                                         </button>
+                                         {!isRestricted && (
+                                            <button onClick={() => removeExpense(exp.id)} className="text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100">
+                                                <Trash2 size={12} />
+                                            </button>
+                                         )}
                                      </td>
                                  </tr>
                              ))}
@@ -1147,15 +1092,6 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
               </div>
           </div>
       )}
-
-      {/* Weekly Report Modal */}
-      <DeliveryWeeklyReportModal 
-        isOpen={showWeeklyReport}
-        onClose={() => setShowWeeklyReport(false)}
-        db={db}
-        zoneName={zoneName}
-        currentDate={new Date(currentDate + 'T12:00:00')} // Ensure correct local date parsing
-      />
 
     </div>
   );

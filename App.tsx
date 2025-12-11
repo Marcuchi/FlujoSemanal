@@ -1,6 +1,4 @@
 
-
-
 import React from 'react';
 import { Download, Upload, PieChart as PieChartIcon, History, ChevronLeft, ChevronRight, Calendar, Menu, LayoutGrid, Scale, BookUser, Banknote, Database, StickyNote, ZoomIn, ZoomOut, Truck, MapPin, ArrowRight, X } from 'lucide-react';
 import { ref, onValue, set, get, child } from 'firebase/database';
@@ -19,6 +17,7 @@ import { CurrentAccountsApp } from './components/CurrentAccountsApp';
 import { ChequesApp } from './components/ChequesApp';
 import { GeneralDataApp } from './components/GeneralDataApp';
 import { DeliveryApp } from './components/DeliveryApp';
+import { TrackingApp } from './components/TrackingApp';
 import { exportToCSV, exportMonthToCSV, parseCSV, parseMonthCSV, getWeekKey, getWeekRangeLabel, addWeeks, getMonday, generateId } from './utils';
 
 // --- LANDING SCREEN COMPONENT ---
@@ -801,6 +800,7 @@ const App: React.FC = () => {
           case 'CC': return 'Cuentas Corrientes';
           case 'CHEQUES': return 'Cheques en Cartera';
           case 'GENERAL_DATA': return 'Datos Generales';
+          case 'TRACKING': return 'Seguimiento Satelital';
           default: return 'Flujo Semanal';
       }
   };
@@ -817,6 +817,9 @@ const App: React.FC = () => {
       }
       if (currentApp === 'GENERAL_DATA') {
           return <>Datos<span className="text-cyan-400">Generales</span></>;
+      }
+      if (currentApp === 'TRACKING') {
+          return <>Seguimiento<span className="text-blue-400">Satelital</span></>;
       }
       if (activeZone) {
           return <>Planilla<span className="text-emerald-400">Reparto</span></>;
@@ -1029,6 +1032,7 @@ const App: React.FC = () => {
         {currentApp === 'CC' && <CurrentAccountsApp db={db} />}
         {currentApp === 'CHEQUES' && <ChequesApp db={db} />}
         {currentApp === 'GENERAL_DATA' && <GeneralDataApp db={db} />}
+        {currentApp === 'TRACKING' && <TrackingApp />}
       </main>
     </div>
   );

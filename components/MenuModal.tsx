@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { X, LayoutGrid, Scale, BookUser, Banknote, Database, Truck, ChevronRight, MapPin } from 'lucide-react';
+import { X, LayoutGrid, Scale, BookUser, Banknote, Database, Truck, ChevronRight, MapPin, Satellite } from 'lucide-react';
 import { AppMode } from '../types';
 
 interface MenuModalProps {
@@ -37,6 +37,12 @@ export const MenuModal: React.FC<MenuModalProps> = ({
   const handleZoneClick = (zoneLabel: string) => {
       onSwitchApp('FLOW');
       onSelectZone(zoneLabel);
+      onClose();
+  };
+
+  const handleTrackingClick = () => {
+      onSwitchApp('TRACKING');
+      onSelectZone(undefined); // Asegurar que no quede zona seleccionada
       onClose();
   };
 
@@ -101,7 +107,7 @@ export const MenuModal: React.FC<MenuModalProps> = ({
 
             {/* --- REPARTOS SECTION --- */}
             {isRestricted ? (
-                // Restricted Mode: Direct List of Zones
+                // Restricted Mode: Direct List of Zones (Tracking NOT shown here as per request "solo para la sección que se ingrese por general")
                 <div className="space-y-3">
                    {repartosList.map((item) => (
                       <button
@@ -130,20 +136,20 @@ export const MenuModal: React.FC<MenuModalProps> = ({
                    ))}
                 </div>
             ) : (
-                // General Mode: Dropdown
-                <div className={`rounded-xl border transition-all overflow-hidden ${showRepartos || activeZone ? 'bg-slate-800 border-emerald-500/50' : 'bg-slate-800/40 border-slate-700/50 hover:bg-slate-800 hover:border-slate-600'}`}>
+                // General Mode: Dropdown with Tracking as First Option
+                <div className={`rounded-xl border transition-all overflow-hidden ${showRepartos || activeZone || currentApp === 'TRACKING' ? 'bg-slate-800 border-emerald-500/50' : 'bg-slate-800/40 border-slate-700/50 hover:bg-slate-800 hover:border-slate-600'}`}>
                     <button 
                     onClick={() => setShowRepartos(!showRepartos)}
                     className="w-full flex items-center justify-between p-4"
                     >
                     <div className="flex items-center gap-4">
-                        <div className={`p-3 rounded-lg shadow-lg ${showRepartos || activeZone ? 'bg-emerald-600 text-white shadow-emerald-900/50' : 'bg-slate-700 text-slate-400'}`}>
+                        <div className={`p-3 rounded-lg shadow-lg ${showRepartos || activeZone || currentApp === 'TRACKING' ? 'bg-emerald-600 text-white shadow-emerald-900/50' : 'bg-slate-700 text-slate-400'}`}>
                             <Truck size={24} />
                         </div>
                         <div className="text-left">
-                            <h3 className={`font-bold transition-colors ${showRepartos || activeZone ? 'text-white' : 'text-slate-300'}`}>Repartos</h3>
+                            <h3 className={`font-bold transition-colors ${showRepartos || activeZone || currentApp === 'TRACKING' ? 'text-white' : 'text-slate-300'}`}>Repartos</h3>
                             <p className="text-xs text-slate-400">
-                                {activeZone ? `Zona: ${activeZone}` : 'Seleccionar zona'}
+                                {currentApp === 'TRACKING' ? 'Seguimiento Satelital' : (activeZone ? `Zona: ${activeZone}` : 'Seleccionar zona')}
                             </p>
                         </div>
                     </div>
@@ -154,6 +160,22 @@ export const MenuModal: React.FC<MenuModalProps> = ({
                     
                     {showRepartos && (
                     <div className="px-4 pb-4 space-y-2 animate-in slide-in-from-top-2 duration-200">
+                        
+                        {/* Option 1: Seguimiento Satelital */}
+                        <button
+                            onClick={handleTrackingClick}
+                            className={`w-full flex items-center justify-between p-3 rounded-lg border transition-colors group mb-3 ${currentApp === 'TRACKING' ? 'bg-blue-900/20 border-blue-500/30' : 'bg-slate-900/50 border-slate-700 hover:border-blue-500/50'}`}
+                        >
+                            <div className="flex items-center gap-3">
+                                <Satellite size={16} className={currentApp === 'TRACKING' ? 'text-blue-400' : 'text-slate-500 group-hover:text-blue-400'} />
+                                <span className={currentApp === 'TRACKING' ? 'text-blue-100 font-bold' : 'text-slate-300 group-hover:text-blue-100 font-medium'}>Seguimiento Satelital</span>
+                            </div>
+                            {currentApp === 'TRACKING' && <div className="w-2 h-2 rounded-full bg-blue-500"></div>}
+                        </button>
+
+                        <div className="h-px bg-slate-700/50 mx-2 mb-3"></div>
+
+                        {/* Zone Options */}
                         {repartosList.map((item) => (
                             <button
                             key={item.id}

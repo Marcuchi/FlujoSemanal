@@ -37,6 +37,7 @@ export interface DeliveryRow {
   price: number;       // Precio kg
   prevBalance: number; // Saldo Ant
   payment: number;     // Entrega
+  isNew?: boolean;     // Flag to identify manually added rows during the current session/day
   // Calculated:
   // Subtotal = weight * price
   // currentBalance = Subtotal + prevBalance - payment
@@ -175,7 +176,7 @@ export interface Note {
   createdAt: string;
 }
 
-export type AppMode = 'FLOW' | 'KILOS' | 'CC' | 'CHEQUES' | 'GENERAL_DATA';
+export type AppMode = 'FLOW' | 'KILOS' | 'CC' | 'CHEQUES' | 'GENERAL_DATA' | 'TRACKING';
 
 export const DAYS_OF_WEEK = [
   { id: 'monday', name: 'Lunes' },
