@@ -1,10 +1,11 @@
 
 import React from 'react';
 import { Database, ref, onValue, set, get } from 'firebase/database';
-import { Calendar, Plus, Trash2, MapPin, Calculator, Printer, ChevronDown, History, X, Clock, Receipt, Wallet, Coins, AlertCircle } from 'lucide-react';
+import { Calendar, Plus, Trash2, MapPin, Calculator, Printer, ChevronDown, History, X, Clock, Receipt, Wallet, Coins, AlertCircle, BarChart3 } from 'lucide-react';
 import { DeliveryRow, DeliveryHistoryLog, DeliveryExpense } from '../types';
 import { generateId } from '../utils';
 import { DayPickerModal } from './DayPickerModal';
+import { DeliveryWeeklyReportModal } from './DeliveryWeeklyReportModal';
 
 interface DeliveryAppProps {
   db: Database | null;
@@ -310,6 +311,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
   
   const [showDatePicker, setShowDatePicker] = React.useState(false);
   const [showHistoryModal, setShowHistoryModal] = React.useState(false);
+  const [showWeeklyReport, setShowWeeklyReport] = React.useState(false);
 
   // Revert to Standard Layout Logic
   const isCompact = ['garbino', 'flores'].includes(zoneName.toLowerCase());
@@ -676,6 +678,17 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
          </div>
 
          <div className="flex items-center gap-3">
+             
+             {!isRestricted && (
+                 <button 
+                    onClick={() => setShowWeeklyReport(true)}
+                    className="p-2 text-indigo-500 hover:bg-indigo-50 rounded-lg transition-colors border border-transparent hover:border-indigo-200"
+                    title="Informe Semanal (Histograma)"
+                 >
+                    <BarChart3 size={20} />
+                 </button>
+             )}
+
              <button 
                 onClick={() => setShowHistoryModal(true)}
                 className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors relative"
@@ -1071,6 +1084,15 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
               </div>
           </div>
       )}
+
+      {/* Weekly Report Modal */}
+      <DeliveryWeeklyReportModal 
+        isOpen={showWeeklyReport}
+        onClose={() => setShowWeeklyReport(false)}
+        db={db}
+        zoneName={zoneName}
+        currentDate={new Date(currentDate + 'T12:00:00')} // Ensure correct local date parsing
+      />
 
     </div>
   );
