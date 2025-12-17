@@ -1,4 +1,5 @@
 
+
 export interface Transaction {
   id: string;
   title: string;
@@ -26,6 +27,18 @@ export interface HistoryItem extends Transaction {
 }
 
 export type WeekData = Record<string, DayData>;
+
+// --- MARCOS APP TYPES (LOGISTICS) ---
+export interface LogisticsZone {
+  id: string;
+  locality: string;
+  courier: string; // Repartidor
+  lat: number; // Latitude
+  lng: number; // Longitude
+  radius: number; // Radius in meters
+}
+
+export type MarcosLogisticsData = LogisticsZone[];
 
 // --- REPARTOS (DELIVERY) APP TYPES ---
 
@@ -176,7 +189,7 @@ export interface Note {
   createdAt: string;
 }
 
-export type AppMode = 'FLOW' | 'KILOS' | 'CC' | 'CHEQUES' | 'GENERAL_DATA' | 'TRACKING';
+export type AppMode = 'FLOW' | 'KILOS' | 'CC' | 'CHEQUES' | 'GENERAL_DATA' | 'TRACKING' | 'MARCOS';
 
 export const DAYS_OF_WEEK = [
   { id: 'monday', name: 'Lunes' },

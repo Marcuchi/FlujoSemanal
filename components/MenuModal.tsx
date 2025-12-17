@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { X, LayoutGrid, Scale, BookUser, Banknote, Database, Truck, ChevronRight, MapPin, Satellite } from 'lucide-react';
+import { X, LayoutGrid, Scale, BookUser, Banknote, Database, Truck, ChevronRight, MapPin, Satellite, Palette } from 'lucide-react';
 import { AppMode } from '../types';
 
 interface MenuModalProps {

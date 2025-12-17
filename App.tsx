@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Download, Upload, PieChart as PieChartIcon, History, ChevronLeft, ChevronRight, Calendar, Menu, LayoutGrid, Scale, BookUser, Banknote, Database, StickyNote, ZoomIn, ZoomOut, Truck, MapPin, ArrowRight, X } from 'lucide-react';
+import { Download, Upload, PieChart as PieChartIcon, History, ChevronLeft, ChevronRight, Calendar, Menu, LayoutGrid, Scale, BookUser, Banknote, Database, StickyNote, ZoomIn, ZoomOut, Truck, MapPin, ArrowRight, X, Palette } from 'lucide-react';
 import { ref, onValue, set, get, child } from 'firebase/database';
 import { db } from './firebaseConfig';
 import { DAYS_OF_WEEK, WeekData, DayData, HistoryItem, AppMode } from './types';
@@ -18,15 +18,17 @@ import { ChequesApp } from './components/ChequesApp';
 import { GeneralDataApp } from './components/GeneralDataApp';
 import { DeliveryApp } from './components/DeliveryApp';
 import { TrackingApp } from './components/TrackingApp';
+import { MarcosApp } from './components/MarcosApp';
 import { exportToCSV, exportMonthToCSV, parseCSV, parseMonthCSV, getWeekKey, getWeekRangeLabel, addWeeks, getMonday, generateId } from './utils';
 
 // --- LANDING SCREEN COMPONENT ---
 
 interface LandingScreenProps {
   onEnter: (zone?: string, restricted?: boolean) => void;
+  onEnterMarcos: () => void;
 }
 
-const LandingScreen: React.FC<LandingScreenProps> = ({ onEnter }) => {
+const LandingScreen: React.FC<LandingScreenProps> = ({ onEnter, onEnterMarcos }) => {
   const [showRepartos, setShowRepartos] = React.useState(false);
   
   // Password State
@@ -110,6 +112,7 @@ const LandingScreen: React.FC<LandingScreenProps> = ({ onEnter }) => {
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
         <div className="absolute -top-20 -left-20 w-96 h-96 bg-indigo-900/20 rounded-full blur-3xl"></div>
         <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-emerald-900/10 rounded-full blur-3xl"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-fuchsia-900/5 rounded-full blur-3xl"></div>
       </div>
 
       <div className="z-10 w-full max-w-md space-y-8 animate-in fade-in zoom-in duration-500">
@@ -178,6 +181,21 @@ const LandingScreen: React.FC<LandingScreenProps> = ({ onEnter }) => {
                 </div>
             </div>
           </div>
+
+          {/* Marcos Button (Last) */}
+          <button
+            onClick={onEnterMarcos}
+            className="group relative flex items-center p-5 bg-slate-900 border border-slate-800 hover:border-fuchsia-500 rounded-2xl transition-all shadow-xl hover:shadow-fuchsia-900/20"
+          >
+            <div className="h-12 w-12 bg-slate-800 rounded-full flex items-center justify-center mr-4 group-hover:bg-fuchsia-600 transition-colors">
+              <Palette size={24} className="text-slate-400 group-hover:text-white" />
+            </div>
+            <div className="flex-1 text-left">
+              <h3 className="text-xl font-bold text-slate-200 group-hover:text-white">Marcos</h3>
+              <p className="text-xs text-slate-500 group-hover:text-slate-400">Gestión de Flujos y Colores</p>
+            </div>
+            <ArrowRight className="text-slate-700 group-hover:text-fuchsia-400 transition-colors" />
+          </button>
 
         </div>
       </div>
@@ -619,6 +637,19 @@ const App: React.FC = () => {
         return;
     }
 
+    if (currentApp === 'MARCOS') {
+        const msg = "Reiniciar borrará los datos de MARCOS de esta semana. ¿Seguro?";
+        if (window.confirm(msg)) {
+            if (db) {
+                set(ref(db!, `weeks/${currentWeekKey}/marcos`), null);
+            } else {
+                localStorage.removeItem(`marcos_${currentWeekKey}`);
+            }
+            window.location.reload(); 
+        }
+        return;
+    }
+
     const msg = db 
       ? `¿Estás seguro de reiniciar la semana actual (${getWeekRangeLabel(currentDate)})? Esto borrará los datos de esta semana.` 
       : "Reiniciar borrará los datos LOCALES de esta semana.";
@@ -801,6 +832,7 @@ const App: React.FC = () => {
           case 'CHEQUES': return 'Cheques en Cartera';
           case 'GENERAL_DATA': return 'Datos Generales';
           case 'TRACKING': return 'Seguimiento Satelital';
+          case 'MARCOS': return 'Marcos Flujos';
           default: return 'Flujo Semanal';
       }
   };
@@ -820,6 +852,9 @@ const App: React.FC = () => {
       }
       if (currentApp === 'TRACKING') {
           return <>Seguimiento<span className="text-blue-400">Satelital</span></>;
+      }
+      if (currentApp === 'MARCOS') {
+          return <>Marcos<span className="text-fuchsia-400">Flujos</span></>;
       }
       if (activeZone) {
           return <>Planilla<span className="text-emerald-400">Reparto</span></>;
@@ -935,9 +970,14 @@ const App: React.FC = () => {
     setIsRestrictedMode(!!restricted);
     setAppStarted(true);
   };
+  
+  const handleEnterMarcos = () => {
+    setCurrentApp('MARCOS');
+    setAppStarted(true);
+  };
 
   if (!appStarted) {
-    return <LandingScreen onEnter={handleEnterApp} />;
+    return <LandingScreen onEnter={handleEnterApp} onEnterMarcos={handleEnterMarcos} />;
   }
 
   return (
@@ -971,7 +1011,7 @@ const App: React.FC = () => {
 
       <Header />
 
-      {currentApp === 'FLOW' && !activeZone && (
+      {(currentApp === 'FLOW' && !activeZone) || currentApp === 'KILOS' ? (
         <div className="bg-slate-900/80 border-b border-slate-800 flex items-center justify-center py-2 relative z-40 backdrop-blur-sm flex-none">
           <div className="flex items-center gap-6 bg-slate-800/50 px-4 py-1.5 rounded-full border border-slate-700/50 relative">
               <button 
@@ -1006,7 +1046,7 @@ const App: React.FC = () => {
               />
           </div>
         </div>
-      )}
+      ) : null}
 
       <main className="flex-1 overflow-x-auto overflow-y-hidden bg-slate-950 relative z-0">
         {currentApp === 'FLOW' && !activeZone && (
@@ -1033,6 +1073,7 @@ const App: React.FC = () => {
         {currentApp === 'CHEQUES' && <ChequesApp db={db} />}
         {currentApp === 'GENERAL_DATA' && <GeneralDataApp db={db} />}
         {currentApp === 'TRACKING' && <TrackingApp />}
+        {currentApp === 'MARCOS' && <MarcosApp db={db} weekKey={currentWeekKey} />}
       </main>
     </div>
   );
