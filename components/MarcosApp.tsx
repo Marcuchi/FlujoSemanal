@@ -61,8 +61,13 @@ export const MarcosApp: React.FC<MarcosAppProps> = ({ db }) => {
   React.useEffect(() => {
     if (view === 'MAP' && mapContainerRef.current && !mapInstanceRef.current) {
         // Initialize Map
-        const map = L.map(mapContainerRef.current).setView(DEFAULT_CENTER, DEFAULT_ZOOM);
+        const map = L.map(mapContainerRef.current, {
+            zoomControl: false // We will add it manually or rely on scroll
+        }).setView(DEFAULT_CENTER, DEFAULT_ZOOM);
         
+        // Add Zoom Control to top-right
+        L.control.zoom({ position: 'topright' }).addTo(map);
+
         // Add OpenStreetMap Tile Layer (Dark/Neutral theme if possible, but standard is fine)
         // Using CartoDB Dark Matter for that "Tech/Cyber" look matching the app
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
@@ -77,11 +82,13 @@ export const MarcosApp: React.FC<MarcosAppProps> = ({ db }) => {
 
         // Click Handler for Manual Mode
         map.on('click', (e) => {
-            // We use a custom event dispatch or state check via a ref if needed, 
-            // but here we rely on the closure scope which might be stale if not careful.
-            // Better to trigger an external handler.
             handleMapClickInternal(e.latlng.lat, e.latlng.lng);
         });
+
+        // Force invalidation to ensure map fills container correctly after render
+        setTimeout(() => {
+            map.invalidateSize();
+        }, 200);
     }
 
     return () => {
@@ -92,6 +99,17 @@ export const MarcosApp: React.FC<MarcosAppProps> = ({ db }) => {
         }
     };
   }, [view]);
+
+  // Handle Resize
+  React.useEffect(() => {
+      const handleResize = () => {
+          if (mapInstanceRef.current) {
+              mapInstanceRef.current.invalidateSize();
+          }
+      };
+      window.addEventListener('resize', handleResize);
+      return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Ref for accessing current state inside Leaflet callbacks
   const stateRef = React.useRef({ manualMode, localityInput, courierInput, radiusInput, zones });
@@ -125,9 +143,6 @@ export const MarcosApp: React.FC<MarcosAppProps> = ({ db }) => {
               setZones(newZones);
               localStorage.setItem(`marcos_logistics`, JSON.stringify(newZones));
           }
-
-          // Reset inputs slightly but keep mode maybe?
-          // setManualMode(false); // Optional: Auto exit manual mode
       }
   };
 
@@ -290,7 +305,7 @@ export const MarcosApp: React.FC<MarcosAppProps> = ({ db }) => {
         <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
             
             {/* Left: Map */}
-            <div className="flex-1 bg-slate-900 relative">
+            <div className="flex-1 bg-slate-900 relative min-h-0 min-w-0">
                 {/* Manual Mode Indicator */}
                 {manualMode && (
                     <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] bg-fuchsia-600 text-white px-6 py-2 rounded-full shadow-xl animate-bounce flex items-center gap-2 pointer-events-none">
@@ -299,8 +314,8 @@ export const MarcosApp: React.FC<MarcosAppProps> = ({ db }) => {
                     </div>
                 )}
                 
-                {/* Leaflet Container */}
-                <div id="map" ref={mapContainerRef} className="w-full h-full z-0 outline-none"></div>
+                {/* Leaflet Container - ABSOLUTE POSITION FIX */}
+                <div id="map" ref={mapContainerRef} className="absolute inset-0 z-0 outline-none"></div>
             </div>
 
             {/* Right: Controls */}
