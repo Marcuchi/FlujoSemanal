@@ -33,6 +33,7 @@ export interface LogisticsZone {
   id: string;
   locality: string;
   courier: string; // Repartidor
+  description?: string; // Optional description
   lat: number; // Latitude
   lng: number; // Longitude
   radius: number; // Radius in meters

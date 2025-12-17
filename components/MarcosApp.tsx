@@ -1,7 +1,8 @@
 
+
 import React from 'react';
 import { Database, ref, onValue, set } from 'firebase/database';
-import { Map as MapIcon, MapPin, Plus, Trash2, ArrowLeft, Navigation, User, Search, Crosshair } from 'lucide-react';
+import { Map as MapIcon, MapPin, Plus, Trash2, ArrowLeft, Navigation, User, Search, Crosshair, AlignLeft } from 'lucide-react';
 import { MarcosLogisticsData, LogisticsZone } from '../types';
 import { generateId } from '../utils';
 import * as L from 'leaflet';
@@ -22,6 +23,7 @@ export const MarcosApp: React.FC<MarcosAppProps> = ({ db }) => {
   // Inputs
   const [localityInput, setLocalityInput] = React.useState('');
   const [courierInput, setCourierInput] = React.useState('');
+  const [descriptionInput, setDescriptionInput] = React.useState(''); // New State for Description
   const [radiusInput, setRadiusInput] = React.useState(2000); // meters
   const [isSearching, setIsSearching] = React.useState(false);
   const [manualMode, setManualMode] = React.useState(false);
@@ -112,13 +114,13 @@ export const MarcosApp: React.FC<MarcosAppProps> = ({ db }) => {
   }, []);
 
   // Ref for accessing current state inside Leaflet callbacks
-  const stateRef = React.useRef({ manualMode, localityInput, courierInput, radiusInput, zones });
+  const stateRef = React.useRef({ manualMode, localityInput, courierInput, radiusInput, descriptionInput, zones });
   React.useEffect(() => {
-      stateRef.current = { manualMode, localityInput, courierInput, radiusInput, zones };
-  }, [manualMode, localityInput, courierInput, radiusInput, zones]);
+      stateRef.current = { manualMode, localityInput, courierInput, radiusInput, descriptionInput, zones };
+  }, [manualMode, localityInput, courierInput, radiusInput, descriptionInput, zones]);
 
   const handleMapClickInternal = (lat: number, lng: number) => {
-      const { manualMode, localityInput, courierInput, radiusInput, zones } = stateRef.current;
+      const { manualMode, localityInput, courierInput, radiusInput, descriptionInput, zones } = stateRef.current;
       
       if (manualMode) {
           if (!courierInput.trim()) {
@@ -132,6 +134,7 @@ export const MarcosApp: React.FC<MarcosAppProps> = ({ db }) => {
               id: generateId(),
               locality: label,
               courier: courierInput,
+              description: descriptionInput,
               lat: lat,
               lng: lng,
               radius: radiusInput
@@ -181,6 +184,7 @@ export const MarcosApp: React.FC<MarcosAppProps> = ({ db }) => {
             <div class="text-center">
                 <div class="font-bold uppercase text-xs text-slate-700">${zone.locality}</div>
                 <div class="text-fuchsia-600 font-bold text-sm">${zone.courier}</div>
+                ${zone.description ? `<div class="text-xs text-slate-500 italic mt-1 border-t border-slate-200 pt-1">${zone.description}</div>` : ''}
             </div>
           `;
           
@@ -228,6 +232,7 @@ export const MarcosApp: React.FC<MarcosAppProps> = ({ db }) => {
                   id: generateId(),
                   locality: localityInput,
                   courier: courierInput,
+                  description: descriptionInput,
                   lat: lat,
                   lng: lon,
                   radius: radiusInput
@@ -236,6 +241,7 @@ export const MarcosApp: React.FC<MarcosAppProps> = ({ db }) => {
               saveZones([...zones, newZone]);
               setLocalityInput('');
               setCourierInput('');
+              setDescriptionInput(''); // Clear description
               
               // Fly to location
               mapInstanceRef.current?.flyTo([lat, lon], 12);
@@ -352,6 +358,20 @@ export const MarcosApp: React.FC<MarcosAppProps> = ({ db }) => {
                             />
                         </div>
 
+                         <div>
+                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Descripción (Opcional)</label>
+                            <div className="relative">
+                                <AlignLeft className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
+                                <input 
+                                    type="text"
+                                    value={descriptionInput}
+                                    onChange={(e) => setDescriptionInput(e.target.value)}
+                                    placeholder="Detalles adicionales..."
+                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg pl-10 pr-4 py-2 text-white focus:border-fuchsia-500 focus:outline-none transition-colors"
+                                />
+                            </div>
+                        </div>
+
                         <div>
                             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Radio Cobertura (mts)</label>
                             <input 
@@ -406,6 +426,11 @@ export const MarcosApp: React.FC<MarcosAppProps> = ({ db }) => {
                                     <div className="text-xs text-fuchsia-400 flex items-center gap-1 mt-0.5">
                                         <User size={10} /> {zone.courier}
                                     </div>
+                                    {zone.description && (
+                                        <div className="text-xs text-slate-500 italic mt-1 pl-1 border-l-2 border-slate-700">
+                                            {zone.description}
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <button 
