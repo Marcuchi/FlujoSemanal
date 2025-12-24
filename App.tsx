@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Download, Upload, PieChart as PieChartIcon, History, ChevronLeft, ChevronRight, Calendar, Menu, LayoutGrid, Scale, BookUser, Banknote, Database, StickyNote, ZoomIn, ZoomOut, Truck, MapPin, ArrowRight, X, Palette } from 'lucide-react';
+import { Download, Upload, PieChart as PieChartIcon, History, ChevronLeft, ChevronRight, Calendar, Menu, LayoutGrid, Scale, BookUser, Banknote, Database, StickyNote, ZoomIn, ZoomOut, Truck, MapPin, ArrowRight, X, Palette, Columns, Maximize2 } from 'lucide-react';
 import { ref, onValue, set, get, child } from 'firebase/database';
 import { db } from './firebaseConfig';
 import { DAYS_OF_WEEK, WeekData, DayData, HistoryItem, AppMode } from './types';
@@ -297,6 +297,16 @@ const App: React.FC = () => {
   const [isRestrictedMode, setIsRestrictedMode] = React.useState(false); // New State for mode
 
   const [currentDate, setCurrentDate] = React.useState(new Date());
+  const [viewMode, setViewMode] = React.useState<'WEEK' | 'DAY'>('WEEK');
+  const [activeDayId, setActiveDayId] = React.useState<string>(() => {
+    const d = new Date().getDay();
+    // JS: 0=Sun, 1=Mon... 6=Sat. 
+    // We map 0-6 to our DAYS_OF_WEEK IDs. If Sun (0), default to Monday.
+    if (d === 0) return 'monday';
+    const dayMap = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    return dayMap[d];
+  });
+
   const [weekData, setWeekData] = React.useState<WeekData>(createInitialState());
   const [history, setHistory] = React.useState<HistoryItem[]>([]);
   const [currentApp, setCurrentApp] = React.useState<AppMode>('FLOW');
@@ -812,11 +822,36 @@ const App: React.FC = () => {
 
   // --- Navigation & Logic ---
 
-  const handlePrevWeek = () => setCurrentDate(addWeeks(currentDate, -1));
+  const handlePrev = () => {
+    if (viewMode === 'WEEK' || currentApp !== 'FLOW' || activeZone) {
+      setCurrentDate(addWeeks(currentDate, -1));
+    } else {
+      // Daily mode: change day
+      const currentIndex = DAYS_OF_WEEK.findIndex(d => d.id === activeDayId);
+      if (currentIndex > 0) {
+        setActiveDayId(DAYS_OF_WEEK[currentIndex - 1].id);
+      } else {
+        // Go to Saturday of previous week
+        setCurrentDate(addWeeks(currentDate, -1));
+        setActiveDayId('saturday');
+      }
+    }
+  };
 
-  const handleNextWeek = () => {
-    const nextDate = addWeeks(currentDate, 1);
-    setCurrentDate(nextDate);
+  const handleNext = () => {
+    if (viewMode === 'WEEK' || currentApp !== 'FLOW' || activeZone) {
+      setCurrentDate(addWeeks(currentDate, 1));
+    } else {
+      // Daily mode: change day
+      const currentIndex = DAYS_OF_WEEK.findIndex(d => d.id === activeDayId);
+      if (currentIndex < DAYS_OF_WEEK.length - 1) {
+        setActiveDayId(DAYS_OF_WEEK[currentIndex + 1].id);
+      } else {
+        // Go to Monday of next week
+        setCurrentDate(addWeeks(currentDate, 1));
+        setActiveDayId('monday');
+      }
+    }
   };
 
   const handleDateSelect = (date: Date) => {
@@ -1012,12 +1047,31 @@ const App: React.FC = () => {
       <Header />
 
       {(currentApp === 'FLOW' && !activeZone) || currentApp === 'KILOS' ? (
-        <div className="bg-slate-900/80 border-b border-slate-800 flex items-center justify-center py-2 relative z-40 backdrop-blur-sm flex-none">
+        <div className="bg-slate-900/80 border-b border-slate-800 flex items-center justify-between px-6 py-2 relative z-40 backdrop-blur-sm flex-none">
+          
+          {/* View Toggle */}
+          <div className="flex items-center bg-slate-800/80 rounded-lg p-1 border border-slate-700/50 shadow-inner">
+             <button 
+                onClick={() => setViewMode('WEEK')}
+                className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-xs font-bold transition-all ${viewMode === 'WEEK' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}
+             >
+                <Columns size={14} />
+                Vista Semanal
+             </button>
+             <button 
+                onClick={() => setViewMode('DAY')}
+                className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-xs font-bold transition-all ${viewMode === 'DAY' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}
+             >
+                <Maximize2 size={14} />
+                Vista Diaria
+             </button>
+          </div>
+
           <div className="flex items-center gap-6 bg-slate-800/50 px-4 py-1.5 rounded-full border border-slate-700/50 relative">
               <button 
-                  onClick={handlePrevWeek}
+                  onClick={handlePrev}
                   className="p-1 hover:bg-slate-700 rounded-full text-slate-400 hover:text-white transition-colors"
-                  title="Semana Anterior"
+                  title={viewMode === 'WEEK' ? "Semana Anterior" : "Día Anterior"}
               >
                   <ChevronLeft size={20} />
               </button>
@@ -1027,13 +1081,13 @@ const App: React.FC = () => {
                   className="text-sm font-bold text-slate-200 hover:text-indigo-400 transition-colors flex items-center gap-2 px-2 py-1 rounded hover:bg-slate-800 cursor-pointer min-w-[140px] justify-center"
               >
                   <Calendar size={14} className="text-indigo-500" />
-                  {getWeekRangeLabel(currentDate)}
+                  {viewMode === 'WEEK' ? getWeekRangeLabel(currentDate) : (DAYS_OF_WEEK.find(d => d.id === activeDayId)?.name || '')}
               </button>
 
               <button 
-                  onClick={handleNextWeek}
+                  onClick={handleNext}
                   className="p-1 hover:bg-slate-700 rounded-full text-slate-400 hover:text-white transition-colors"
-                  title="Semana Siguiente"
+                  title={viewMode === 'WEEK' ? "Semana Siguiente" : "Día Siguiente"}
               >
                   <ChevronRight size={20} />
               </button>
@@ -1045,22 +1099,37 @@ const App: React.FC = () => {
                   onSelectDate={handleDateSelect} 
               />
           </div>
+
+          {/* Placeholder for symmetry */}
+          <div className="w-48 hidden lg:block"></div>
         </div>
       ) : null}
 
       <main className="flex-1 overflow-x-auto overflow-y-hidden bg-slate-950 relative z-0">
         {currentApp === 'FLOW' && !activeZone && (
-            <div className="h-full flex flex-row p-4 gap-4 w-full">
-                {DAYS_OF_WEEK.map((day) => (
-                    <DayCard 
-                        key={day.id} 
-                        dayData={weekData[day.id]} 
-                        onUpdate={handleUpdateDay}
-                        previousBalance={runningBalances[day.id]}
-                        prevWeekTreasury={prevWeekTreasury}
-                        onAddToHistory={handleAddToHistory}
-                    />
-                ))}
+            <div className={`h-full flex ${viewMode === 'WEEK' ? 'flex-row p-4 gap-4 w-full' : 'items-center justify-center p-6'}`}>
+                {viewMode === 'WEEK' ? (
+                    DAYS_OF_WEEK.map((day) => (
+                        <DayCard 
+                            key={day.id} 
+                            dayData={weekData[day.id]} 
+                            onUpdate={handleUpdateDay}
+                            previousBalance={runningBalances[day.id]}
+                            prevWeekTreasury={prevWeekTreasury}
+                            onAddToHistory={handleAddToHistory}
+                        />
+                    ))
+                ) : (
+                    <div className="max-w-2xl w-full h-[85%] transform scale-105 transition-transform">
+                        <DayCard 
+                            dayData={weekData[activeDayId]} 
+                            onUpdate={handleUpdateDay}
+                            previousBalance={runningBalances[activeDayId]}
+                            prevWeekTreasury={prevWeekTreasury}
+                            onAddToHistory={handleAddToHistory}
+                        />
+                    </div>
+                )}
             </div>
         )}
         
