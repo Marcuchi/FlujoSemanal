@@ -379,7 +379,6 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
     saveData(rows.map(row => row.id === id ? { ...row, [field]: value } : row));
   };
 
-  // --- Fixed missing expense handlers ---
   const addExpense = () => {
     const newExpense: DeliveryExpense = {
       id: generateId(),
@@ -403,7 +402,6 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
     }
   };
 
-  // --- Fixed missing saveMetadata handler ---
   const saveMetadata = (newMeta: typeof metadata) => {
     const metaKey = `deliveries_metadata/${zoneName}/${currentDate}`;
     if (db) set(ref(db, metaKey), newMeta);
@@ -563,7 +561,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                                                         <div className="flex items-center justify-between border-b border-slate-200 pb-1">
                                                             <div className="flex items-center gap-2 text-slate-500 font-bold uppercase text-[10px]"><History size={14}/> Saldo Ant</div>
                                                             <div className="w-32 h-8 border rounded bg-slate-50">
-                                                                <NumericInput value={row.prevBalance} onChange={(v) => handleRowChange(row.id, 'prevBalance', v)} isCurrency disabled={isRestricted} className="font-mono text-right" />
+                                                                <NumericInput value={row.prevBalance} onChange={(v) => handleRowChange(row.id, 'prevBalance', v)} isCurrency disabled={isRestricted} className="font-mono text-right font-bold text-black" />
                                                             </div>
                                                         </div>
                                                         {!isRestricted && (
