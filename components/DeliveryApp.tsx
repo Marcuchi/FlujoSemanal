@@ -475,7 +475,7 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-slate-50 border-b border-slate-200 print:border-slate-300">
-                                <th className={`${cellPadding} py-1 text-left ${headerFontSize} font-bold text-slate-600 uppercase tracking-wider border-r border-slate-200`}>Cliente</th>
+                                <th className={`${cellPadding} py-1 text-left ${headerFontSize} font-black text-black sm:text-slate-600 uppercase tracking-wider border-r border-slate-200`}>Cliente</th>
                                 <th className={`${cellPadding} py-1 text-left ${headerFontSize} font-bold text-slate-600 uppercase tracking-wider w-36 border-r border-slate-200 hidden md:table-cell`}>Articulo</th>
                                 <th className={`${cellPadding} py-1 text-right ${headerFontSize} font-bold text-slate-600 uppercase tracking-wider w-20 border-r border-slate-200 hidden md:table-cell`}>Kg</th>
                                 <th className={`${cellPadding} py-1 text-right ${headerFontSize} font-bold text-slate-600 uppercase tracking-wider w-24 border-r border-slate-200 hidden md:table-cell`}>Precio</th>
@@ -501,9 +501,9 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                                             <td className={`border-r border-slate-100 print:border-slate-200 ${rowHeight}`}>
                                                 <div className="flex items-center gap-2">
                                                     <span className="md:hidden">
-                                                        {isExpanded ? <ChevronUp size={14} className="text-indigo-500" /> : <ChevronDown size={14} className="text-slate-400" />}
+                                                        {isExpanded ? <ChevronUp size={14} className="text-black" /> : <ChevronDown size={14} className="text-black" />}
                                                     </span>
-                                                    <TextInput value={row.client} onChange={(v) => handleRowChange(row.id, 'client', v)} className={`font-bold text-slate-800 ${fontSize}`} disabled={isRestricted && !row.isNew} />
+                                                    <TextInput value={row.client} onChange={(v) => handleRowChange(row.id, 'client', v)} className={`font-black text-black sm:font-bold sm:text-slate-800 ${fontSize}`} disabled={isRestricted && !row.isNew} />
                                                 </div>
                                             </td>
                                             <td className={`border-r border-slate-100 print:border-slate-200 ${rowHeight} hidden md:table-cell`}>
@@ -537,31 +537,31 @@ export const DeliveryApp: React.FC<DeliveryAppProps> = ({ db, zoneName, isRestri
                                                 <td colSpan={10} className="p-4 border-b border-slate-200">
                                                     <div className="grid grid-cols-1 gap-3 text-sm">
                                                         <div className="flex items-center justify-between border-b border-slate-200 pb-1">
-                                                            <div className="flex items-center gap-2 text-slate-500 font-bold uppercase text-[10px]"><Package size={14}/> Artículo</div>
+                                                            <div className="flex items-center gap-2 text-black font-black uppercase text-[10px]"><Package size={14}/> Artículo</div>
                                                             <div className="flex-1 h-8 ml-4 border rounded bg-white">
-                                                                <ProductSelect value={row.product} onChange={(v) => handleRowChange(row.id, 'product', v)} className="text-slate-800" />
+                                                                <ProductSelect value={row.product} onChange={(v) => handleRowChange(row.id, 'product', v)} className="text-black font-black" />
                                                             </div>
                                                         </div>
                                                         <div className="flex items-center justify-between border-b border-slate-200 pb-1">
-                                                            <div className="flex items-center gap-2 text-slate-500 font-bold uppercase text-[10px]"><Scale size={14}/> Kilos</div>
+                                                            <div className="flex items-center gap-2 text-black font-black uppercase text-[10px]"><Scale size={14}/> Kilos</div>
                                                             <div className="w-24 h-8 border rounded bg-white">
-                                                                <NumericInput value={row.weight} onChange={(v) => handleRowChange(row.id, 'weight', v)} className="font-mono text-right" />
+                                                                <NumericInput value={row.weight} onChange={(v) => handleRowChange(row.id, 'weight', v)} className="font-mono text-right font-black text-black" />
                                                             </div>
                                                         </div>
                                                         <div className="flex items-center justify-between border-b border-slate-200 pb-1">
-                                                            <div className="flex items-center gap-2 text-slate-500 font-bold uppercase text-[10px]"><DollarSign size={14}/> Precio</div>
+                                                            <div className="flex items-center gap-2 text-black font-black uppercase text-[10px]"><DollarSign size={14}/> Precio</div>
                                                             <div className="w-32 h-8 border rounded bg-white">
-                                                                <NumericInput value={row.price} onChange={(v) => handleRowChange(row.id, 'price', v)} isCurrency className="font-mono text-right" />
+                                                                <NumericInput value={row.price} onChange={(v) => handleRowChange(row.id, 'price', v)} isCurrency className="font-mono text-right font-black text-black" />
                                                             </div>
                                                         </div>
                                                         <div className="flex items-center justify-between border-b border-slate-200 pb-1">
-                                                            <div className="flex items-center gap-2 text-slate-500 font-bold uppercase text-[10px]"><ArrowUpRight size={14}/> Subtotal</div>
-                                                            <div className="font-mono font-bold text-slate-700">{formatCurrency(subtotal)}</div>
+                                                            <div className="flex items-center gap-2 text-black font-black uppercase text-[10px]"><ArrowUpRight size={14}/> Subtotal</div>
+                                                            <div className="font-mono font-black text-black">{formatCurrency(subtotal)}</div>
                                                         </div>
                                                         <div className="flex items-center justify-between border-b border-slate-200 pb-1">
-                                                            <div className="flex items-center gap-2 text-slate-500 font-bold uppercase text-[10px]"><History size={14}/> Saldo Ant</div>
+                                                            <div className="flex items-center gap-2 text-black font-black uppercase text-[10px]"><History size={14}/> Saldo Ant</div>
                                                             <div className="w-32 h-8 border rounded bg-slate-50">
-                                                                <NumericInput value={row.prevBalance} onChange={(v) => handleRowChange(row.id, 'prevBalance', v)} isCurrency disabled={isRestricted} className="font-mono text-right font-bold text-black" />
+                                                                <NumericInput value={row.prevBalance} onChange={(v) => handleRowChange(row.id, 'prevBalance', v)} isCurrency disabled={isRestricted} className="font-mono text-right font-black text-black" />
                                                             </div>
                                                         </div>
                                                         {!isRestricted && (
