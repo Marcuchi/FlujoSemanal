@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { X, LayoutGrid, Scale, BookUser, Banknote, Database, Truck, ChevronRight, MapPin, Satellite, Palette } from 'lucide-react';
+import { X, LayoutGrid, Scale, BookUser, Banknote, Database, Truck, ChevronRight, MapPin, Satellite, Palette, Upload, Download, LogOut } from 'lucide-react';
 import { AppMode } from '../types';
 
 interface MenuModalProps {
@@ -11,6 +10,9 @@ interface MenuModalProps {
   onSelectZone: (zone?: string) => void;
   activeZone?: string;
   isRestrictedMode: boolean;
+  onShowImport: () => void;
+  onShowExport: () => void;
+  onLogout: () => void;
 }
 
 export const MenuModal: React.FC<MenuModalProps> = ({ 
@@ -20,7 +22,10 @@ export const MenuModal: React.FC<MenuModalProps> = ({
   onSwitchApp, 
   onSelectZone,
   activeZone,
-  isRestrictedMode
+  isRestrictedMode,
+  onShowImport,
+  onShowExport,
+  onLogout
 }) => {
   const [showRepartos, setShowRepartos] = React.useState(false);
 
@@ -61,12 +66,21 @@ export const MenuModal: React.FC<MenuModalProps> = ({
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden relative max-h-[90vh] overflow-y-auto custom-scrollbar">
         
-        <button 
-          onClick={onClose} 
-          className="absolute top-4 right-4 p-2 hover:bg-slate-800 rounded-full text-slate-400 hover:text-white transition-colors z-10"
-        >
-          <X size={20} />
-        </button>
+        <div className="absolute top-4 right-4 flex items-center gap-2 z-10">
+          <button 
+            onClick={onLogout}
+            title="Regresar al menú inicial"
+            className="p-2 hover:bg-slate-800 rounded-full text-rose-500 hover:text-rose-400 transition-colors"
+          >
+            <LogOut size={20} />
+          </button>
+          <button 
+            onClick={onClose} 
+            className="p-2 hover:bg-slate-800 rounded-full text-slate-400 hover:text-white transition-colors"
+          >
+            <X size={20} />
+          </button>
+        </div>
 
         <div className="p-6 sm:p-8">
           <h2 className="text-2xl font-bold text-slate-100 mb-2">
@@ -296,6 +310,24 @@ export const MenuModal: React.FC<MenuModalProps> = ({
                         </div>
                     )}
                     </button>
+
+                    {/* Import/Export Footer Section */}
+                    <div className="mt-4 pt-4 border-t border-slate-800 grid grid-cols-2 gap-3">
+                        <button 
+                            onClick={onShowImport}
+                            className="flex items-center justify-center gap-2 p-3 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl border border-slate-700 transition-all group"
+                        >
+                            <Upload size={18} className="text-emerald-500 group-hover:scale-110 transition-transform" />
+                            <span className="text-sm font-bold">Importar</span>
+                        </button>
+                        <button 
+                            onClick={onShowExport}
+                            className="flex items-center justify-center gap-2 p-3 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl border border-slate-700 transition-all group"
+                        >
+                            <Download size={18} className="text-indigo-500 group-hover:scale-110 transition-transform" />
+                            <span className="text-sm font-bold">Exportar</span>
+                        </button>
+                    </div>
                 </>
             )}
           </div>

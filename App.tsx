@@ -1,5 +1,5 @@
 import React from 'react';
-import { Download, Upload, PieChart as PieChartIcon, History, ChevronLeft, ChevronRight, Calendar, Menu, LayoutGrid, Scale, BookUser, Banknote, Database, StickyNote, ZoomIn, ZoomOut, Truck, MapPin, ArrowRight, X, Palette } from 'lucide-react';
+import { Download, Upload, PieChart as PieChartIcon, History, ChevronLeft, ChevronRight, Calendar, Menu, LayoutGrid, Scale, BookUser, Banknote, Database, StickyNote, ZoomIn, ZoomOut, Truck, MapPin, ArrowRight, X, Palette, Maximize2, Columns } from 'lucide-react';
 import { ref, onValue, set, get, child } from 'firebase/database';
 import { db } from './firebaseConfig';
 import { DAYS_OF_WEEK, WeekData, DayData, HistoryItem, AppMode } from './types';
@@ -68,7 +68,7 @@ const LandingScreen: React.FC<LandingScreenProps> = ({ onEnter, onEnterMarcos })
       {/* Password Modal */}
       {showPassword && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-           <div className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-6 relative">
+           <div className="w-full max-sm bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-6 relative">
               <button 
                 onClick={closePasswordModal}
                 className="absolute top-4 right-4 text-slate-500 hover:text-slate-300"
@@ -224,7 +224,6 @@ const createInitialState = (): WeekData => {
   return state;
 };
 
-// Helper to calculate the closing balance of a week data object (Office)
 const calculateWeeklyBalance = (data: WeekData, startBalance: number = 0): number => {
     let balance = data['monday']?.manualInitialAmount !== undefined 
         ? data['monday']!.manualInitialAmount! 
@@ -262,11 +261,9 @@ const calculateWeeklyBalance = (data: WeekData, startBalance: number = 0): numbe
     return balance;
 };
 
-// Helper to calculate the closing Treasury total of a week
 const calculateWeeklyTreasury = (data: WeekData, startBalance: number = 0): number => {
     let balance = 0;
     
-    // Determine start balance for Treasury
     if (data['monday']?.initialBoxAmount !== undefined) {
         balance = data['monday'].initialBoxAmount;
     } else {
@@ -278,10 +275,8 @@ const calculateWeeklyTreasury = (data: WeekData, startBalance: number = 0): numb
             day.toBox.forEach(t => {
                 const title = t.title.trim().toLowerCase();
                 if (title === 'oficina') {
-                    // Returns to office, subtract from Treasury
                     balance -= t.amount;
                 } else { 
-                    // "Tesoro" OR Generic items: Add to Treasury
                     balance += t.amount;
                 }
             });
@@ -291,15 +286,28 @@ const calculateWeeklyTreasury = (data: WeekData, startBalance: number = 0): numb
 };
 
 const App: React.FC = () => {
-  const [appStarted, setAppStarted] = React.useState(false);
-  const [activeZone, setActiveZone] = React.useState<string | undefined>(undefined);
-  const [isRestrictedMode, setIsRestrictedMode] = React.useState(false); // New State for mode
+  // --- PERSISTENCE LOGIC ---
+  const [appStarted, setAppStarted] = React.useState(() => {
+    return localStorage.getItem('session_app_started') === 'true';
+  });
+  const [activeZone, setActiveZone] = React.useState<string | undefined>(() => {
+    return localStorage.getItem('session_active_zone') || undefined;
+  });
+  const [isRestrictedMode, setIsRestrictedMode] = React.useState(() => {
+    return localStorage.getItem('session_is_restricted') === 'true';
+  });
+  const [currentApp, setCurrentApp] = React.useState<AppMode>(() => {
+    return (localStorage.getItem('session_current_app') as AppMode) || 'FLOW';
+  });
 
   const [currentDate, setCurrentDate] = React.useState(new Date());
   const [weekData, setWeekData] = React.useState<WeekData>(createInitialState());
   const [history, setHistory] = React.useState<HistoryItem[]>([]);
-  const [currentApp, setCurrentApp] = React.useState<AppMode>('FLOW');
   
+  // New: Flow view mode (Weekly vs Daily)
+  const [flowView, setFlowView] = React.useState<'WEEKLY' | 'DAILY'>('WEEKLY');
+  const [selectedDayId, setSelectedDayId] = React.useState(DAYS_OF_WEEK[new Date().getDay() === 0 ? 0 : new Date().getDay() - 1].id);
+
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [importMode, setImportMode] = React.useState<'WEEK' | 'MONTH'>('WEEK');
 
@@ -312,47 +320,57 @@ const App: React.FC = () => {
   const [showImportModal, setShowImportModal] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
   
-  // State for Zoom Level
-  const [zoomLevel, setZoomLevel] = React.useState(90);
-
-  // State for Previous Week's Close (for Automatic Monday Initial Office)
   const [prevWeekClose, setPrevWeekClose] = React.useState(0);
-  // State for Previous Week's Treasury Total (for Automatic Monday Initial Treasury)
   const [prevWeekTreasury, setPrevWeekTreasury] = React.useState(0);
 
-  // Derived week key (e.g., "2024-04-15")
   const currentWeekKey = React.useMemo(() => getWeekKey(currentDate), [currentDate]);
 
-  // --- Zoom Logic ---
+  // Sync session state to localStorage
   React.useEffect(() => {
-    const savedZoom = localStorage.getItem('app_zoom_level');
-    if (savedZoom) {
-      setZoomLevel(parseInt(savedZoom, 10));
+    localStorage.setItem('session_app_started', String(appStarted));
+    if (activeZone) localStorage.setItem('session_active_zone', activeZone);
+    else localStorage.removeItem('session_active_zone');
+    localStorage.setItem('session_is_restricted', String(isRestrictedMode));
+    localStorage.setItem('session_current_app', currentApp);
+  }, [appStarted, activeZone, isRestrictedMode, currentApp]);
+
+  // UI/UX Mobile optimization: Auto-set daily view on small screens and DISABLE weekly view toggle
+  React.useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 768) {
+        setFlowView('DAILY');
+      }
+    };
+    
+    handleResize(); // Initial check
+    window.addEventListener('resize', handleResize);
+    
+    const savedFlowView = localStorage.getItem('app_flow_view');
+    if (savedFlowView === 'WEEKLY' || savedFlowView === 'DAILY') {
+      if (window.innerWidth < 768) {
+         setFlowView('DAILY');
+      } else {
+         setFlowView(savedFlowView);
+      }
     }
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   React.useEffect(() => {
     if (appStarted) {
-       document.documentElement.style.fontSize = `${zoomLevel}%`;
-       localStorage.setItem('app_zoom_level', zoomLevel.toString());
+       localStorage.setItem('app_flow_view', flowView);
     }
-  }, [zoomLevel, appStarted]);
+  }, [flowView, appStarted]);
 
-  const handleZoomIn = () => setZoomLevel(prev => Math.min(prev + 5, 150));
-  const handleZoomOut = () => setZoomLevel(prev => Math.max(prev - 5, 30));
-
-  // --- Data Loading Effect ---
   React.useEffect(() => {
-    if (!appStarted) return; // Only load if app started
+    if (!appStarted) return;
 
     if (db) {
       setLoading(true);
 
-      const rootRef = ref(db!, `weeks`);
       const weekDataRef = ref(db!, `weeks/${currentWeekKey}/data`);
       const historyRef = ref(db!, `weeks/${currentWeekKey}/history`);
 
-      // 1. Migration Logic
       const globalRootRef = ref(db!);
       get(child(globalRootRef, 'weekData')).then((snapshot) => {
         if (snapshot.exists()) {
@@ -372,7 +390,6 @@ const App: React.FC = () => {
         }
       });
 
-      // 2. Week Data Listener
       const unsubscribeWeek = onValue(weekDataRef, (snapshot) => {
         const data = snapshot.val();
         if (data) {
@@ -398,21 +415,17 @@ const App: React.FC = () => {
         setLoading(false);
       });
 
-      // 3. History Listener
       const unsubscribeHistory = onValue(historyRef, (snapshot) => {
           const data = snapshot.val();
           setHistory(data || []);
       });
 
-      // 4. Load Previous Week Data for "Automatic" Calculation (Office & Treasury)
       const prevWeekKey = getWeekKey(addWeeks(currentDate, -1));
       const prevPrevWeekKey = getWeekKey(addWeeks(currentDate, -2));
 
       get(ref(db!, `weeks/${prevWeekKey}/data`)).then((snap) => {
           if (snap.exists()) {
               const prevData = snap.val();
-              
-              // --- Office Balance Logic ---
               if (prevData['monday']?.manualInitialAmount === undefined) {
                   get(ref(db!, `weeks/${prevPrevWeekKey}/data`)).then((snap2) => {
                       let startOfPrev = 0;
@@ -427,7 +440,6 @@ const App: React.FC = () => {
                   setPrevWeekClose(calculateWeeklyBalance(prevData, 0));
               }
 
-              // --- Treasury Balance Logic ---
               if (prevData['monday']?.initialBoxAmount === undefined) {
                   get(ref(db!, `weeks/${prevPrevWeekKey}/data`)).then((snap2) => {
                       let startTreasuryPrev = 0;
@@ -456,7 +468,6 @@ const App: React.FC = () => {
         unsubscribeHistory();
       };
     } else {
-      // LocalStorage Fallback
       setIsOfflineMode(true);
       const saved = localStorage.getItem(`weekData_${currentWeekKey}`);
       const savedHistory = localStorage.getItem(`history_${currentWeekKey}`);
@@ -473,7 +484,6 @@ const App: React.FC = () => {
         setHistory([]);
       }
 
-      // Load Previous Week Local
       const prevWeekKey = getWeekKey(addWeeks(currentDate, -1));
       const prevPrevWeekKey = getWeekKey(addWeeks(currentDate, -2));
       const savedPrev = localStorage.getItem(`weekData_${prevWeekKey}`);
@@ -484,7 +494,6 @@ const App: React.FC = () => {
              const savedPrevPrev = localStorage.getItem(`weekData_${prevPrevWeekKey}`);
              const prevPrevData = savedPrevPrev ? JSON.parse(savedPrevPrev) : null;
 
-             // Office
              if (prevData['monday']?.manualInitialAmount === undefined) {
                  let startOfPrev = 0;
                  if (prevPrevData) {
@@ -495,7 +504,6 @@ const App: React.FC = () => {
                  setPrevWeekClose(calculateWeeklyBalance(prevData, 0));
              }
 
-             // Treasury
              if (prevData['monday']?.initialBoxAmount === undefined) {
                  let startTreasuryPrev = 0;
                  if (prevPrevData) {
@@ -519,8 +527,6 @@ const App: React.FC = () => {
     }
   }, [currentDate, currentWeekKey, currentApp, appStarted]);
 
-  // --- Save Functions ---
-
   const saveWeekData = (newData: WeekData) => {
     const cleanData = JSON.parse(JSON.stringify(newData));
     if (db) {
@@ -542,8 +548,6 @@ const App: React.FC = () => {
           localStorage.setItem(`history_${currentWeekKey}`, JSON.stringify(newHistory));
       }
   };
-
-  // --- Handlers ---
 
   const handleUpdateDay = (updatedDay: DayData) => {
     const newWeekData = { ...weekData, [updatedDay.id]: updatedDay };
@@ -686,7 +690,6 @@ const App: React.FC = () => {
             alert('Error al leer el archivo CSV de Semana.');
           }
       } else {
-          // Import Month
           const result = parseMonthCSV(text);
           if (result) {
              const keys = Object.keys(result);
@@ -726,8 +729,6 @@ const App: React.FC = () => {
       fileInputRef.current?.click();
   };
 
-  // --- Calculations ---
-
   const totals = React.useMemo(() => (Object.values(weekData) as DayData[]).reduce(
     (acc, day) => {
       if (!day) return acc;
@@ -745,15 +746,11 @@ const App: React.FC = () => {
             if (t === 'oficina') {
                 dayTreasurySub += item.amount;
             } else {
-                // "Tesoro" OR Generic items: Add to Treasury
                 dayTreasuryAdd += item.amount;
             }
         });
       }
       
-      // Treasury Initial logic:
-      // For Monday, if manual is set, use it. If not, use calculated prevWeekTreasury.
-      // For other days, initialBoxAmount should generally be 0 or undefined, but we keep the property check.
       let initialBox = 0;
       if (day.id === 'monday') {
            initialBox = day.initialBoxAmount !== undefined ? day.initialBoxAmount : prevWeekTreasury;
@@ -809,31 +806,12 @@ const App: React.FC = () => {
     return balances;
   }, [weekData, prevWeekClose]);
 
-  // --- Navigation & Logic ---
-
   const handlePrevWeek = () => setCurrentDate(addWeeks(currentDate, -1));
-
-  const handleNextWeek = () => {
-    const nextDate = addWeeks(currentDate, 1);
-    setCurrentDate(nextDate);
-  };
+  const handleNextWeek = () => setCurrentDate(addWeeks(currentDate, 1));
 
   const handleDateSelect = (date: Date) => {
     setCurrentDate(date);
     setShowWeekPicker(false);
-  };
-
-  const getAppName = () => {
-      switch(currentApp) {
-          case 'FLOW': return 'Flujo Semanal';
-          case 'KILOS': return 'Control de Kilos';
-          case 'CC': return 'Cuentas Corrientes';
-          case 'CHEQUES': return 'Cheques en Cartera';
-          case 'GENERAL_DATA': return 'Datos Generales';
-          case 'TRACKING': return 'Seguimiento Satelital';
-          case 'MARCOS': return 'Marcos Flujos';
-          default: return 'Flujo Semanal';
-      }
   };
 
   const getHeaderContent = () => {
@@ -866,72 +844,64 @@ const App: React.FC = () => {
         <div className="max-w-full px-4 py-3">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             
-            <div className="flex items-center gap-3">
-              <img 
-                src="https://avicolaalpina.com.ar/wp-content/uploads/2025/04/logoCompleto0.png" 
-                alt="Avícola Alpina" 
-                className={`h-12 w-auto object-contain transition-all ${currentApp !== 'FLOW' ? 'grayscale opacity-80' : ''}`}
-                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-              />
-              <div>
-                <h1 className="text-xl font-bold text-slate-100 leading-tight flex items-center gap-2">
-                  {getHeaderContent()}
-                  {activeZone && <span className="text-xs bg-emerald-900/50 text-emerald-300 px-2 py-0.5 rounded border border-emerald-800 ml-2 uppercase tracking-wide">{activeZone}</span>}
-                  {isOfflineMode && <span className="text-[10px] bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded ml-2 border border-slate-600">MODO LOCAL</span>}
-                </h1>
-                <p className="text-xs text-slate-400 hidden sm:block">Avícola Alpina</p>
+            <div className="flex items-center justify-between md:justify-start w-full md:w-auto gap-3">
+              <div className="flex items-center gap-3">
+                <img 
+                  src="https://avicolaalpina.com.ar/wp-content/uploads/2025/04/logoCompleto0.png" 
+                  alt="Avícola Alpina" 
+                  className={`h-12 w-auto object-contain transition-all ${currentApp !== 'FLOW' ? 'grayscale opacity-80' : ''}`}
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                />
+                <div>
+                  <h1 className="text-xl font-bold text-slate-100 leading-tight flex items-center gap-2">
+                    {getHeaderContent()}
+                    {activeZone && <span className="text-xs bg-emerald-900/50 text-emerald-300 px-2 py-0.5 rounded border border-emerald-800 ml-2 uppercase tracking-wide">{activeZone}</span>}
+                    {isOfflineMode && <span className="text-[10px] bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded ml-2 border border-slate-600">MODO LOCAL</span>}
+                  </h1>
+                  <p className="text-xs text-slate-400 hidden sm:block">Avícola Alpina</p>
+                </div>
               </div>
+
+              {/* Mobile Menu Button - Shown if NOT in FLOW mode OR if there is an active zone (Delivery mode) to ensure menu is always reachable */}
+              {(currentApp !== 'FLOW' || activeZone) && (
+                <button onClick={() => setShowMenu(true)} className="sm:hidden p-2.5 bg-slate-800 text-slate-300 rounded-xl border border-slate-700 shadow-lg active:scale-95 transition-transform">
+                  <Menu size={20} />
+                </button>
+              )}
             </div>
 
             {currentApp === 'FLOW' && !activeZone && (
-                <div className="flex-1 overflow-x-auto no-scrollbar mx-4">
-                   <Summary totalIncome={totals.income} totalExpense={totals.expense} netTotal={netTotal} totalToBox={totals.toBox} />
+                <div className="flex items-center gap-2 flex-1 md:mx-4">
+                   <div className="flex-1 overflow-x-auto no-scrollbar">
+                      <Summary totalIncome={totals.income} totalExpense={totals.expense} netTotal={netTotal} totalToBox={totals.toBox} />
+                   </div>
+                   {/* Mobile Menu Button - Right of Summary in FLOW mode (No zone) */}
+                   <button onClick={() => setShowMenu(true)} className="sm:hidden flex-none p-2.5 bg-slate-800 text-slate-300 rounded-xl border border-slate-700 shadow-lg active:scale-95 transition-transform">
+                      <Menu size={20} />
+                   </button>
                 </div>
             )}
             
-            {currentApp !== 'FLOW' && <div className="flex-1"></div>}
-            {currentApp === 'FLOW' && activeZone && <div className="flex-1"></div>}
+            {currentApp !== 'FLOW' && <div className="hidden md:block flex-1"></div>}
+            {currentApp === 'FLOW' && activeZone && <div className="hidden md:block flex-1"></div>}
             
             <div className="flex items-center gap-2 flex-shrink-0">
-              
-              {/* Zoom Controls */}
-              <div className="flex items-center bg-slate-800 rounded-lg border border-slate-700 mr-2">
-                <button 
-                    type="button"
-                    onClick={handleZoomOut} 
-                    className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-l-lg transition-colors border-r border-slate-700/50" 
-                    title="Reducir tamaño"
-                >
-                    <ZoomOut size={14} />
-                </button>
-                <div className="w-9 text-center text-[10px] font-mono font-bold text-slate-500 select-none">
-                    {zoomLevel}%
-                </div>
-                <button 
-                    type="button"
-                    onClick={handleZoomIn} 
-                    className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-r-lg transition-colors border-l border-slate-700/50" 
-                    title="Aumentar tamaño"
-                >
-                    <ZoomIn size={14} />
-                </button>
-              </div>
-
               {currentApp === 'FLOW' && !activeZone && (
                   <>
+                      {/* Ocultar Informe e Historial en móviles */}
                       <button 
                         type="button"
                         onClick={() => setShowReport(true)}
-                        className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-100 bg-indigo-600 hover:bg-indigo-500 rounded-lg transition-colors shadow-sm shadow-indigo-900/50"
+                        className="hidden sm:flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-100 bg-indigo-600 hover:bg-indigo-500 rounded-lg transition-colors shadow-sm shadow-indigo-900/50"
                       >
                         <PieChartIcon size={14} />
-                        <span className="hidden lg:inline">Informe Semanal</span>
+                        <span className="hidden lg:inline">Informe</span>
                       </button>
 
                       <button 
                         type="button"
                         onClick={() => setShowHistory(true)}
-                        className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 hover:text-white rounded-lg transition-colors border border-slate-700 relative"
+                        className="hidden sm:flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 hover:text-white rounded-lg transition-colors border border-slate-700 relative"
                       >
                         <History size={14} />
                         <span className="hidden lg:inline">Historial</span>
@@ -941,20 +911,10 @@ const App: React.FC = () => {
                             </span>
                         )}
                       </button>
-
-                      <button type="button" onClick={() => setShowImportModal(true)} className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 hover:text-white rounded-lg transition-colors border border-slate-700">
-                        <Upload size={14} />
-                        <span className="hidden lg:inline">Importar</span>
-                      </button>
-
-                      <button type="button" onClick={() => setShowExportModal(true)} className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 hover:text-white rounded-lg transition-colors border border-slate-700">
-                        <Download size={14} />
-                        <span className="hidden lg:inline">Exportar</span>
-                      </button>
                   </>
               )}
 
-              <button type="button" onClick={() => setShowMenu(true)} className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 hover:text-white rounded-lg transition-colors border border-slate-700">
+              <button type="button" onClick={() => setShowMenu(true)} className="hidden sm:flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 hover:text-white rounded-lg transition-colors border border-slate-700">
                 <Menu size={14} />
                 <span className="hidden lg:inline">Menú</span>
               </button>
@@ -973,6 +933,19 @@ const App: React.FC = () => {
   const handleEnterMarcos = () => {
     setCurrentApp('MARCOS');
     setAppStarted(true);
+  };
+
+  const handleLogout = () => {
+    if (window.confirm("¿Seguro que quieres salir al menú de inicio? Se guardará tu posición actual.")) {
+        localStorage.removeItem('session_app_started');
+        localStorage.removeItem('session_active_zone');
+        localStorage.removeItem('session_is_restricted');
+        localStorage.removeItem('session_current_app');
+        setAppStarted(false);
+        setActiveZone(undefined);
+        setIsRestrictedMode(false);
+        setCurrentApp('FLOW');
+    }
   };
 
   if (!appStarted) {
@@ -1013,13 +986,36 @@ const App: React.FC = () => {
         onSelectZone={setActiveZone}
         activeZone={activeZone}
         isRestrictedMode={isRestrictedMode}
+        onShowImport={() => setShowImportModal(true)}
+        onShowExport={() => setShowExportModal(true)}
+        onLogout={handleLogout}
       />
 
       <Header />
 
       {(currentApp === 'FLOW' && !activeZone) || currentApp === 'KILOS' ? (
-        <div className="bg-slate-900/80 border-b border-slate-800 flex items-center justify-center py-2 relative z-40 backdrop-blur-sm flex-none">
-          <div className="flex items-center gap-6 bg-slate-800/50 px-4 py-1.5 rounded-full border border-slate-700/50 relative">
+        <div className="bg-slate-900/80 border-b border-slate-800 flex flex-col md:flex-row items-center justify-center py-2 md:py-2 relative z-40 backdrop-blur-sm flex-none gap-4">
+          
+          {/* View Switcher - Only visible on medium/large screens. HIDDEN on smartphone. */}
+          {currentApp === 'FLOW' && !activeZone && (
+              <div className="hidden md:flex items-center bg-slate-800/60 rounded-full border border-slate-700 p-1 overflow-hidden gap-1 order-1 md:order-2">
+                <button 
+                  onClick={() => setFlowView('WEEKLY')}
+                  className={`px-3 py-1.5 rounded-full transition-all text-xs font-bold ${flowView === 'WEEKLY' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/50' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}
+                >
+                  Vista Semanal
+                </button>
+                <button 
+                  onClick={() => setFlowView('DAILY')}
+                  className={`px-3 py-1.5 rounded-full transition-all text-xs font-bold ${flowView === 'DAILY' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/50' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}
+                >
+                  Vista Diaria
+                </button>
+              </div>
+          )}
+
+          {/* Week Picker - Always visible */}
+          <div className="flex items-center gap-6 bg-slate-800/50 px-4 py-1.5 rounded-full border border-slate-700/50 relative order-2 md:order-1">
               <button 
                   onClick={handlePrevWeek}
                   className="p-1 hover:bg-slate-700 rounded-full text-slate-400 hover:text-white transition-colors"
@@ -1051,22 +1047,63 @@ const App: React.FC = () => {
                   onSelectDate={handleDateSelect} 
               />
           </div>
+
+          {/* Day selector for Daily view mode - visible when in daily mode */}
+          {currentApp === 'FLOW' && flowView === 'DAILY' && !activeZone && (
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 hidden lg:flex items-center gap-1 bg-slate-800/40 p-1 rounded-lg border border-slate-700/50">
+              {DAYS_OF_WEEK.map((day) => (
+                <button
+                  key={day.id}
+                  onClick={() => setSelectedDayId(day.id)}
+                  className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${selectedDayId === day.id ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}
+                >
+                  {day.name.substring(0, 3)}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       ) : null}
 
       <main className="flex-1 overflow-x-auto overflow-y-hidden bg-slate-950 relative z-0">
         {currentApp === 'FLOW' && !activeZone && (
-            <div className="h-full flex flex-row p-4 gap-4 w-full">
-                {DAYS_OF_WEEK.map((day) => (
+            <div className={`h-full p-4 w-full ${flowView === 'WEEKLY' ? 'flex flex-row gap-4' : 'flex flex-col items-center overflow-y-auto custom-scrollbar'}`}>
+                {/* Rendering logic forced to DAILY on small screens via CSS/JS check above */}
+                {flowView === 'WEEKLY' && window.innerWidth >= 768 ? (
+                  DAYS_OF_WEEK.map((day) => (
+                      <DayCard 
+                          key={day.id} 
+                          dayData={weekData[day.id]} 
+                          onUpdate={handleUpdateDay}
+                          previousBalance={runningBalances[day.id]}
+                          prevWeekTreasury={prevWeekTreasury}
+                          onAddToHistory={handleAddToHistory}
+                      />
+                  ))
+                ) : (
+                  <div className="w-full max-w-7xl h-full">
+                    {/* Day selector specifically for smartphones/vertical view */}
+                    <div className="lg:hidden flex items-center justify-center gap-2 mb-4 bg-slate-900 p-2 rounded-xl border border-slate-800">
+                      {DAYS_OF_WEEK.map((day) => (
+                        <button
+                          key={day.id}
+                          onClick={() => setSelectedDayId(day.id)}
+                          className={`flex-1 py-2 text-xs font-black rounded-lg transition-all ${selectedDayId === day.id ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-800'}`}
+                        >
+                          {day.name.substring(0, 1)}
+                        </button>
+                      ))}
+                    </div>
                     <DayCard 
-                        key={day.id} 
-                        dayData={weekData[day.id]} 
+                        dayData={weekData[selectedDayId]} 
                         onUpdate={handleUpdateDay}
-                        previousBalance={runningBalances[day.id]}
+                        previousBalance={runningBalances[selectedDayId]}
                         prevWeekTreasury={prevWeekTreasury}
                         onAddToHistory={handleAddToHistory}
+                        isDailyView={true}
                     />
-                ))}
+                  </div>
+                )}
             </div>
         )}
         
