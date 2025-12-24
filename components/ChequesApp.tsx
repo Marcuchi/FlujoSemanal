@@ -1,7 +1,6 @@
-
 import React from 'react';
 import { Database, ref, onValue, set } from 'firebase/database';
-import { Plus, Trash2, Calendar, DollarSign, User, CreditCard, ArrowDown, Building2, ArrowUp, ArrowUpDown } from 'lucide-react';
+import { Plus, Minus, Trash2, Calendar, DollarSign, User, CreditCard, ArrowDown, Building2, ArrowUp, ArrowUpDown, X, Check } from 'lucide-react';
 import { Cheque } from '../types';
 import { generateId } from '../utils';
 
@@ -35,6 +34,7 @@ interface SortConfig {
 export const ChequesApp: React.FC<ChequesAppProps> = ({ db }) => {
   const [cheques, setCheques] = React.useState<Cheque[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [showForm, setShowForm] = React.useState(false);
 
   // Sorting State
   const [sortConfig, setSortConfig] = React.useState<SortConfig>({ key: 'paymentDate', direction: 'asc' });
@@ -61,7 +61,6 @@ export const ChequesApp: React.FC<ChequesAppProps> = ({ db }) => {
       const unsubscribe = onValue(chequesRef, (snapshot) => {
         const val = snapshot.val();
         if (val) {
-           // Convert object to array if needed (Firebase might return object with IDs as keys)
            const list = Array.isArray(val) ? val : Object.values(val);
            setCheques(list as Cheque[]);
         } else {
@@ -128,6 +127,7 @@ export const ChequesApp: React.FC<ChequesAppProps> = ({ db }) => {
           deliveredBy: ''
       }));
       setAmountDisplay('');
+      setShowForm(false); // Contraer al agregar
   };
 
   const handleDeleteCheque = (id: string) => {
@@ -152,17 +152,17 @@ export const ChequesApp: React.FC<ChequesAppProps> = ({ db }) => {
       let sortableItems = [...cheques];
       if (sortConfig.key !== null) {
           sortableItems.sort((a, b) => {
-              // @ts-ignore - Dynamic access
-              const aValue = a[sortConfig.key];
-              // @ts-ignore - Dynamic access
-              const bValue = b[sortConfig.key];
+              const aValue = (a[sortConfig.key!] || '').toString().toLowerCase();
+              const bValue = (b[sortConfig.key!] || '').toString().toLowerCase();
 
-              if (aValue < bValue) {
-                  return sortConfig.direction === 'asc' ? -1 : 1;
+              if (sortConfig.key === 'amount') {
+                  const numA = Number(a.amount) || 0;
+                  const numB = Number(b.amount) || 0;
+                  return sortConfig.direction === 'asc' ? numA - numB : numB - numA;
               }
-              if (aValue > bValue) {
-                  return sortConfig.direction === 'asc' ? 1 : -1;
-              }
+
+              if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+              if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
               return 0;
           });
       }
@@ -208,134 +208,144 @@ export const ChequesApp: React.FC<ChequesAppProps> = ({ db }) => {
         <div className="flex-1 overflow-y-auto p-2 sm:p-6 custom-scrollbar">
             <div className="max-w-7xl mx-auto space-y-6">
 
-                {/* Formulario */}
-                <form onSubmit={handleAddCheque} className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg">
-                    <h3 className="text-xs font-bold text-violet-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-                        <Plus size={14} /> Agregar Cheque
-                    </h3>
-                    
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        
-                        {/* Fecha Ingreso */}
-                        <div className="relative">
-                            <span className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">Fecha Registro</span>
-                            <div className="relative">
-                                <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" size={14} />
-                                <input 
-                                    type="date" 
-                                    required
-                                    value={formData.date}
-                                    onChange={e => setFormData({...formData, date: e.target.value})}
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg py-2 pl-8 pr-3 text-sm text-white focus:border-violet-500 focus:outline-none"
-                                />
+                {/* Collapsable Add Form */}
+                <div className={`bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-lg transition-all ${showForm ? 'border-violet-500/50' : ''}`}>
+                    <button 
+                        onClick={() => setShowForm(!showForm)}
+                        className={`w-full flex items-center justify-between p-5 ${showForm ? 'bg-slate-800/50' : 'hover:bg-slate-800/30'} transition-colors`}
+                    >
+                        <div className="flex items-center gap-3">
+                            <Plus size={20} className={showForm ? 'text-violet-400' : 'text-slate-500'} />
+                            <h3 className={`text-sm font-bold uppercase tracking-widest ${showForm ? 'text-slate-100' : 'text-slate-400'}`}>Nuevo Cheque</h3>
+                        </div>
+                        {showForm ? <Minus className="text-slate-500" /> : <Plus className="text-slate-500" />}
+                    </button>
+
+                    {showForm && (
+                        <form onSubmit={handleAddCheque} className="p-5 border-t border-slate-800 animate-in slide-in-from-top-2 duration-200">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                
+                                {/* Fecha Ingreso */}
+                                <div className="relative">
+                                    <span className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">Fecha Registro</span>
+                                    <div className="relative">
+                                        <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" size={14} />
+                                        <input 
+                                            type="date" 
+                                            required
+                                            value={formData.date}
+                                            onChange={e => setFormData({...formData, date: e.target.value})}
+                                            className="w-full bg-slate-950 border border-slate-700 rounded-lg py-2 pl-8 pr-3 text-sm text-white focus:border-violet-500 focus:outline-none"
+                                        />
+                                    </div>
+                                </div>
+
+                                 {/* Banco */}
+                                 <div className="relative">
+                                    <span className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">Banco</span>
+                                    <div className="relative">
+                                        <Building2 className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" size={14} />
+                                        <input 
+                                            type="text" 
+                                            placeholder="Nombre del Banco"
+                                            required
+                                            value={formData.bank}
+                                            onChange={e => setFormData({...formData, bank: e.target.value})}
+                                            className="w-full bg-slate-950 border border-slate-700 rounded-lg py-2 pl-8 pr-3 text-sm text-white focus:border-violet-500 focus:outline-none"
+                                        />
+                                    </div>
+                                </div>
+
+                                 {/* Número */}
+                                 <div className="relative">
+                                    <span className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">N° Cheque</span>
+                                    <div className="relative">
+                                        <input 
+                                            type="text" 
+                                            placeholder="00000000"
+                                            required
+                                            value={formData.number}
+                                            onChange={e => setFormData({...formData, number: e.target.value})}
+                                            className="w-full bg-slate-950 border border-slate-700 rounded-lg py-2 px-3 text-sm text-white focus:border-violet-500 focus:outline-none font-mono"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Monto */}
+                                <div className="relative">
+                                    <span className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">Monto</span>
+                                    <div className="relative">
+                                        <DollarSign className="absolute left-1 top-1/2 -translate-y-1/2 text-violet-500" size={14} />
+                                        <input 
+                                            type="text" 
+                                            inputMode="numeric"
+                                            placeholder="0"
+                                            required
+                                            value={amountDisplay}
+                                            onChange={handleAmountInput}
+                                            className="w-full bg-slate-950 border border-violet-900/50 rounded-lg py-2 pl-6 pr-2 text-sm text-violet-300 font-mono focus:border-violet-500 focus:outline-none"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Fecha Cobro */}
+                                <div className="relative">
+                                    <span className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">Fecha Cobro</span>
+                                    <div className="relative">
+                                        <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" size={14} />
+                                        <input 
+                                            type="date" 
+                                            required
+                                            value={formData.paymentDate}
+                                            onChange={e => setFormData({...formData, paymentDate: e.target.value})}
+                                            className="w-full bg-slate-950 border border-slate-700 rounded-lg py-2 pl-8 pr-3 text-sm text-white focus:border-violet-500 focus:outline-none"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Titular */}
+                                <div className="relative">
+                                    <span className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">Titular</span>
+                                    <div className="relative">
+                                        <User className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" size={14} />
+                                        <input 
+                                            type="text" 
+                                            placeholder="Nombre Titular"
+                                            value={formData.holder}
+                                            onChange={e => setFormData({...formData, holder: e.target.value})}
+                                            className="w-full bg-slate-950 border border-slate-700 rounded-lg py-2 pl-8 pr-3 text-sm text-white focus:border-violet-500 focus:outline-none"
+                                        />
+                                    </div>
+                                </div>
+
+                                 {/* Entregado Por */}
+                                 <div className="relative">
+                                    <span className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">Entregado Por</span>
+                                    <div className="relative">
+                                        <ArrowDown className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" size={14} />
+                                        <input 
+                                            type="text" 
+                                            placeholder="¿Quién lo entregó?"
+                                            value={formData.deliveredBy}
+                                            onChange={e => setFormData({...formData, deliveredBy: e.target.value})}
+                                            className="w-full bg-slate-950 border border-slate-700 rounded-lg py-2 pl-8 pr-3 text-sm text-white focus:border-violet-500 focus:outline-none"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Submit Button */}
+                                <div className="flex items-end">
+                                    <button 
+                                        type="submit"
+                                        className="w-full bg-violet-600 hover:bg-violet-500 text-white font-bold py-2 rounded-lg transition-colors flex items-center justify-center shadow-lg shadow-violet-900/20"
+                                    >
+                                        <Plus size={20} /> Guardar Cheque
+                                    </button>
+                                </div>
                             </div>
-                        </div>
-
-                         {/* Banco */}
-                         <div className="relative">
-                            <span className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">Banco</span>
-                            <div className="relative">
-                                <Building2 className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" size={14} />
-                                <input 
-                                    type="text" 
-                                    placeholder="Nombre del Banco"
-                                    required
-                                    value={formData.bank}
-                                    onChange={e => setFormData({...formData, bank: e.target.value})}
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg py-2 pl-8 pr-3 text-sm text-white focus:border-violet-500 focus:outline-none"
-                                />
-                            </div>
-                        </div>
-
-                         {/* Número */}
-                         <div className="relative">
-                            <span className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">N° Cheque</span>
-                            <div className="relative">
-                                <input 
-                                    type="text" 
-                                    placeholder="00000000"
-                                    required
-                                    value={formData.number}
-                                    onChange={e => setFormData({...formData, number: e.target.value})}
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg py-2 px-3 text-sm text-white focus:border-violet-500 focus:outline-none font-mono"
-                                />
-                            </div>
-                        </div>
-
-                        {/* Monto */}
-                        <div className="relative">
-                            <span className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">Monto</span>
-                            <div className="relative">
-                                <DollarSign className="absolute left-2 top-1/2 -translate-y-1/2 text-violet-500" size={14} />
-                                <input 
-                                    type="text" 
-                                    inputMode="numeric"
-                                    placeholder="0"
-                                    required
-                                    value={amountDisplay}
-                                    onChange={handleAmountInput}
-                                    className="w-full bg-slate-950 border border-violet-900/50 rounded-lg py-2 pl-6 pr-2 text-sm text-violet-300 font-mono focus:border-violet-500 focus:outline-none"
-                                />
-                            </div>
-                        </div>
-
-                        {/* Fecha Cobro */}
-                        <div className="relative">
-                            <span className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">Fecha Cobro</span>
-                            <div className="relative">
-                                <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" size={14} />
-                                <input 
-                                    type="date" 
-                                    required
-                                    value={formData.paymentDate}
-                                    onChange={e => setFormData({...formData, paymentDate: e.target.value})}
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg py-2 pl-8 pr-3 text-sm text-white focus:border-violet-500 focus:outline-none"
-                                />
-                            </div>
-                        </div>
-
-                        {/* Titular */}
-                        <div className="relative">
-                            <span className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">Titular</span>
-                            <div className="relative">
-                                <User className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" size={14} />
-                                <input 
-                                    type="text" 
-                                    placeholder="Nombre Titular"
-                                    value={formData.holder}
-                                    onChange={e => setFormData({...formData, holder: e.target.value})}
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg py-2 pl-8 pr-3 text-sm text-white focus:border-violet-500 focus:outline-none"
-                                />
-                            </div>
-                        </div>
-
-                         {/* Entregado Por */}
-                         <div className="relative">
-                            <span className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">Entregado Por</span>
-                            <div className="relative">
-                                <ArrowDown className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" size={14} />
-                                <input 
-                                    type="text" 
-                                    placeholder="¿Quién lo entregó?"
-                                    value={formData.deliveredBy}
-                                    onChange={e => setFormData({...formData, deliveredBy: e.target.value})}
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg py-2 pl-8 pr-3 text-sm text-white focus:border-violet-500 focus:outline-none"
-                                />
-                            </div>
-                        </div>
-
-                        {/* Submit Button */}
-                        <div className="flex items-end">
-                            <button 
-                                type="submit"
-                                className="w-full bg-violet-600 hover:bg-violet-500 text-white font-bold py-2 rounded-lg transition-colors flex items-center justify-center shadow-lg shadow-violet-900/20"
-                            >
-                                <Plus size={20} />
-                            </button>
-                        </div>
-
-                    </div>
-                </form>
+                        </form>
+                    )}
+                </div>
 
                 {/* Tabla */}
                 <div className="bg-slate-900 rounded-xl border border-slate-800 shadow-xl overflow-hidden">

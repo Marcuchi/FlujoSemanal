@@ -1,7 +1,6 @@
-
 import React from 'react';
 import { Database as DBRef, ref, onValue, set } from 'firebase/database';
-import { ChevronDown, ChevronUp, Plus, Trash2, User, Users, Truck, ArrowUpDown, MapPin, Edit2, Check, X, Tag } from 'lucide-react';
+import { ChevronDown, ChevronUp, Plus, Minus, Trash2, User, Users, Truck, ArrowUpDown, MapPin, Edit2, Check, X, Tag, UserPlus } from 'lucide-react';
 import { GeneralData, Employee, Supplier, Client } from '../types';
 import { generateId, formatCurrency } from '../utils';
 
@@ -163,6 +162,9 @@ const EmployeeSection: React.FC<EmployeeSectionProps> = ({ items, isOpen, onTogg
         address: '', startDate: '', birthDate: '', phone: ''
     });
 
+    // Form Collapse State
+    const [showForm, setShowForm] = React.useState(false);
+
     // Editing State
     const [editingId, setEditingId] = React.useState<string | null>(null);
     const [editForm, setEditForm] = React.useState<Employee | null>(null);
@@ -183,6 +185,7 @@ const EmployeeSection: React.FC<EmployeeSectionProps> = ({ items, isOpen, onTogg
             firstName: '', lastName: '', dni: '', cuil: '',
             address: '', startDate: '', birthDate: '', phone: ''
         });
+        setShowForm(false); // Contraer al agregar
     };
 
     const startEditing = (emp: Employee) => {
@@ -266,29 +269,42 @@ const EmployeeSection: React.FC<EmployeeSectionProps> = ({ items, isOpen, onTogg
             {isOpen && (
                 <div className="p-5 border-t border-slate-800 animate-in slide-in-from-top-2 duration-200">
                     
-                    {/* ADD FORM */}
-                    <form onSubmit={handleAdd} className="bg-slate-950/50 p-4 rounded-xl border border-slate-800 mb-6">
-                        <h3 className="text-xs font-bold text-amber-500 uppercase mb-3">Nuevo Empleado</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                            <input required placeholder="Nombre" value={formData.firstName} onChange={e => setFormData({...formData, firstName: e.target.value})} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-amber-500 focus:outline-none" />
-                            <input required placeholder="Apellido" value={formData.lastName} onChange={e => setFormData({...formData, lastName: e.target.value})} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-amber-500 focus:outline-none" />
-                            <input placeholder="DNI" value={formData.dni} onChange={e => setFormData({...formData, dni: e.target.value})} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-amber-500 focus:outline-none" />
-                            <input placeholder="CUIL" value={formData.cuil} onChange={e => setFormData({...formData, cuil: e.target.value})} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-amber-500 focus:outline-none" />
-                            <input placeholder="Domicilio" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-amber-500 focus:outline-none" />
-                            <input placeholder="Teléfono" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-amber-500 focus:outline-none" />
-                            <div className="relative">
-                                <span className="text-[10px] text-slate-500 absolute -top-1.5 left-2 bg-slate-900 px-1">F. Nacimiento</span>
-                                <input type="date" value={formData.birthDate} onChange={e => setFormData({...formData, birthDate: e.target.value})} className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-slate-400 focus:text-white focus:border-amber-500 focus:outline-none" />
-                            </div>
-                            <div className="relative">
-                                <span className="text-[10px] text-slate-500 absolute -top-1.5 left-2 bg-slate-900 px-1">F. Ingreso</span>
-                                <input type="date" value={formData.startDate} onChange={e => setFormData({...formData, startDate: e.target.value})} className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-slate-400 focus:text-white focus:border-amber-500 focus:outline-none" />
-                            </div>
+                    {/* TOGGLE FORM BUTTON */}
+                    <button 
+                        onClick={() => setShowForm(!showForm)}
+                        className={`mb-4 w-full flex items-center justify-between p-3 rounded-xl border border-dashed transition-all ${showForm ? 'bg-amber-900/20 border-amber-500/50 text-amber-100' : 'bg-slate-950 border-slate-700 text-slate-400 hover:border-amber-500/30'}`}
+                    >
+                        <div className="flex items-center gap-2">
+                            <UserPlus size={18} className={showForm ? 'text-amber-400' : 'text-slate-500'} />
+                            <span className="text-sm font-bold uppercase tracking-wider">Nuevo Empleado</span>
                         </div>
-                        <button type="submit" className="mt-3 w-full bg-amber-700 hover:bg-amber-600 text-white font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-2">
-                            <Plus size={16} /> Agregar
-                        </button>
-                    </form>
+                        {showForm ? <Minus size={18} /> : <Plus size={18} />}
+                    </button>
+
+                    {/* ADD FORM (COLLAPSABLE) */}
+                    {showForm && (
+                        <form onSubmit={handleAdd} className="bg-slate-950/50 p-4 rounded-xl border border-amber-500/20 mb-6 animate-in slide-in-from-top-2 duration-200">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                                <input required placeholder="Nombre" value={formData.firstName} onChange={e => setFormData({...formData, firstName: e.target.value})} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-amber-500 focus:outline-none" />
+                                <input required placeholder="Apellido" value={formData.lastName} onChange={e => setFormData({...formData, lastName: e.target.value})} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-amber-500 focus:outline-none" />
+                                <input placeholder="DNI" value={formData.dni} onChange={e => setFormData({...formData, dni: e.target.value})} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-amber-500 focus:outline-none" />
+                                <input placeholder="CUIL" value={formData.cuil} onChange={e => setFormData({...formData, cuil: e.target.value})} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-amber-500 focus:outline-none" />
+                                <input placeholder="Domicilio" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-amber-500 focus:outline-none" />
+                                <input placeholder="Teléfono" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-amber-500 focus:outline-none" />
+                                <div className="relative">
+                                    <span className="text-[10px] text-slate-500 absolute -top-1.5 left-2 bg-slate-900 px-1">F. Nacimiento</span>
+                                    <input type="date" value={formData.birthDate} onChange={e => setFormData({...formData, birthDate: e.target.value})} className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-slate-400 focus:text-white focus:border-amber-500 focus:outline-none" />
+                                </div>
+                                <div className="relative">
+                                    <span className="text-[10px] text-slate-500 absolute -top-1.5 left-2 bg-slate-900 px-1">F. Ingreso</span>
+                                    <input type="date" value={formData.startDate} onChange={e => setFormData({...formData, startDate: e.target.value})} className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-slate-400 focus:text-white focus:border-amber-500 focus:outline-none" />
+                                </div>
+                            </div>
+                            <button type="submit" className="mt-3 w-full bg-amber-700 hover:bg-amber-600 text-white font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-2">
+                                <Plus size={16} /> Agregar Empleado
+                            </button>
+                        </form>
+                    )}
 
                     {/* TABLE */}
                     <div className="overflow-x-auto rounded-lg border border-slate-800">
@@ -377,6 +393,9 @@ const SupplierSection: React.FC<SupplierSectionProps> = ({ items, isOpen, onTogg
     });
     const [priceDisplay, setPriceDisplay] = React.useState(''); // For input masking
 
+    // Form Collapse State
+    const [showForm, setShowForm] = React.useState(false);
+
     // Editing State
     const [editingId, setEditingId] = React.useState<string | null>(null);
     const [editForm, setEditForm] = React.useState<Supplier | null>(null);
@@ -409,6 +428,7 @@ const SupplierSection: React.FC<SupplierSectionProps> = ({ items, isOpen, onTogg
         onUpdate([...items, newSupplier]);
         setFormData({ name: '', product: '', price: 0, phone: '' });
         setPriceDisplay('');
+        setShowForm(false); // Contraer al agregar
     };
 
     const startEditing = (sup: Supplier) => {
@@ -483,22 +503,35 @@ const SupplierSection: React.FC<SupplierSectionProps> = ({ items, isOpen, onTogg
             {isOpen && (
                 <div className="p-5 border-t border-slate-800 animate-in slide-in-from-top-2 duration-200">
                     
-                    {/* ADD FORM */}
-                    <form onSubmit={handleAdd} className="bg-slate-950/50 p-4 rounded-xl border border-slate-800 mb-6">
-                        <h3 className="text-xs font-bold text-emerald-500 uppercase mb-3">Nuevo Proveedor</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                            <input required placeholder="Nombre" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none" />
-                            <input required placeholder="Producto" value={formData.product} onChange={e => setFormData({...formData, product: e.target.value})} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none" />
-                            <div className="relative">
-                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-500 text-xs">$</span>
-                                <input required placeholder="Precio" value={priceDisplay} onChange={e => handlePriceInput(e.target.value, setPriceDisplay, (v) => setFormData({...formData, price: v}))} className="w-full bg-slate-900 border border-slate-700 rounded px-3 pl-5 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none" />
-                            </div>
-                            <input placeholder="Teléfono" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none" />
+                    {/* TOGGLE FORM BUTTON */}
+                    <button 
+                        onClick={() => setShowForm(!showForm)}
+                        className={`mb-4 w-full flex items-center justify-between p-3 rounded-xl border border-dashed transition-all ${showForm ? 'bg-emerald-900/20 border-emerald-500/50 text-emerald-100' : 'bg-slate-950 border-slate-700 text-slate-400 hover:border-emerald-500/30'}`}
+                    >
+                        <div className="flex items-center gap-2">
+                            <Truck size={18} className={showForm ? 'text-emerald-400' : 'text-slate-500'} />
+                            <span className="text-sm font-bold uppercase tracking-wider">Nuevo Proveedor</span>
                         </div>
-                        <button type="submit" className="mt-3 w-full bg-emerald-700 hover:bg-emerald-600 text-white font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-2">
-                            <Plus size={16} /> Agregar
-                        </button>
-                    </form>
+                        {showForm ? <Minus size={18} /> : <Plus size={18} />}
+                    </button>
+
+                    {/* ADD FORM (COLLAPSABLE) */}
+                    {showForm && (
+                        <form onSubmit={handleAdd} className="bg-slate-950/50 p-4 rounded-xl border border-emerald-500/20 mb-6 animate-in slide-in-from-top-2 duration-200">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                                <input required placeholder="Nombre" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none" />
+                                <input required placeholder="Producto" value={formData.product} onChange={e => setFormData({...formData, product: e.target.value})} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none" />
+                                <div className="relative">
+                                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-500 text-xs">$</span>
+                                    <input required placeholder="Precio" value={priceDisplay} onChange={e => handlePriceInput(e.target.value, setPriceDisplay, (v) => setFormData({...formData, price: v}))} className="w-full bg-slate-900 border border-slate-700 rounded px-3 pl-5 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none" />
+                                </div>
+                                <input placeholder="Teléfono" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none" />
+                            </div>
+                            <button type="submit" className="mt-3 w-full bg-emerald-700 hover:bg-emerald-600 text-white font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-2">
+                                <Plus size={16} /> Agregar Proveedor
+                            </button>
+                        </form>
+                    )}
 
                     {/* TABLE */}
                     <div className="overflow-x-auto rounded-lg border border-slate-800">
@@ -578,6 +611,9 @@ const ClientSection: React.FC<ClientSectionProps> = ({ items, isOpen, onToggle, 
         name: '', cuil: '', phone: '', location: ''
     });
 
+    // Form Collapse State
+    const [showForm, setShowForm] = React.useState(false);
+
     // Editing State
     const [editingId, setEditingId] = React.useState<string | null>(null);
     const [editForm, setEditForm] = React.useState<Client | null>(null);
@@ -595,6 +631,7 @@ const ClientSection: React.FC<ClientSectionProps> = ({ items, isOpen, onToggle, 
         };
         onUpdate([...items, newClient]);
         setFormData({ name: '', cuil: '', phone: '', location: '' });
+        setShowForm(false); // Contraer al agregar
     };
 
     const handleDelete = (id: string) => {
@@ -663,19 +700,32 @@ const ClientSection: React.FC<ClientSectionProps> = ({ items, isOpen, onToggle, 
             {isOpen && (
                 <div className="p-5 border-t border-slate-800 animate-in slide-in-from-top-2 duration-200">
                     
-                    {/* ADD FORM */}
-                    <form onSubmit={handleAdd} className="bg-slate-950/50 p-4 rounded-xl border border-slate-800 mb-6">
-                        <h3 className="text-xs font-bold text-cyan-500 uppercase mb-3">Nuevo Cliente</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                            <input required placeholder="Nombre" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-cyan-500 focus:outline-none" />
-                            <input placeholder="CUIL" value={formData.cuil} onChange={e => setFormData({...formData, cuil: e.target.value})} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-cyan-500 focus:outline-none" />
-                            <input placeholder="Teléfono" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-cyan-500 focus:outline-none" />
-                            <input placeholder="Lugar / Dirección" value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-cyan-500 focus:outline-none" />
+                    {/* TOGGLE FORM BUTTON */}
+                    <button 
+                        onClick={() => setShowForm(!showForm)}
+                        className={`mb-4 w-full flex items-center justify-between p-3 rounded-xl border border-dashed transition-all ${showForm ? 'bg-cyan-900/20 border-cyan-500/50 text-cyan-100' : 'bg-slate-950 border-slate-700 text-slate-400 hover:border-cyan-500/30'}`}
+                    >
+                        <div className="flex items-center gap-2">
+                            <Users size={18} className={showForm ? 'text-cyan-400' : 'text-slate-500'} />
+                            <span className="text-sm font-bold uppercase tracking-wider">Nuevo Cliente</span>
                         </div>
-                        <button type="submit" className="mt-3 w-full bg-cyan-700 hover:bg-cyan-600 text-white font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-2">
-                            <Plus size={16} /> Agregar
-                        </button>
-                    </form>
+                        {showForm ? <Minus size={18} /> : <Plus size={18} />}
+                    </button>
+
+                    {/* ADD FORM (COLLAPSABLE) */}
+                    {showForm && (
+                        <form onSubmit={handleAdd} className="bg-slate-950/50 p-4 rounded-xl border border-cyan-500/20 mb-6 animate-in slide-in-from-top-2 duration-200">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                                <input required placeholder="Nombre" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-cyan-500 focus:outline-none" />
+                                <input placeholder="CUIL" value={formData.cuil} onChange={e => setFormData({...formData, cuil: e.target.value})} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-cyan-500 focus:outline-none" />
+                                <input placeholder="Teléfono" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-cyan-500 focus:outline-none" />
+                                <input placeholder="Lugar / Dirección" value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-cyan-500 focus:outline-none" />
+                            </div>
+                            <button type="submit" className="mt-3 w-full bg-cyan-700 hover:bg-cyan-600 text-white font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-2">
+                                <Plus size={16} /> Agregar Cliente
+                            </button>
+                        </form>
+                    )}
 
                     <div className="overflow-x-auto rounded-lg border border-slate-800">
                          <table className="w-full text-left border-collapse">
