@@ -32,6 +32,7 @@ const LandingScreen: React.FC<LandingScreenProps> = ({ onEnter, onEnterMarcos })
   
   // Password State
   const [showPassword, setShowPassword] = React.useState(false);
+  const [passwordType, setPasswordType] = React.useState<'GENERAL' | 'MARCOS' | null>(null);
   const [password, setPassword] = React.useState('');
   const [error, setError] = React.useState(false);
 
@@ -43,13 +44,21 @@ const LandingScreen: React.FC<LandingScreenProps> = ({ onEnter, onEnterMarcos })
   ];
 
   const handleGeneralClick = () => {
+    setPasswordType('GENERAL');
+    setShowPassword(true);
+  };
+
+  const handleMarcosClick = () => {
+    setPasswordType('MARCOS');
     setShowPassword(true);
   };
 
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === 'alpinito') {
+    if (passwordType === 'GENERAL' && password === 'alpinito') {
       onEnter(undefined, false); // Not restricted
+    } else if (passwordType === 'MARCOS' && password === 'marcoskapo22') {
+      onEnterMarcos();
     } else {
       setError(true);
       setPassword('');
@@ -58,6 +67,7 @@ const LandingScreen: React.FC<LandingScreenProps> = ({ onEnter, onEnterMarcos })
 
   const closePasswordModal = () => {
     setShowPassword(false);
+    setPasswordType(null);
     setError(false);
     setPassword('');
   };
@@ -78,10 +88,10 @@ const LandingScreen: React.FC<LandingScreenProps> = ({ onEnter, onEnterMarcos })
               
               <div className="flex flex-col items-center mb-6">
                  <div className="p-3 bg-indigo-900/30 rounded-full border border-indigo-500/30 mb-3">
-                    <LayoutGrid size={24} className="text-indigo-400" />
+                    {passwordType === 'MARCOS' ? <Palette size={24} className="text-fuchsia-400" /> : <LayoutGrid size={24} className="text-indigo-400" />}
                  </div>
-                 <h3 className="text-xl font-bold text-white">Acceso General</h3>
-                 <p className="text-sm text-slate-400">Ingrese contraseña de administrador</p>
+                 <h3 className="text-xl font-bold text-white">{passwordType === 'MARCOS' ? 'Acceso Marcos' : 'Acceso General'}</h3>
+                 <p className="text-sm text-slate-400">Ingrese contraseña de acceso</p>
               </div>
               
               <form onSubmit={handlePasswordSubmit} className="space-y-4">
@@ -98,7 +108,7 @@ const LandingScreen: React.FC<LandingScreenProps> = ({ onEnter, onEnterMarcos })
                 </div>
                 <button 
                   type="submit"
-                  className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl transition-colors shadow-lg shadow-indigo-900/20"
+                  className={`w-full ${passwordType === 'MARCOS' ? 'bg-fuchsia-600 hover:bg-fuchsia-500 shadow-fuchsia-900/20' : 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-900/20'} text-white font-bold py-3 rounded-xl transition-colors shadow-lg`}
                 >
                   Ingresar
                 </button>
@@ -183,7 +193,7 @@ const LandingScreen: React.FC<LandingScreenProps> = ({ onEnter, onEnterMarcos })
 
           {/* Marcos Button (Last) */}
           <button
-            onClick={onEnterMarcos}
+            onClick={handleMarcosClick}
             className="group relative flex items-center p-5 bg-slate-900 border border-slate-800 hover:border-fuchsia-500 rounded-2xl transition-all shadow-xl hover:shadow-fuchsia-900/20"
           >
             <div className="h-12 w-12 bg-slate-800 rounded-full flex items-center justify-center mr-4 group-hover:bg-fuchsia-600 transition-colors">
