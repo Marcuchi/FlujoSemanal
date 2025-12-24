@@ -1,6 +1,6 @@
 import React from 'react';
 import { Database as DBRef, ref, onValue, set } from 'firebase/database';
-import { ChevronDown, ChevronUp, Plus, Minus, Trash2, User, Users, Truck, ArrowUpDown, MapPin, Edit2, Check, X, Tag, UserPlus } from 'lucide-react';
+import { ChevronDown, ChevronUp, Plus, Minus, Trash2, User, Users, Truck, ArrowUpDown, MapPin, Edit2, Check, X, Tag, UserPlus, Phone, Calendar, CreditCard, Home } from 'lucide-react';
 import { GeneralData, Employee, Supplier, Client } from '../types';
 import { generateId, formatCurrency } from '../utils';
 
@@ -40,11 +40,8 @@ const createInitialState = (): GeneralData => ({
 export const GeneralDataApp: React.FC<GeneralDataAppProps> = ({ db }) => {
   const [data, setData] = React.useState<GeneralData>(createInitialState());
   const [loading, setLoading] = React.useState(true);
-  
-  // Accordion State
   const [openSection, setOpenSection] = React.useState<string | null>('employees');
 
-  // Load Data
   React.useEffect(() => {
     if (db) {
       setLoading(true);
@@ -52,27 +49,18 @@ export const GeneralDataApp: React.FC<GeneralDataAppProps> = ({ db }) => {
       const unsubscribe = onValue(dataRef, (snapshot) => {
         const val = snapshot.val();
         if (val) {
-          // Si existe data en DB pero employees está vacío, cargamos los iniciales Y los guardamos en DB
           let employees = val.employees || [];
-          
           if (employees.length === 0) {
               employees = INITIAL_EMPLOYEES;
-              // Persistimos en Firebase automáticamente
               set(ref(db, 'general_data/employees'), employees).catch(console.error);
           }
-
           setData({
             clients: val.clients || [],
             suppliers: val.suppliers || [],
             employees: employees
           });
         } else {
-          // Primera vez, cargamos todo inicial
-          setData({
-             clients: [],
-             suppliers: [],
-             employees: INITIAL_EMPLOYEES
-          });
+          setData({ clients: [], suppliers: [], employees: INITIAL_EMPLOYEES });
         }
         setLoading(false);
       });
@@ -82,15 +70,10 @@ export const GeneralDataApp: React.FC<GeneralDataAppProps> = ({ db }) => {
       if (saved) {
         try { 
             const parsed = JSON.parse(saved);
-            if (!parsed.employees || parsed.employees.length === 0) {
-                parsed.employees = INITIAL_EMPLOYEES;
-            }
+            if (!parsed.employees || parsed.employees.length === 0) parsed.employees = INITIAL_EMPLOYEES;
             setData(parsed);
-        } catch (e) { 
-            setData({ ...createInitialState(), employees: INITIAL_EMPLOYEES }); 
-        }
+        } catch (e) { setData({ ...createInitialState(), employees: INITIAL_EMPLOYEES }); }
       } else {
-        // Primera vez local
         setData({ ...createInitialState(), employees: INITIAL_EMPLOYEES });
       }
       setLoading(false);
@@ -156,67 +139,28 @@ interface EmployeeSectionProps {
 }
 
 const EmployeeSection: React.FC<EmployeeSectionProps> = ({ items, isOpen, onToggle, onUpdate }) => {
-    // Form State for New Entry
-    const [formData, setFormData] = React.useState({
-        firstName: '', lastName: '', dni: '', cuil: '',
-        address: '', startDate: '', birthDate: '', phone: ''
-    });
-
-    // Form Collapse State
+    const [formData, setFormData] = React.useState({ firstName: '', lastName: '', dni: '', cuil: '', address: '', startDate: '', birthDate: '', phone: '' });
     const [showForm, setShowForm] = React.useState(false);
-
-    // Editing State
     const [editingId, setEditingId] = React.useState<string | null>(null);
     const [editForm, setEditForm] = React.useState<Employee | null>(null);
-
-    // Sort State
-    const [sortConfig, setSortConfig] = React.useState<{ key: keyof Employee | null, direction: 'asc' | 'desc' }>({
-        key: 'lastName', direction: 'asc'
-    });
+    const [expandedId, setExpandedId] = React.useState<string | null>(null);
+    const [sortConfig, setSortConfig] = React.useState<{ key: keyof Employee | null, direction: 'asc' | 'desc' }>({ key: 'lastName', direction: 'asc' });
 
     const handleAdd = (e: React.FormEvent) => {
         e.preventDefault();
-        const newEmployee: Employee = {
-            id: generateId(),
-            ...formData
-        };
-        onUpdate([...items, newEmployee]);
-        setFormData({
-            firstName: '', lastName: '', dni: '', cuil: '',
-            address: '', startDate: '', birthDate: '', phone: ''
-        });
-        setShowForm(false); // Contraer al agregar
+        onUpdate([...items, { id: generateId(), ...formData }]);
+        setFormData({ firstName: '', lastName: '', dni: '', cuil: '', address: '', startDate: '', birthDate: '', phone: '' });
+        setShowForm(false);
     };
 
-    const startEditing = (emp: Employee) => {
-        setEditingId(emp.id);
-        setEditForm({ ...emp });
-    };
-
-    const cancelEditing = () => {
-        setEditingId(null);
-        setEditForm(null);
-    };
-
-    const saveEditing = () => {
-        if (!editForm) return;
-        const updatedList = items.map(i => i.id === editForm.id ? editForm : i);
-        onUpdate(updatedList);
-        setEditingId(null);
-        setEditForm(null);
-    };
-
-    const handleDelete = (id: string) => {
-        if (window.confirm("¿Eliminar empleado?")) {
-            onUpdate(items.filter(i => i.id !== id));
-        }
-    };
+    const startEditing = (emp: Employee) => { setEditingId(emp.id); setEditForm({ ...emp }); };
+    const cancelEditing = () => { setEditingId(null); setEditForm(null); };
+    const saveEditing = () => { if (!editForm) return; onUpdate(items.map(i => i.id === editForm.id ? editForm : i)); setEditingId(null); setEditForm(null); };
+    const handleDelete = (id: string) => { if (window.confirm("¿Eliminar empleado?")) onUpdate(items.filter(i => i.id !== id)); };
 
     const handleSort = (key: keyof Employee) => {
         let direction: 'asc' | 'desc' = 'asc';
-        if (sortConfig.key === key && sortConfig.direction === 'asc') {
-            direction = 'desc';
-        }
+        if (sortConfig.key === key && sortConfig.direction === 'asc') direction = 'desc';
         setSortConfig({ key, direction });
     };
 
@@ -226,7 +170,6 @@ const EmployeeSection: React.FC<EmployeeSectionProps> = ({ items, isOpen, onTogg
             sortable.sort((a, b) => {
                 const valA = (a[sortConfig.key!] || '').toString().toLowerCase();
                 const valB = (b[sortConfig.key!] || '').toString().toLowerCase();
-                
                 if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
                 if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
                 return 0;
@@ -242,38 +185,23 @@ const EmployeeSection: React.FC<EmployeeSectionProps> = ({ items, isOpen, onTogg
     };
 
     const InputCell = ({ val, onChange, type = "text" }: { val: string, onChange: (v: string) => void, type?: string }) => (
-        <input 
-            type={type}
-            value={val}
-            onChange={e => onChange(e.target.value)}
-            className="w-full bg-slate-950 border border-amber-500/50 rounded px-2 py-1 text-sm text-amber-100 focus:outline-none focus:border-amber-400"
-        />
+        <input type={type} value={val} onChange={e => onChange(e.target.value)} className="w-full bg-slate-950 border border-amber-500/50 rounded px-2 py-1 text-sm text-amber-100 focus:outline-none focus:border-amber-400" />
     );
 
     return (
         <div className={`bg-slate-900 rounded-xl border ${isOpen ? 'border-amber-500/50' : 'border-slate-800'} overflow-hidden transition-all shadow-lg`}>
-            <button 
-                onClick={onToggle}
-                className={`w-full flex items-center justify-between p-5 ${isOpen ? 'bg-slate-800/50' : 'hover:bg-slate-800/30'} transition-colors`}
-            >
+            <button onClick={onToggle} className={`w-full flex items-center justify-between p-5 ${isOpen ? 'bg-slate-800/50' : 'hover:bg-slate-800/30'} transition-colors`}>
                 <div className="flex items-center gap-3">
                     <User className="text-amber-400" size={24} />
                     <span className={`text-lg font-bold ${isOpen ? 'text-slate-100' : 'text-slate-300'}`}>Empleados</span>
-                    <span className="text-xs bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full border border-slate-700">
-                        {items.length}
-                    </span>
+                    <span className="text-xs bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full border border-slate-700">{items.length}</span>
                 </div>
                 {isOpen ? <ChevronUp className="text-slate-500" /> : <ChevronDown className="text-slate-500" />}
             </button>
 
             {isOpen && (
                 <div className="p-5 border-t border-slate-800 animate-in slide-in-from-top-2 duration-200">
-                    
-                    {/* TOGGLE FORM BUTTON */}
-                    <button 
-                        onClick={() => setShowForm(!showForm)}
-                        className={`mb-4 w-full flex items-center justify-between p-3 rounded-xl border border-dashed transition-all ${showForm ? 'bg-amber-900/20 border-amber-500/50 text-amber-100' : 'bg-slate-950 border-slate-700 text-slate-400 hover:border-amber-500/30'}`}
-                    >
+                    <button onClick={() => setShowForm(!showForm)} className={`mb-4 w-full flex items-center justify-between p-3 rounded-xl border border-dashed transition-all ${showForm ? 'bg-amber-900/20 border-amber-500/50 text-amber-100' : 'bg-slate-950 border-slate-700 text-slate-400 hover:border-amber-500/30'}`}>
                         <div className="flex items-center gap-2">
                             <UserPlus size={18} className={showForm ? 'text-amber-400' : 'text-slate-500'} />
                             <span className="text-sm font-bold uppercase tracking-wider">Nuevo Empleado</span>
@@ -281,7 +209,6 @@ const EmployeeSection: React.FC<EmployeeSectionProps> = ({ items, isOpen, onTogg
                         {showForm ? <Minus size={18} /> : <Plus size={18} />}
                     </button>
 
-                    {/* ADD FORM (COLLAPSABLE) */}
                     {showForm && (
                         <form onSubmit={handleAdd} className="bg-slate-950/50 p-4 rounded-xl border border-amber-500/20 mb-6 animate-in slide-in-from-top-2 duration-200">
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -291,81 +218,77 @@ const EmployeeSection: React.FC<EmployeeSectionProps> = ({ items, isOpen, onTogg
                                 <input placeholder="CUIL" value={formData.cuil} onChange={e => setFormData({...formData, cuil: e.target.value})} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-amber-500 focus:outline-none" />
                                 <input placeholder="Domicilio" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-amber-500 focus:outline-none" />
                                 <input placeholder="Teléfono" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-amber-500 focus:outline-none" />
-                                <div className="relative">
-                                    <span className="text-[10px] text-slate-500 absolute -top-1.5 left-2 bg-slate-900 px-1">F. Nacimiento</span>
-                                    <input type="date" value={formData.birthDate} onChange={e => setFormData({...formData, birthDate: e.target.value})} className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-slate-400 focus:text-white focus:border-amber-500 focus:outline-none" />
-                                </div>
-                                <div className="relative">
-                                    <span className="text-[10px] text-slate-500 absolute -top-1.5 left-2 bg-slate-900 px-1">F. Ingreso</span>
-                                    <input type="date" value={formData.startDate} onChange={e => setFormData({...formData, startDate: e.target.value})} className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-slate-400 focus:text-white focus:border-amber-500 focus:outline-none" />
-                                </div>
+                                <div className="relative"><span className="text-[10px] text-slate-500 absolute -top-1.5 left-2 bg-slate-900 px-1">F. Nacimiento</span><input type="date" value={formData.birthDate} onChange={e => setFormData({...formData, birthDate: e.target.value})} className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-slate-400 focus:text-white focus:border-amber-500 focus:outline-none" /></div>
+                                <div className="relative"><span className="text-[10px] text-slate-500 absolute -top-1.5 left-2 bg-slate-900 px-1">F. Ingreso</span><input type="date" value={formData.startDate} onChange={e => setFormData({...formData, startDate: e.target.value})} className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-slate-400 focus:text-white focus:border-amber-500 focus:outline-none" /></div>
                             </div>
-                            <button type="submit" className="mt-3 w-full bg-amber-700 hover:bg-amber-600 text-white font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-2">
-                                <Plus size={16} /> Agregar Empleado
-                            </button>
+                            <button type="submit" className="mt-3 w-full bg-amber-700 hover:bg-amber-600 text-white font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-2"><Plus size={16} /> Agregar Empleado</button>
                         </form>
                     )}
 
-                    {/* TABLE */}
                     <div className="overflow-x-auto rounded-lg border border-slate-800">
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-slate-950 text-xs font-bold text-slate-500 uppercase">
                                     <th className="p-3 min-w-[150px] cursor-pointer hover:text-amber-400" onClick={() => handleSort('lastName')}>Apellido y Nombre <ArrowUpDown size={12} className="inline"/></th>
-                                    <th className="p-3 min-w-[100px]">DNI / CUIL</th>
-                                    <th className="p-3 min-w-[150px]">Domicilio</th>
-                                    <th className="p-3 min-w-[120px]">Teléfono</th>
-                                    <th className="p-3 min-w-[120px] cursor-pointer hover:text-amber-400" onClick={() => handleSort('startDate')}>Ingreso <ArrowUpDown size={12} className="inline"/></th>
-                                    <th className="p-3 min-w-[120px]">Nacimiento</th>
+                                    <th className="p-3 min-w-[100px] hidden md:table-cell">DNI / CUIL</th>
+                                    <th className="p-3 min-w-[150px] hidden md:table-cell">Domicilio</th>
+                                    <th className="p-3 min-w-[120px] hidden md:table-cell">Teléfono</th>
+                                    <th className="p-3 min-w-[120px] cursor-pointer hover:text-amber-400 hidden md:table-cell" onClick={() => handleSort('startDate')}>Ingreso <ArrowUpDown size={12} className="inline"/></th>
+                                    <th className="p-3 min-w-[120px] hidden md:table-cell">Nacimiento</th>
                                     <th className="p-3 w-20 text-center">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-800">
                                 {sortedItems.map(emp => {
                                     const isEditing = editingId === emp.id;
+                                    const isExpanded = expandedId === emp.id;
                                     return (
-                                        <tr key={emp.id} className="bg-slate-900/50 hover:bg-slate-800 transition-colors">
-                                            {isEditing && editForm ? (
-                                                <>
-                                                    <td className="p-2 space-y-1">
-                                                        <InputCell val={editForm.lastName} onChange={v => setEditForm({...editForm, lastName: v})} />
-                                                        <InputCell val={editForm.firstName} onChange={v => setEditForm({...editForm, firstName: v})} />
-                                                    </td>
-                                                    <td className="p-2 space-y-1">
-                                                        <InputCell val={editForm.dni} onChange={v => setEditForm({...editForm, dni: v})} />
-                                                        <InputCell val={editForm.cuil} onChange={v => setEditForm({...editForm, cuil: v})} />
-                                                    </td>
-                                                    <td className="p-2"><InputCell val={editForm.address} onChange={v => setEditForm({...editForm, address: v})} /></td>
-                                                    <td className="p-2"><InputCell val={editForm.phone} onChange={v => setEditForm({...editForm, phone: v})} /></td>
-                                                    <td className="p-2"><InputCell type="date" val={editForm.startDate} onChange={v => setEditForm({...editForm, startDate: v})} /></td>
-                                                    <td className="p-2"><InputCell type="date" val={editForm.birthDate} onChange={v => setEditForm({...editForm, birthDate: v})} /></td>
-                                                    <td className="p-2 text-center">
-                                                        <div className="flex flex-col gap-1 items-center">
-                                                            <button onClick={saveEditing} className="p-1.5 bg-emerald-600 rounded text-white"><Check size={14}/></button>
-                                                            <button onClick={cancelEditing} className="p-1.5 bg-slate-600 rounded text-white"><X size={14}/></button>
-                                                        </div>
-                                                    </td>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <td className="p-3 font-medium text-slate-200">{emp.lastName}, {emp.firstName}</td>
-                                                    <td className="p-3 text-sm text-slate-400">
-                                                        <div>{emp.dni}</div>
-                                                        <div className="text-xs text-slate-600">{emp.cuil}</div>
-                                                    </td>
-                                                    <td className="p-3 text-sm text-slate-400 truncate max-w-[150px]" title={emp.address}>{emp.address || '-'}</td>
-                                                    <td className="p-3 text-sm text-slate-400">{emp.phone || '-'}</td>
-                                                    <td className="p-3 text-sm text-slate-300 font-mono">{formatDate(emp.startDate)}</td>
-                                                    <td className="p-3 text-sm text-slate-400 font-mono">{formatDate(emp.birthDate)}</td>
-                                                    <td className="p-3 text-center">
-                                                        <div className="flex gap-2 justify-center">
-                                                            <button onClick={() => startEditing(emp)} className="p-1.5 text-slate-400 hover:text-amber-400 hover:bg-slate-700 rounded"><Edit2 size={16}/></button>
-                                                            <button onClick={() => handleDelete(emp.id)} className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-slate-700 rounded"><Trash2 size={16}/></button>
-                                                        </div>
-                                                    </td>
-                                                </>
+                                        <React.Fragment key={emp.id}>
+                                            <tr 
+                                              onClick={() => !isEditing && setExpandedId(isExpanded ? null : emp.id)}
+                                              className={`bg-slate-900/50 hover:bg-slate-800 transition-colors ${!isEditing ? 'cursor-pointer' : ''}`}
+                                            >
+                                                {isEditing && editForm ? (
+                                                    <>
+                                                        <td className="p-2 space-y-1"><InputCell val={editForm.lastName} onChange={v => setEditForm({...editForm, lastName: v})} /><InputCell val={editForm.firstName} onChange={v => setEditForm({...editForm, firstName: v})} /></td>
+                                                        <td className="p-2 space-y-1 hidden md:table-cell"><InputCell val={editForm.dni} onChange={v => setEditForm({...editForm, dni: v})} /><InputCell val={editForm.cuil} onChange={v => setEditForm({...editForm, cuil: v})} /></td>
+                                                        <td className="p-2 hidden md:table-cell"><InputCell val={editForm.address} onChange={v => setEditForm({...editForm, address: v})} /></td>
+                                                        <td className="p-2 hidden md:table-cell"><InputCell val={editForm.phone} onChange={v => setEditForm({...editForm, phone: v})} /></td>
+                                                        <td className="p-2 hidden md:table-cell"><InputCell type="date" val={editForm.startDate} onChange={v => setEditForm({...editForm, startDate: v})} /></td>
+                                                        <td className="p-2 hidden md:table-cell"><InputCell type="date" val={editForm.birthDate} onChange={v => setEditForm({...editForm, birthDate: v})} /></td>
+                                                        <td className="p-2 text-center"><div className="flex flex-col gap-1 items-center"><button onClick={(e) => { e.stopPropagation(); saveEditing(); }} className="p-1.5 bg-emerald-600 rounded text-white"><Check size={14}/></button><button onClick={(e) => { e.stopPropagation(); cancelEditing(); }} className="p-1.5 bg-slate-600 rounded text-white"><X size={14}/></button></div></td>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <td className="p-3 font-medium text-slate-200">
+                                                          <div className="flex items-center gap-2">
+                                                            <span className="md:hidden">{isExpanded ? <ChevronUp size={14} className="text-amber-500" /> : <ChevronDown size={14} className="text-slate-500" />}</span>
+                                                            {emp.lastName}, {emp.firstName}
+                                                          </div>
+                                                        </td>
+                                                        <td className="p-3 text-sm text-slate-400 hidden md:table-cell"><div>{emp.dni}</div><div className="text-xs text-slate-600">{emp.cuil}</div></td>
+                                                        <td className="p-3 text-sm text-slate-400 truncate max-w-[150px] hidden md:table-cell" title={emp.address}>{emp.address || '-'}</td>
+                                                        <td className="p-3 text-sm text-slate-400 hidden md:table-cell">{emp.phone || '-'}</td>
+                                                        <td className="p-3 text-sm text-slate-300 font-mono hidden md:table-cell">{formatDate(emp.startDate)}</td>
+                                                        <td className="p-3 text-sm text-slate-400 font-mono hidden md:table-cell">{formatDate(emp.birthDate)}</td>
+                                                        <td className="p-3 text-center"><div className="flex gap-2 justify-center"><button onClick={(e) => { e.stopPropagation(); startEditing(emp); }} className="p-1.5 text-slate-400 hover:text-amber-400 hover:bg-slate-700 rounded"><Edit2 size={16}/></button><button onClick={(e) => { e.stopPropagation(); handleDelete(emp.id); }} className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-slate-700 rounded"><Trash2 size={16}/></button></div></td>
+                                                    </>
+                                                )}
+                                            </tr>
+                                            {isExpanded && !isEditing && (
+                                              <tr className="bg-slate-900/80 md:hidden animate-in slide-in-from-top-1 duration-200">
+                                                <td colSpan={2} className="p-4">
+                                                  <div className="space-y-3">
+                                                    <div className="flex items-center gap-3"><CreditCard size={14} className="text-slate-500"/><div className="text-xs uppercase font-bold text-slate-500 w-24">DNI / CUIL:</div><div className="text-sm text-slate-300">{emp.dni} <span className="text-slate-600 ml-1">({emp.cuil})</span></div></div>
+                                                    <div className="flex items-center gap-3"><Home size={14} className="text-slate-500"/><div className="text-xs uppercase font-bold text-slate-500 w-24">Domicilio:</div><div className="text-sm text-slate-300">{emp.address || '-'}</div></div>
+                                                    <div className="flex items-center gap-3"><Phone size={14} className="text-slate-500"/><div className="text-xs uppercase font-bold text-slate-500 w-24">Teléfono:</div><div className="text-sm text-slate-300">{emp.phone || '-'}</div></div>
+                                                    <div className="flex items-center gap-3"><Calendar size={14} className="text-slate-500"/><div className="text-xs uppercase font-bold text-slate-500 w-24">Ingreso:</div><div className="text-sm text-slate-300 font-mono">{formatDate(emp.startDate)}</div></div>
+                                                    <div className="flex items-center gap-3"><Calendar size={14} className="text-slate-500"/><div className="text-xs uppercase font-bold text-slate-500 w-24">Nacimiento:</div><div className="text-sm text-slate-300 font-mono">{formatDate(emp.birthDate)}</div></div>
+                                                  </div>
+                                                </td>
+                                              </tr>
                                             )}
-                                        </tr>
+                                        </React.Fragment>
                                     );
                                 })}
                             </tbody>
@@ -387,75 +310,38 @@ interface SupplierSectionProps {
 }
 
 const SupplierSection: React.FC<SupplierSectionProps> = ({ items, isOpen, onToggle, onUpdate }) => {
-    // Form State
-    const [formData, setFormData] = React.useState({
-        name: '', product: '', price: 0, phone: ''
-    });
-    const [priceDisplay, setPriceDisplay] = React.useState(''); // For input masking
-
-    // Form Collapse State
+    const [formData, setFormData] = React.useState({ name: '', product: '', price: 0, phone: '' });
+    const [priceDisplay, setPriceDisplay] = React.useState('');
     const [showForm, setShowForm] = React.useState(false);
-
-    // Editing State
     const [editingId, setEditingId] = React.useState<string | null>(null);
     const [editForm, setEditForm] = React.useState<Supplier | null>(null);
     const [editPriceDisplay, setEditPriceDisplay] = React.useState('');
-
-    // Sort State
-    const [sortConfig, setSortConfig] = React.useState<{ key: keyof Supplier | null, direction: 'asc' | 'desc' }>({
-        key: 'name', direction: 'asc'
-    });
+    const [expandedId, setExpandedId] = React.useState<string | null>(null);
+    const [sortConfig, setSortConfig] = React.useState<{ key: keyof Supplier | null, direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
 
     const handlePriceInput = (val: string, setDisplay: (v: string) => void, setVal: (v: number) => void) => {
         const digits = val.replace(/\D/g, '');
-        if (digits === '') {
-            setDisplay('');
-            setVal(0);
-            return;
-        }
+        if (digits === '') { setDisplay(''); setVal(0); return; }
         const num = parseInt(digits, 10);
-        const formatted = new Intl.NumberFormat('es-AR').format(num);
-        setDisplay(formatted);
+        setDisplay(new Intl.NumberFormat('es-AR').format(num));
         setVal(num);
     };
 
     const handleAdd = (e: React.FormEvent) => {
         e.preventDefault();
-        const newSupplier: Supplier = {
-            id: generateId(),
-            ...formData
-        };
-        onUpdate([...items, newSupplier]);
+        onUpdate([...items, { id: generateId(), ...formData }]);
         setFormData({ name: '', product: '', price: 0, phone: '' });
         setPriceDisplay('');
-        setShowForm(false); // Contraer al agregar
+        setShowForm(false);
     };
 
-    const startEditing = (sup: Supplier) => {
-        setEditingId(sup.id);
-        setEditForm({ ...sup });
-        setEditPriceDisplay(new Intl.NumberFormat('es-AR').format(sup.price));
-    };
-
-    const saveEditing = () => {
-        if (!editForm) return;
-        const updatedList = items.map(i => i.id === editForm.id ? editForm : i);
-        onUpdate(updatedList);
-        setEditingId(null);
-        setEditForm(null);
-    };
-
-    const handleDelete = (id: string) => {
-        if (window.confirm("¿Eliminar proveedor?")) {
-            onUpdate(items.filter(i => i.id !== id));
-        }
-    };
+    const startEditing = (sup: Supplier) => { setEditingId(sup.id); setEditForm({ ...sup }); setEditPriceDisplay(new Intl.NumberFormat('es-AR').format(sup.price)); };
+    const saveEditing = () => { if (!editForm) return; onUpdate(items.map(i => i.id === editForm.id ? editForm : i)); setEditingId(null); setEditForm(null); };
+    const handleDelete = (id: string) => { if (window.confirm("¿Eliminar proveedor?")) onUpdate(items.filter(i => i.id !== id)); };
 
     const handleSort = (key: keyof Supplier) => {
         let direction: 'asc' | 'desc' = 'asc';
-        if (sortConfig.key === key && sortConfig.direction === 'asc') {
-            direction = 'desc';
-        }
+        if (sortConfig.key === key && sortConfig.direction === 'asc') direction = 'desc';
         setSortConfig({ key, direction });
     };
 
@@ -463,11 +349,7 @@ const SupplierSection: React.FC<SupplierSectionProps> = ({ items, isOpen, onTogg
         let sortable = [...items];
         if (sortConfig.key) {
             sortable.sort((a, b) => {
-                if (sortConfig.key === 'price') {
-                     const valA = a.price || 0;
-                     const valB = b.price || 0;
-                     return sortConfig.direction === 'asc' ? valA - valB : valB - valA;
-                }
+                if (sortConfig.key === 'price') return sortConfig.direction === 'asc' ? (a.price || 0) - (b.price || 0) : (b.price || 0) - (a.price || 0);
                 const valA = (a[sortConfig.key!] || '').toString().toLowerCase();
                 const valB = (b[sortConfig.key!] || '').toString().toLowerCase();
                 return sortConfig.direction === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
@@ -477,37 +359,23 @@ const SupplierSection: React.FC<SupplierSectionProps> = ({ items, isOpen, onTogg
     }, [items, sortConfig]);
 
     const InputCell = ({ val, onChange }: { val: string, onChange: (v: string) => void }) => (
-        <input 
-            value={val}
-            onChange={e => onChange(e.target.value)}
-            className="w-full bg-slate-950 border border-emerald-500/50 rounded px-2 py-1 text-sm text-emerald-100 focus:outline-none focus:border-emerald-400"
-        />
+        <input value={val} onChange={e => onChange(e.target.value)} className="w-full bg-slate-950 border border-emerald-500/50 rounded px-2 py-1 text-sm text-emerald-100 focus:outline-none focus:border-emerald-400" />
     );
 
     return (
         <div className={`bg-slate-900 rounded-xl border ${isOpen ? 'border-emerald-500/50' : 'border-slate-800'} overflow-hidden transition-all shadow-lg`}>
-            <button 
-                onClick={onToggle}
-                className={`w-full flex items-center justify-between p-5 ${isOpen ? 'bg-slate-800/50' : 'hover:bg-slate-800/30'} transition-colors`}
-            >
+            <button onClick={onToggle} className={`w-full flex items-center justify-between p-5 ${isOpen ? 'bg-slate-800/50' : 'hover:bg-slate-800/30'} transition-colors`}>
                 <div className="flex items-center gap-3">
                     <Truck className="text-emerald-400" size={24} />
                     <span className={`text-lg font-bold ${isOpen ? 'text-slate-100' : 'text-slate-300'}`}>Proveedores</span>
-                    <span className="text-xs bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full border border-slate-700">
-                        {items.length}
-                    </span>
+                    <span className="text-xs bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full border border-slate-700">{items.length}</span>
                 </div>
                 {isOpen ? <ChevronUp className="text-slate-500" /> : <ChevronDown className="text-slate-500" />}
             </button>
 
             {isOpen && (
                 <div className="p-5 border-t border-slate-800 animate-in slide-in-from-top-2 duration-200">
-                    
-                    {/* TOGGLE FORM BUTTON */}
-                    <button 
-                        onClick={() => setShowForm(!showForm)}
-                        className={`mb-4 w-full flex items-center justify-between p-3 rounded-xl border border-dashed transition-all ${showForm ? 'bg-emerald-900/20 border-emerald-500/50 text-emerald-100' : 'bg-slate-950 border-slate-700 text-slate-400 hover:border-emerald-500/30'}`}
-                    >
+                    <button onClick={() => setShowForm(!showForm)} className={`mb-4 w-full flex items-center justify-between p-3 rounded-xl border border-dashed transition-all ${showForm ? 'bg-emerald-900/20 border-emerald-500/50 text-emerald-100' : 'bg-slate-950 border-slate-700 text-slate-400 hover:border-emerald-500/30'}`}>
                         <div className="flex items-center gap-2">
                             <Truck size={18} className={showForm ? 'text-emerald-400' : 'text-slate-500'} />
                             <span className="text-sm font-bold uppercase tracking-wider">Nuevo Proveedor</span>
@@ -515,75 +383,74 @@ const SupplierSection: React.FC<SupplierSectionProps> = ({ items, isOpen, onTogg
                         {showForm ? <Minus size={18} /> : <Plus size={18} />}
                     </button>
 
-                    {/* ADD FORM (COLLAPSABLE) */}
                     {showForm && (
                         <form onSubmit={handleAdd} className="bg-slate-950/50 p-4 rounded-xl border border-emerald-500/20 mb-6 animate-in slide-in-from-top-2 duration-200">
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                                 <input required placeholder="Nombre" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none" />
                                 <input required placeholder="Producto" value={formData.product} onChange={e => setFormData({...formData, product: e.target.value})} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none" />
-                                <div className="relative">
-                                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-500 text-xs">$</span>
-                                    <input required placeholder="Precio" value={priceDisplay} onChange={e => handlePriceInput(e.target.value, setPriceDisplay, (v) => setFormData({...formData, price: v}))} className="w-full bg-slate-900 border border-slate-700 rounded px-3 pl-5 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none" />
-                                </div>
+                                <div className="relative"><span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-500 text-xs">$</span><input required placeholder="Precio" value={priceDisplay} onChange={e => handlePriceInput(e.target.value, setPriceDisplay, (v) => setFormData({...formData, price: v}))} className="w-full bg-slate-900 border border-slate-700 rounded px-3 pl-5 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none" /></div>
                                 <input placeholder="Teléfono" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none" />
                             </div>
-                            <button type="submit" className="mt-3 w-full bg-emerald-700 hover:bg-emerald-600 text-white font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-2">
-                                <Plus size={16} /> Agregar Proveedor
-                            </button>
+                            <button type="submit" className="mt-3 w-full bg-emerald-700 hover:bg-emerald-600 text-white font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-2"><Plus size={16} /> Agregar Proveedor</button>
                         </form>
                     )}
 
-                    {/* TABLE */}
                     <div className="overflow-x-auto rounded-lg border border-slate-800">
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-slate-950 text-xs font-bold text-slate-500 uppercase">
                                     <th className="p-3 min-w-[150px] cursor-pointer hover:text-emerald-400" onClick={() => handleSort('name')}>Nombre <ArrowUpDown size={12} className="inline"/></th>
-                                    <th className="p-3 min-w-[150px]">Producto</th>
-                                    <th className="p-3 min-w-[100px] text-right cursor-pointer hover:text-emerald-400" onClick={() => handleSort('price')}>Precio <ArrowUpDown size={12} className="inline"/></th>
-                                    <th className="p-3 min-w-[120px]">Teléfono</th>
+                                    <th className="p-3 min-w-[150px] hidden md:table-cell">Producto</th>
+                                    <th className="p-3 min-w-[100px] text-right cursor-pointer hover:text-emerald-400 hidden md:table-cell" onClick={() => handleSort('price')}>Precio <ArrowUpDown size={12} className="inline"/></th>
+                                    <th className="p-3 min-w-[120px] hidden md:table-cell">Teléfono</th>
                                     <th className="p-3 w-20 text-center">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-800">
                                 {sortedItems.map(sup => {
                                     const isEditing = editingId === sup.id;
+                                    const isExpanded = expandedId === sup.id;
                                     return (
-                                        <tr key={sup.id} className="bg-slate-900/50 hover:bg-slate-800 transition-colors">
-                                            {isEditing && editForm ? (
-                                                <>
-                                                    <td className="p-2"><InputCell val={editForm.name} onChange={v => setEditForm({...editForm, name: v})} /></td>
-                                                    <td className="p-2"><InputCell val={editForm.product} onChange={v => setEditForm({...editForm, product: v})} /></td>
-                                                    <td className="p-2">
-                                                        <input 
-                                                            value={editPriceDisplay}
-                                                            onChange={e => handlePriceInput(e.target.value, setEditPriceDisplay, (v) => setEditForm({...editForm, price: v}))}
-                                                            className="w-full bg-slate-950 border border-emerald-500/50 rounded px-2 py-1 text-sm text-emerald-100 focus:outline-none focus:border-emerald-400 text-right"
-                                                        />
-                                                    </td>
-                                                    <td className="p-2"><InputCell val={editForm.phone} onChange={v => setEditForm({...editForm, phone: v})} /></td>
-                                                    <td className="p-2 text-center">
-                                                        <div className="flex flex-col gap-1 items-center">
-                                                            <button onClick={saveEditing} className="p-1.5 bg-emerald-600 rounded text-white"><Check size={14}/></button>
-                                                            <button onClick={() => { setEditingId(null); setEditForm(null); }} className="p-1.5 bg-slate-600 rounded text-white"><X size={14}/></button>
-                                                        </div>
-                                                    </td>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <td className="p-3 font-bold text-slate-200">{sup.name}</td>
-                                                    <td className="p-3 text-sm text-slate-300"><Tag size={12} className="inline mr-1 text-slate-500"/>{sup.product || '-'}</td>
-                                                    <td className="p-3 text-sm font-mono text-emerald-400 text-right">{formatCurrency(sup.price || 0)}</td>
-                                                    <td className="p-3 text-sm text-slate-400">{sup.phone || '-'}</td>
-                                                    <td className="p-3 text-center">
-                                                        <div className="flex gap-2 justify-center">
-                                                            <button onClick={() => startEditing(sup)} className="p-1.5 text-slate-400 hover:text-emerald-400 hover:bg-slate-700 rounded"><Edit2 size={16}/></button>
-                                                            <button onClick={() => handleDelete(sup.id)} className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-slate-700 rounded"><Trash2 size={16}/></button>
-                                                        </div>
-                                                    </td>
-                                                </>
+                                        <React.Fragment key={sup.id}>
+                                            <tr 
+                                              onClick={() => !isEditing && setExpandedId(isExpanded ? null : sup.id)}
+                                              className={`bg-slate-900/50 hover:bg-slate-800 transition-colors ${!isEditing ? 'cursor-pointer' : ''}`}
+                                            >
+                                                {isEditing && editForm ? (
+                                                    <>
+                                                        <td className="p-2"><InputCell val={editForm.name} onChange={v => setEditForm({...editForm, name: v})} /></td>
+                                                        <td className="p-2 hidden md:table-cell"><InputCell val={editForm.product} onChange={v => setEditForm({...editForm, product: v})} /></td>
+                                                        <td className="p-2 hidden md:table-cell"><input value={editPriceDisplay} onChange={e => handlePriceInput(e.target.value, setEditPriceDisplay, (v) => setEditForm({...editForm, price: v}))} className="w-full bg-slate-950 border border-emerald-500/50 rounded px-2 py-1 text-sm text-emerald-100 focus:outline-none focus:border-emerald-400 text-right" /></td>
+                                                        <td className="p-2 hidden md:table-cell"><InputCell val={editForm.phone} onChange={v => setEditForm({...editForm, phone: v})} /></td>
+                                                        <td className="p-2 text-center"><div className="flex flex-col gap-1 items-center"><button onClick={(e) => { e.stopPropagation(); saveEditing(); }} className="p-1.5 bg-emerald-600 rounded text-white"><Check size={14}/></button><button onClick={(e) => { e.stopPropagation(); setEditingId(null); setEditForm(null); }} className="p-1.5 bg-slate-600 rounded text-white"><X size={14}/></button></div></td>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <td className="p-3 font-bold text-slate-200">
+                                                          <div className="flex items-center gap-2">
+                                                            <span className="md:hidden">{isExpanded ? <ChevronUp size={14} className="text-emerald-500" /> : <ChevronDown size={14} className="text-slate-500" />}</span>
+                                                            {sup.name}
+                                                          </div>
+                                                        </td>
+                                                        <td className="p-3 text-sm text-slate-300 hidden md:table-cell"><Tag size={12} className="inline mr-1 text-slate-500"/>{sup.product || '-'}</td>
+                                                        <td className="p-3 text-sm font-mono text-emerald-400 text-right hidden md:table-cell">{formatCurrency(sup.price || 0)}</td>
+                                                        <td className="p-3 text-sm text-slate-400 hidden md:table-cell">{sup.phone || '-'}</td>
+                                                        <td className="p-3 text-center"><div className="flex gap-2 justify-center"><button onClick={(e) => { e.stopPropagation(); startEditing(sup); }} className="p-1.5 text-slate-400 hover:text-emerald-400 hover:bg-slate-700 rounded"><Edit2 size={16}/></button><button onClick={(e) => { e.stopPropagation(); handleDelete(sup.id); }} className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-slate-700 rounded"><Trash2 size={16}/></button></div></td>
+                                                    </>
+                                                )}
+                                            </tr>
+                                            {isExpanded && !isEditing && (
+                                              <tr className="bg-slate-900/80 md:hidden animate-in slide-in-from-top-1 duration-200">
+                                                <td colSpan={2} className="p-4">
+                                                  <div className="space-y-3 text-sm">
+                                                    <div className="flex items-center gap-3"><Tag size={14} className="text-slate-500"/><div className="text-xs uppercase font-bold text-slate-500 w-24">Producto:</div><div className="text-slate-300">{sup.product || '-'}</div></div>
+                                                    <div className="flex items-center gap-3"><CreditCard size={14} className="text-slate-500"/><div className="text-xs uppercase font-bold text-slate-500 w-24">Precio:</div><div className="text-emerald-400 font-mono font-bold">{formatCurrency(sup.price || 0)}</div></div>
+                                                    <div className="flex items-center gap-3"><Phone size={14} className="text-slate-500"/><div className="text-xs uppercase font-bold text-slate-500 w-24">Teléfono:</div><div className="text-slate-300">{sup.phone || '-'}</div></div>
+                                                  </div>
+                                                </td>
+                                              </tr>
                                             )}
-                                        </tr>
+                                        </React.Fragment>
                                     );
                                 })}
                             </tbody>
@@ -606,58 +473,27 @@ interface ClientSectionProps {
 }
 
 const ClientSection: React.FC<ClientSectionProps> = ({ items, isOpen, onToggle, onUpdate }) => {
-    // Form State
-    const [formData, setFormData] = React.useState({
-        name: '', cuil: '', phone: '', location: ''
-    });
-
-    // Form Collapse State
+    const [formData, setFormData] = React.useState({ name: '', cuil: '', phone: '', location: '' });
     const [showForm, setShowForm] = React.useState(false);
-
-    // Editing State
     const [editingId, setEditingId] = React.useState<string | null>(null);
     const [editForm, setEditForm] = React.useState<Client | null>(null);
-
-    // Sort State
-    const [sortConfig, setSortConfig] = React.useState<{ key: keyof Client | null, direction: 'asc' | 'desc' }>({
-        key: 'name', direction: 'asc'
-    });
+    const [expandedId, setExpandedId] = React.useState<string | null>(null);
+    const [sortConfig, setSortConfig] = React.useState<{ key: keyof Client | null, direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
 
     const handleAdd = (e: React.FormEvent) => {
         e.preventDefault();
-        const newClient: Client = {
-            id: generateId(),
-            ...formData
-        };
-        onUpdate([...items, newClient]);
+        onUpdate([...items, { id: generateId(), ...formData }]);
         setFormData({ name: '', cuil: '', phone: '', location: '' });
-        setShowForm(false); // Contraer al agregar
+        setShowForm(false);
     };
 
-    const handleDelete = (id: string) => {
-        if (window.confirm("¿Eliminar cliente?")) {
-            onUpdate(items.filter(i => i.id !== id));
-        }
-    };
-
-    const startEditing = (client: Client) => {
-        setEditingId(client.id);
-        setEditForm({ ...client });
-    };
-
-    const saveEditing = () => {
-        if (!editForm) return;
-        const updatedList = items.map(i => i.id === editForm.id ? editForm : i);
-        onUpdate(updatedList);
-        setEditingId(null);
-        setEditForm(null);
-    };
+    const handleDelete = (id: string) => { if (window.confirm("¿Eliminar cliente?")) onUpdate(items.filter(i => i.id !== id)); };
+    const startEditing = (client: Client) => { setEditingId(client.id); setEditForm({ ...client }); };
+    const saveEditing = () => { if (!editForm) return; onUpdate(items.map(i => i.id === editForm.id ? editForm : i)); setEditingId(null); setEditForm(null); };
 
     const handleSort = (key: keyof Client) => {
         let direction: 'asc' | 'desc' = 'asc';
-        if (sortConfig.key === key && sortConfig.direction === 'asc') {
-            direction = 'desc';
-        }
+        if (sortConfig.key === key && sortConfig.direction === 'asc') direction = 'desc';
         setSortConfig({ key, direction });
     };
 
@@ -674,37 +510,23 @@ const ClientSection: React.FC<ClientSectionProps> = ({ items, isOpen, onToggle, 
     }, [items, sortConfig]);
 
     const InputCell = ({ val, onChange }: { val: string, onChange: (v: string) => void }) => (
-        <input 
-            value={val}
-            onChange={e => onChange(e.target.value)}
-            className="w-full bg-slate-950 border border-cyan-500/50 rounded px-2 py-1 text-sm text-cyan-100 focus:outline-none focus:border-cyan-400"
-        />
+        <input value={val} onChange={e => onChange(e.target.value)} className="w-full bg-slate-950 border border-cyan-500/50 rounded px-2 py-1 text-sm text-cyan-100 focus:outline-none focus:border-cyan-400" />
     );
 
     return (
         <div className={`bg-slate-900 rounded-xl border ${isOpen ? 'border-cyan-500/50' : 'border-slate-800'} overflow-hidden transition-all shadow-lg`}>
-            <button 
-                onClick={onToggle}
-                className={`w-full flex items-center justify-between p-5 ${isOpen ? 'bg-slate-800/50' : 'hover:bg-slate-800/30'} transition-colors`}
-            >
+            <button onClick={onToggle} className={`w-full flex items-center justify-between p-5 ${isOpen ? 'bg-slate-800/50' : 'hover:bg-slate-800/30'} transition-colors`}>
                 <div className="flex items-center gap-3">
                     <Users className="text-cyan-400" size={24} />
                     <span className={`text-lg font-bold ${isOpen ? 'text-slate-100' : 'text-slate-300'}`}>Clientes</span>
-                    <span className="text-xs bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full border border-slate-700">
-                        {items.length}
-                    </span>
+                    <span className="text-xs bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full border border-slate-700">{items.length}</span>
                 </div>
                 {isOpen ? <ChevronUp className="text-slate-500" /> : <ChevronDown className="text-slate-500" />}
             </button>
 
             {isOpen && (
                 <div className="p-5 border-t border-slate-800 animate-in slide-in-from-top-2 duration-200">
-                    
-                    {/* TOGGLE FORM BUTTON */}
-                    <button 
-                        onClick={() => setShowForm(!showForm)}
-                        className={`mb-4 w-full flex items-center justify-between p-3 rounded-xl border border-dashed transition-all ${showForm ? 'bg-cyan-900/20 border-cyan-500/50 text-cyan-100' : 'bg-slate-950 border-slate-700 text-slate-400 hover:border-cyan-500/30'}`}
-                    >
+                    <button onClick={() => setShowForm(!showForm)} className={`mb-4 w-full flex items-center justify-between p-3 rounded-xl border border-dashed transition-all ${showForm ? 'bg-cyan-900/20 border-cyan-500/50 text-cyan-100' : 'bg-slate-950 border-slate-700 text-slate-400 hover:border-cyan-500/30'}`}>
                         <div className="flex items-center gap-2">
                             <Users size={18} className={showForm ? 'text-cyan-400' : 'text-slate-500'} />
                             <span className="text-sm font-bold uppercase tracking-wider">Nuevo Cliente</span>
@@ -712,7 +534,6 @@ const ClientSection: React.FC<ClientSectionProps> = ({ items, isOpen, onToggle, 
                         {showForm ? <Minus size={18} /> : <Plus size={18} />}
                     </button>
 
-                    {/* ADD FORM (COLLAPSABLE) */}
                     {showForm && (
                         <form onSubmit={handleAdd} className="bg-slate-950/50 p-4 rounded-xl border border-cyan-500/20 mb-6 animate-in slide-in-from-top-2 duration-200">
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -721,9 +542,7 @@ const ClientSection: React.FC<ClientSectionProps> = ({ items, isOpen, onToggle, 
                                 <input placeholder="Teléfono" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-cyan-500 focus:outline-none" />
                                 <input placeholder="Lugar / Dirección" value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-cyan-500 focus:outline-none" />
                             </div>
-                            <button type="submit" className="mt-3 w-full bg-cyan-700 hover:bg-cyan-600 text-white font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-2">
-                                <Plus size={16} /> Agregar Cliente
-                            </button>
+                            <button type="submit" className="mt-3 w-full bg-cyan-700 hover:bg-cyan-600 text-white font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-2"><Plus size={16} /> Agregar Cliente</button>
                         </form>
                     )}
 
@@ -732,9 +551,9 @@ const ClientSection: React.FC<ClientSectionProps> = ({ items, isOpen, onToggle, 
                             <thead>
                                 <tr className="bg-slate-950 text-xs font-bold text-slate-500 uppercase">
                                     <th className="p-3 min-w-[150px] cursor-pointer hover:text-cyan-400" onClick={() => handleSort('name')}>Nombre <ArrowUpDown size={12} className="inline"/></th>
-                                    <th className="p-3 min-w-[120px]">CUIL</th>
-                                    <th className="p-3 min-w-[120px]">Teléfono</th>
-                                    <th className="p-3 min-w-[150px] cursor-pointer hover:text-cyan-400" onClick={() => handleSort('location')}>Lugar <ArrowUpDown size={12} className="inline"/></th>
+                                    <th className="p-3 min-w-[120px] hidden md:table-cell">CUIL</th>
+                                    <th className="p-3 min-w-[120px] hidden md:table-cell">Teléfono</th>
+                                    <th className="p-3 min-w-[150px] cursor-pointer hover:text-cyan-400 hidden md:table-cell" onClick={() => handleSort('location')}>Lugar <ArrowUpDown size={12} className="inline"/></th>
                                     <th className="p-3 w-20 text-center">Acciones</th>
                                 </tr>
                             </thead>
@@ -744,36 +563,48 @@ const ClientSection: React.FC<ClientSectionProps> = ({ items, isOpen, onToggle, 
                                 ) : (
                                     sortedItems.map(item => {
                                         const isEditing = editingId === item.id;
+                                        const isExpanded = expandedId === item.id;
                                         return (
-                                            <tr key={item.id} className="bg-slate-900/50 hover:bg-slate-800 transition-colors">
-                                                {isEditing && editForm ? (
-                                                    <>
-                                                        <td className="p-2"><InputCell val={editForm.name} onChange={v => setEditForm({...editForm, name: v})} /></td>
-                                                        <td className="p-2"><InputCell val={editForm.cuil} onChange={v => setEditForm({...editForm, cuil: v})} /></td>
-                                                        <td className="p-2"><InputCell val={editForm.phone} onChange={v => setEditForm({...editForm, phone: v})} /></td>
-                                                        <td className="p-2"><InputCell val={editForm.location} onChange={v => setEditForm({...editForm, location: v})} /></td>
-                                                        <td className="p-2 text-center">
-                                                            <div className="flex flex-col gap-1 items-center">
-                                                                <button onClick={saveEditing} className="p-1.5 bg-emerald-600 rounded text-white"><Check size={14}/></button>
-                                                                <button onClick={() => { setEditingId(null); setEditForm(null); }} className="p-1.5 bg-slate-600 rounded text-white"><X size={14}/></button>
-                                                            </div>
-                                                        </td>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <td className="p-3 font-medium text-slate-200">{item.name}</td>
-                                                        <td className="p-3 text-sm text-slate-400">{item.cuil || '-'}</td>
-                                                        <td className="p-3 text-sm text-slate-400">{item.phone || '-'}</td>
-                                                        <td className="p-3 text-sm text-slate-400"><MapPin size={12} className="inline mr-1 text-slate-500"/>{item.location || '-'}</td>
-                                                        <td className="p-3 text-center">
-                                                            <div className="flex gap-2 justify-center">
-                                                                <button onClick={() => startEditing(item)} className="p-1.5 text-slate-400 hover:text-cyan-400 hover:bg-slate-700 rounded"><Edit2 size={16}/></button>
-                                                                <button onClick={() => handleDelete(item.id)} className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-slate-700 rounded"><Trash2 size={16}/></button>
-                                                            </div>
-                                                        </td>
-                                                    </>
+                                            <React.Fragment key={item.id}>
+                                                <tr 
+                                                  onClick={() => !isEditing && setExpandedId(isExpanded ? null : item.id)}
+                                                  className={`bg-slate-900/50 hover:bg-slate-800 transition-colors ${!isEditing ? 'cursor-pointer' : ''}`}
+                                                >
+                                                    {isEditing && editForm ? (
+                                                        <>
+                                                            <td className="p-2"><InputCell val={editForm.name} onChange={v => setEditForm({...editForm, name: v})} /></td>
+                                                            <td className="p-2 hidden md:table-cell"><InputCell val={editForm.cuil} onChange={v => setEditForm({...editForm, cuil: v})} /></td>
+                                                            <td className="p-2 hidden md:table-cell"><InputCell val={editForm.phone} onChange={v => setEditForm({...editForm, phone: v})} /></td>
+                                                            <td className="p-2 hidden md:table-cell"><InputCell val={editForm.location} onChange={v => setEditForm({...editForm, location: v})} /></td>
+                                                            <td className="p-2 text-center"><div className="flex flex-col gap-1 items-center"><button onClick={(e) => { e.stopPropagation(); saveEditing(); }} className="p-1.5 bg-emerald-600 rounded text-white"><Check size={14}/></button><button onClick={(e) => { e.stopPropagation(); setEditingId(null); setEditForm(null); }} className="p-1.5 bg-slate-600 rounded text-white"><X size={14}/></button></div></td>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <td className="p-3 font-medium text-slate-200">
+                                                              <div className="flex items-center gap-2">
+                                                                <span className="md:hidden">{isExpanded ? <ChevronUp size={14} className="text-cyan-500" /> : <ChevronDown size={14} className="text-slate-500" />}</span>
+                                                                {item.name}
+                                                              </div>
+                                                            </td>
+                                                            <td className="p-3 text-sm text-slate-400 hidden md:table-cell">{item.cuil || '-'}</td>
+                                                            <td className="p-3 text-sm text-slate-400 hidden md:table-cell">{item.phone || '-'}</td>
+                                                            <td className="p-3 text-sm text-slate-400 hidden md:table-cell"><MapPin size={12} className="inline mr-1 text-slate-500"/>{item.location || '-'}</td>
+                                                            <td className="p-3 text-center"><div className="flex gap-2 justify-center"><button onClick={(e) => { e.stopPropagation(); startEditing(item); }} className="p-1.5 text-slate-400 hover:text-cyan-400 hover:bg-slate-700 rounded"><Edit2 size={16}/></button><button onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }} className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-slate-700 rounded"><Trash2 size={16}/></button></div></td>
+                                                        </>
+                                                    )}
+                                                </tr>
+                                                {isExpanded && !isEditing && (
+                                                  <tr className="bg-slate-900/80 md:hidden animate-in slide-in-from-top-1 duration-200">
+                                                    <td colSpan={2} className="p-4">
+                                                      <div className="space-y-3 text-sm">
+                                                        <div className="flex items-center gap-3"><CreditCard size={14} className="text-slate-500"/><div className="text-xs uppercase font-bold text-slate-500 w-24">CUIL:</div><div className="text-slate-300">{item.cuil || '-'}</div></div>
+                                                        <div className="flex items-center gap-3"><Phone size={14} className="text-slate-500"/><div className="text-xs uppercase font-bold text-slate-500 w-24">Teléfono:</div><div className="text-slate-300">{item.phone || '-'}</div></div>
+                                                        <div className="flex items-center gap-3"><MapPin size={14} className="text-slate-500"/><div className="text-xs uppercase font-bold text-slate-500 w-24">Lugar:</div><div className="text-slate-300">{item.location || '-'}</div></div>
+                                                      </div>
+                                                    </td>
+                                                  </tr>
                                                 )}
-                                            </tr>
+                                            </React.Fragment>
                                         );
                                     })
                                 )}

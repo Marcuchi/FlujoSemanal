@@ -1,6 +1,6 @@
 import React from 'react';
 import { Database, ref, onValue, set } from 'firebase/database';
-import { Plus, Minus, Trash2, Calendar, DollarSign, User, CreditCard, ArrowDown, Building2, ArrowUp, ArrowUpDown, X, Check } from 'lucide-react';
+import { Plus, Minus, Trash2, Calendar, DollarSign, User, CreditCard, ArrowDown, Building2, ArrowUp, ArrowUpDown, X, Check, ChevronDown, ChevronUp } from 'lucide-react';
 import { Cheque } from '../types';
 import { generateId } from '../utils';
 
@@ -35,6 +35,7 @@ export const ChequesApp: React.FC<ChequesAppProps> = ({ db }) => {
   const [cheques, setCheques] = React.useState<Cheque[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [showForm, setShowForm] = React.useState(false);
+  const [expandedId, setExpandedId] = React.useState<string | null>(null);
 
   // Sorting State
   const [sortConfig, setSortConfig] = React.useState<SortConfig>({ key: 'paymentDate', direction: 'asc' });
@@ -127,13 +128,14 @@ export const ChequesApp: React.FC<ChequesAppProps> = ({ db }) => {
           deliveredBy: ''
       }));
       setAmountDisplay('');
-      setShowForm(false); // Contraer al agregar
+      setShowForm(false); 
   };
 
   const handleDeleteCheque = (id: string) => {
       if (window.confirm("¿Eliminar este cheque de la lista?")) {
           const updatedList = cheques.filter(c => c.id !== id);
           saveCheques(updatedList);
+          if (expandedId === id) setExpandedId(null);
       }
   };
 
@@ -177,10 +179,10 @@ export const ChequesApp: React.FC<ChequesAppProps> = ({ db }) => {
       return <ArrowDown size={14} className="text-violet-400" />;
   };
 
-  const ThSortable = ({ label, column, alignRight = false }: { label: string, column: SortKey, alignRight?: boolean }) => (
+  const ThSortable = ({ label, column, alignRight = false, hiddenOnMobile = false }: { label: string, column: SortKey, alignRight?: boolean, hiddenOnMobile?: boolean }) => (
       <th 
-          className={`p-4 cursor-pointer hover:bg-slate-800 transition-colors select-none group ${alignRight ? 'text-right' : 'text-left'}`}
-          onClick={() => handleSort(column)}
+          className={`p-4 cursor-pointer hover:bg-slate-800 transition-colors select-none group ${alignRight ? 'text-right' : 'text-left'} ${hiddenOnMobile ? 'hidden md:table-cell' : ''}`}
+          onClick={(e) => { e.stopPropagation(); handleSort(column); }}
       >
           <div className={`flex items-center gap-2 ${alignRight ? 'justify-end' : 'justify-start'}`}>
               <span className={sortConfig.key === column ? 'text-violet-300' : 'text-slate-500 group-hover:text-slate-300'}>{label}</span>
@@ -188,6 +190,10 @@ export const ChequesApp: React.FC<ChequesAppProps> = ({ db }) => {
           </div>
       </th>
   );
+
+  const toggleExpand = (id: string) => {
+    setExpandedId(expandedId === id ? null : id);
+  };
 
   return (
     <div className="h-full flex flex-col bg-slate-950">
@@ -197,7 +203,7 @@ export const ChequesApp: React.FC<ChequesAppProps> = ({ db }) => {
             <h2 className="text-xl font-bold text-violet-400 uppercase tracking-wider flex items-center gap-2">
                 <CreditCard size={24} /> Cheques en Cartera
             </h2>
-            <div className="bg-slate-950 px-6 py-3 rounded-xl border border-violet-900/50 flex flex-col items-end shadow-lg shadow-violet-900/10">
+            <div className="bg-slate-950 px-6 py-3 rounded-xl border border-violet-900/50 flex flex-col items-end shadow-lg shadow-violet-900/10 w-full sm:w-auto">
                 <span className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Total Cartera</span>
                 <span className="text-2xl font-mono font-bold text-violet-300">
                     {formatCurrency(totalAmount)}
@@ -225,7 +231,6 @@ export const ChequesApp: React.FC<ChequesAppProps> = ({ db }) => {
                         <form onSubmit={handleAddCheque} className="p-5 border-t border-slate-800 animate-in slide-in-from-top-2 duration-200">
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                                 
-                                {/* Fecha Ingreso */}
                                 <div className="relative">
                                     <span className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">Fecha Registro</span>
                                     <div className="relative">
@@ -240,7 +245,6 @@ export const ChequesApp: React.FC<ChequesAppProps> = ({ db }) => {
                                     </div>
                                 </div>
 
-                                 {/* Banco */}
                                  <div className="relative">
                                     <span className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">Banco</span>
                                     <div className="relative">
@@ -256,7 +260,6 @@ export const ChequesApp: React.FC<ChequesAppProps> = ({ db }) => {
                                     </div>
                                 </div>
 
-                                 {/* Número */}
                                  <div className="relative">
                                     <span className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">N° Cheque</span>
                                     <div className="relative">
@@ -271,7 +274,6 @@ export const ChequesApp: React.FC<ChequesAppProps> = ({ db }) => {
                                     </div>
                                 </div>
 
-                                {/* Monto */}
                                 <div className="relative">
                                     <span className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">Monto</span>
                                     <div className="relative">
@@ -288,7 +290,6 @@ export const ChequesApp: React.FC<ChequesAppProps> = ({ db }) => {
                                     </div>
                                 </div>
 
-                                {/* Fecha Cobro */}
                                 <div className="relative">
                                     <span className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">Fecha Cobro</span>
                                     <div className="relative">
@@ -303,7 +304,6 @@ export const ChequesApp: React.FC<ChequesAppProps> = ({ db }) => {
                                     </div>
                                 </div>
 
-                                {/* Titular */}
                                 <div className="relative">
                                     <span className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">Titular</span>
                                     <div className="relative">
@@ -318,7 +318,6 @@ export const ChequesApp: React.FC<ChequesAppProps> = ({ db }) => {
                                     </div>
                                 </div>
 
-                                 {/* Entregado Por */}
                                  <div className="relative">
                                     <span className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">Entregado Por</span>
                                     <div className="relative">
@@ -333,7 +332,6 @@ export const ChequesApp: React.FC<ChequesAppProps> = ({ db }) => {
                                     </div>
                                 </div>
 
-                                {/* Submit Button */}
                                 <div className="flex items-end">
                                     <button 
                                         type="submit"
@@ -354,38 +352,86 @@ export const ChequesApp: React.FC<ChequesAppProps> = ({ db }) => {
                             <thead>
                                 <tr className="bg-slate-950 border-b border-slate-800 text-xs font-bold uppercase tracking-wider">
                                     <ThSortable label="F. Registro" column="date" />
-                                    <ThSortable label="F. Cobro" column="paymentDate" />
-                                    <ThSortable label="Banco" column="bank" />
-                                    <ThSortable label="Número" column="number" />
-                                    <ThSortable label="Titular" column="holder" />
+                                    <ThSortable label="F. Cobro" column="paymentDate" hiddenOnMobile />
+                                    <ThSortable label="Banco" column="bank" hiddenOnMobile />
+                                    <ThSortable label="Número" column="number" hiddenOnMobile />
+                                    <ThSortable label="Titular" column="holder" hiddenOnMobile />
                                     <ThSortable label="Entregado Por" column="deliveredBy" />
                                     <ThSortable label="Monto" column="amount" alignRight />
                                     <th className="p-4 w-10"></th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-800">
-                                {sortedCheques.map((c) => (
-                                    <tr key={c.id} className="hover:bg-slate-800/30 transition-colors group">
-                                        <td className="p-3 text-sm text-slate-400 whitespace-nowrap">{formatDate(c.date)}</td>
-                                        <td className="p-3 text-sm text-white font-bold whitespace-nowrap">{formatDate(c.paymentDate)}</td>
-                                        <td className="p-3 text-sm text-slate-300 font-medium">{c.bank}</td>
-                                        <td className="p-3 text-sm text-slate-300 font-mono">{c.number}</td>
-                                        <td className="p-3 text-sm text-slate-300">{c.holder}</td>
-                                        <td className="p-3 text-sm text-slate-300">{c.deliveredBy}</td>
-                                        <td className="p-3 text-right font-mono font-bold text-violet-300 bg-slate-900/30">
-                                            {formatCurrency(c.amount)}
-                                        </td>
-                                        <td className="p-3 text-center">
-                                            <button 
-                                                onClick={() => handleDeleteCheque(c.id)}
-                                                className="opacity-0 group-hover:opacity-100 p-1.5 text-rose-500 hover:bg-rose-950/30 rounded transition-all"
-                                                title="Eliminar Cheque"
+                                {sortedCheques.map((c) => {
+                                    const isExpanded = expandedId === c.id;
+                                    return (
+                                        <React.Fragment key={c.id}>
+                                            <tr 
+                                                onClick={() => toggleExpand(c.id)}
+                                                className={`hover:bg-slate-800/30 transition-colors group cursor-pointer ${isExpanded ? 'bg-slate-800/20' : ''}`}
                                             >
-                                                <Trash2 size={14} />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
+                                                <td className="p-3 text-sm text-slate-400 whitespace-nowrap">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="md:hidden">
+                                                            {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                                                        </span>
+                                                        {formatDate(c.date)}
+                                                    </div>
+                                                </td>
+                                                <td className="p-3 text-sm text-white font-bold whitespace-nowrap hidden md:table-cell">{formatDate(c.paymentDate)}</td>
+                                                <td className="p-3 text-sm text-slate-300 font-medium hidden md:table-cell">{c.bank}</td>
+                                                <td className="p-3 text-sm text-slate-300 font-mono hidden md:table-cell">{c.number}</td>
+                                                <td className="p-3 text-sm text-slate-300 hidden md:table-cell">{c.holder}</td>
+                                                <td className="p-3 text-sm text-slate-300">{c.deliveredBy}</td>
+                                                <td className="p-3 text-right font-mono font-bold text-violet-300 bg-slate-900/30">
+                                                    {formatCurrency(c.amount)}
+                                                </td>
+                                                <td className="p-3 text-center">
+                                                    <button 
+                                                        onClick={(e) => { e.stopPropagation(); handleDeleteCheque(c.id); }}
+                                                        className="opacity-0 group-hover:opacity-100 p-1.5 text-rose-500 hover:bg-rose-950/30 rounded transition-all"
+                                                        title="Eliminar Cheque"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            {/* Expandable row for mobile/all screens when clicked */}
+                                            {isExpanded && (
+                                                <tr className="bg-slate-900/40 animate-in slide-in-from-top-1 duration-200">
+                                                    <td colSpan={8} className="p-4">
+                                                        <div className="grid grid-cols-1 gap-3 text-sm">
+                                                            <div className="flex justify-between border-b border-slate-800 pb-1">
+                                                                <span className="text-slate-500 uppercase font-bold text-[10px]">F. Cobro</span>
+                                                                <span className="text-white font-bold">{formatDate(c.paymentDate)}</span>
+                                                            </div>
+                                                            <div className="flex justify-between border-b border-slate-800 pb-1">
+                                                                <span className="text-slate-500 uppercase font-bold text-[10px]">Banco</span>
+                                                                <span className="text-slate-300">{c.bank}</span>
+                                                            </div>
+                                                            <div className="flex justify-between border-b border-slate-800 pb-1">
+                                                                <span className="text-slate-500 uppercase font-bold text-[10px]">N° Cheque</span>
+                                                                <span className="text-slate-300 font-mono">{c.number}</span>
+                                                            </div>
+                                                            <div className="flex justify-between border-b border-slate-800 pb-1">
+                                                                <span className="text-slate-500 uppercase font-bold text-[10px]">Titular</span>
+                                                                <span className="text-slate-300">{c.holder}</span>
+                                                            </div>
+                                                            <div className="md:hidden flex justify-end pt-2">
+                                                                <button 
+                                                                    onClick={(e) => { e.stopPropagation(); handleDeleteCheque(c.id); }}
+                                                                    className="flex items-center gap-2 text-rose-500 text-xs font-bold px-3 py-1.5 bg-rose-500/10 rounded border border-rose-500/20"
+                                                                >
+                                                                    <Trash2 size={14} /> Eliminar
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </React.Fragment>
+                                    );
+                                })}
                                 {sortedCheques.length === 0 && (
                                     <tr>
                                         <td colSpan={8} className="p-8 text-center text-slate-500 italic">No hay cheques registrados.</td>
